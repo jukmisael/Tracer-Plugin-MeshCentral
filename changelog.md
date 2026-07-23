@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.0.6 (2026-07-23)
+
+### Fixes
+- Changed `view_admin` permission default from `denied` to `allowed` — MeshCentral plugin handler was blocking admin panel access with 401 before reaching our handler
+- Restored proper `handleAdminReq` implementation after debug cycle
+
+### Notes
+- **Must delete and reinstall the plugin** — "Reload" does not refresh cached plugin JS on disk. Remove via dropdown, then re-download from the same `configUrl`
+
 ## 1.0.5 (2026-07-23)
 
 ### Fixes
