@@ -45,12 +45,6 @@ tr:hover { background: #f0f7ff; }
 .tl-date { font-size: 11px; color: #666; }
 .tl-user { font-weight: 600; }
 .tl-device { color: #1565C0; }
-#graphContainer { width: 100%; height: 500px; border: 1px solid #e0e0e0; background: #fff; border-radius: 4px; }
-.graph-legend { display: flex; gap: 16px; margin-bottom: 8px; font-size: 12px; }
-.graph-legend span { display: flex; align-items: center; gap: 4px; }
-.graph-legend .dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
-.dot-user { background: #4CAF50; }
-.dot-device { background: #1976D2; }
 .loading { text-align: center; padding: 40px; color: #999; }
 @media (max-width: 768px) { .card-grid { grid-template-columns: 1fr; } .controls { flex-direction: column; align-items: stretch; } }
 </style>
@@ -116,15 +110,10 @@ tr:hover { background: #f0f7ff; }
 </div>
 
 <div id="tab-graph" class="tab-pane">
-    <div class="graph-legend">
-        <span><span class="dot dot-user"></span> Usuário</span>
-        <span><span class="dot dot-device"></span> Dispositivo</span>
-    </div>
-    <div id="graphContainer"></div>
+    <p style="margin-bottom:8px;font-size:13px;color:#666;">Matriz de relacionamento usuário ↔ dispositivo. Células mais escuras = mais conexões.</p>
+    <div id="matrixContainer" style="overflow-x:auto;"></div>
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.9/vis-network.min.js"></script>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.9/dist/vis-network.min.css">
 
 <script>
 // -----------------------------------------------------------------------
@@ -302,36 +291,53 @@ function loadGraph() {
 }
 
 function renderGraph(data) {
-    var container = document.getElementById('graphContainer');
+    var container = document.getElementById('matrixContainer');
     if (!data || !data.nodes || !data.nodes.length) {
-        container.innerHTML = '<div class="loading">Dados insuficientes para gerar o grafo.</div>';
+        container.innerHTML = '<div class="loading">Dados insuficientes para montar a matriz.</div>';
         return;
     }
-    var nodes = new vis.DataSet(data.nodes.map(function(n) {
-        return {
-            id: n.id, label: n.label, title: n.title,
-            shape: n.type === 'user' ? 'dot' : 'square',
-            color: n.type === 'user' ? '#4CAF50' : '#1976D2',
-            size: n.type === 'user' ? 20 : 25, borderWidth: 2,
-            font: { size: 11, face: 'Segoe UI' }
-        };
-    }));
-    var edges = new vis.DataSet(data.edges.map(function(e) {
-        var opacity = Math.min(1, 0.2 + (e.value / 10));
-        return {
-            from: e.from, to: e.to, value: e.value,
-            width: Math.min(8, 1 + e.value * 0.5),
-            color: { color: 'rgba(76,175,80,' + opacity + ')', highlight: '#1976D2' },
-            smooth: { type: 'curvedCW', roundness: 0.1 }, title: e.title
-        };
-    }));
-    var options = {
-        layout: { improvedLayout: true, hierarchical: { enabled: false } },
-        physics: { solver: 'forceAtlas2Based', forceAtlas2Based: { gravitationalConstant: -40, centralGravity: 0.005, springLength: 200, springConstant: 0.02, damping: 0.4 }, stabilization: { iterations: 200 } },
-        interaction: { hover: true, tooltipDelay: 200, navigationButtons: true, keyboard: true },
-        edges: { arrows: { to: { enabled: false } } }
-    };
-    new vis.Network(container, { nodes: nodes, edges: edges }, options);
+    // Build user×device matrix from edge list
+    var users = [], devices = [], matrix = {}, maxVal = 1;
+    data.nodes.forEach(function(n) {
+        if (n.type === 'user') users.push(n);
+        else devices.push(n);
+    });
+    data.edges.forEach(function(e) {
+        var from = e.from.replace('user_','').replace('device_','');
+        var to = e.to.replace('user_','').replace('device_','');
+        var uLabel = '', dLabel = '';
+        data.nodes.forEach(function(n) {
+            if (n.id === e.from) uLabel = n.label;
+            if (n.id === e.to) dLabel = n.label;
+        });
+        var key = uLabel + '|' + dLabel;
+        matrix[key] = (matrix[key] || 0) + e.value;
+        if (matrix[key] > maxVal) maxVal = matrix[key];
+    });
+    // Sort
+    users.sort(function(a,b){ return a.label.localeCompare(b.label); });
+    devices.sort(function(a,b){ return a.label.localeCompare(b.label); });
+    // Build HTML table
+    var html = '<table style="font-size:11px;border-collapse:collapse;"><thead><tr><th style="padding:4px 8px;background:#f5f5f5;text-align:left;">Usuário \\ Dispositivo</th>';
+    devices.forEach(function(d) { html += '<th style="padding:4px 8px;background:#f5f5f5;text-align:center;writing-mode:vertical-lr;height:80px;white-space:nowrap;">' + d.label + '</th>'; });
+    html += '</tr></thead><tbody>';
+    users.forEach(function(u) {
+        html += '<tr><td style="padding:4px 8px;font-weight:600;white-space:nowrap;border-bottom:1px solid #eee;">' + u.label + '</td>';
+        devices.forEach(function(d) {
+            var key = u.label + '|' + d.label;
+            var val = matrix[key] || 0;
+            var pct = maxVal > 0 ? val / maxVal : 0;
+            var r = Math.round(220 - (pct * 180));
+            var g = Math.round(240 - (pct * 180));
+            var b = Math.round(220 - (pct * 150));
+            var bg = 'rgb(' + r + ',' + g + ',' + b + ')';
+            html += '<td style="padding:6px 8px;text-align:center;background:' + bg + ';border-bottom:1px solid #eee;border-right:1px solid #eee;font-size:12px;font-weight:' + (val > 0 ? '600' : '400') + ';">' + (val || '-') + '</td>';
+        });
+        html += '</tr>';
+    });
+    html += '</tbody></table>';
+    html += '<p style="margin-top:8px;font-size:11px;color:#999;">Células mais escuras = mais eventos de conexão. Clique em "Por Usuário" ou "Por Dispositivo" para detalhes.</p>';
+    container.innerHTML = html;
 }
 
 // -----------------------------------------------------------------------
