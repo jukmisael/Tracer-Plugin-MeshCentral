@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.0.3 (2026-07-23)
+
+### Fixes
+- All views converted to `.handlebars`; `res.render()` works natively with MeshCentral's Express renderWrapper
+- Communication migrated from `pnetMsg` to standard `parent.meshserver.send({ action: 'plugin', ... })`
+- Device tab and admin panel now load without "Failed to lookup view" errors
+
+### Notes
+- Compatible with all MeshCentral versions >=1.0.0
+- Remove old plugin before reinstalling to clear cached `.ejs` files
+
 ## 1.0.2 (2026-07-23)
 
 ### Fixes
