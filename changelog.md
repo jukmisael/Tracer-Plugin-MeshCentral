@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.0.1 (2026-07-23)
+
+### Fixes
+- `res.render()` now uses relative view names instead of absolute paths, fixing "Failed to lookup view" error on plugin install
+- Removed unused `obj.VIEWS` variable
+
+### Notes
+- No breaking changes; upgrade by reinstalling from the same `configUrl`
+
 ## 1.0.0 (2026-07-23)
 
 ### Features
