@@ -8,8 +8,18 @@
  */
 
 "use strict";
+console.log('PLUGIN: usertracer.js evaluated, starting module.exports...');
 
-module.exports.usertracer = function (parent) {
+ module.exports.usertracer = function (parent) {
+    console.log('PLUGIN: usertracer() constructor called');
+     var obj = {};
+     obj.parent = parent;
+     obj.meshServer = parent.parent;
+    console.log('PLUGIN: parent OK, meshServer available:', obj.meshServer != null);
+     obj.debug = obj.meshServer.debug;
+     obj.db = null;
+
+     // Exports to frontend (web UI functions)
     var obj = {};
     obj.parent = parent;
     obj.meshServer = parent.parent;
@@ -20,62 +30,77 @@ module.exports.usertracer = function (parent) {
     obj.exports = [
         'onDeviceRefreshEnd'
     ];
+    // -----------------------------------------------------------------------
+    // Database (NeDB)
+    // -----------------------------------------------------------------------
+    obj.initDB = function () {
+        try {
+            var Datastore = require('nedb');
+            if (obj.eventsDb == null) {
+                obj.eventsDb = new Datastore({
+                    filename: obj.meshServer.getConfigFilePath('plugin-usertracer-events.db'),
+                    autoload: true
+                });
+                obj.eventsDb.persistence.setAutocompactionInterval(60000);
+                obj.eventsDb.ensureIndex({ fieldName: 'nodeid' });
+                obj.eventsDb.ensureIndex({ fieldName: 'detectedAt' });
+                obj.eventsDb.ensureIndex({ fieldName: 'username' });
+            }
+            if (obj.snapshotsDb == null) {
+                obj.snapshotsDb = new Datastore({
+                    filename: obj.meshServer.getConfigFilePath('plugin-usertracer-snapshots.db'),
+                    autoload: true
+                });
+                obj.snapshotsDb.persistence.setAutocompactionInterval(60000);
+                obj.snapshotsDb.ensureIndex({ fieldName: 'nodeid' });
+                obj.snapshotsDb.ensureIndex({ fieldName: 'timestamp' });
+            }
+            console.log('PLUGIN: DB initialized successfully');
+        } catch (e) {
+            console.log('PLUGIN: DB init ERROR: ' + e.message, e.stack);
+        }
+    };
 
     // -----------------------------------------------------------------------
     // Permissions
     // -----------------------------------------------------------------------
     obj.registerPermissions = function () {
-        parent.registerPermissions('usertracer', {
-            'view_audit': {
-                title: 'View Audit Log',
-                desc: 'Can view the user-device audit trail',
-                default: 'allowed'
-            },
-            'view_admin': {
-                title: 'View Admin Panel',
-                desc: 'Can access the global admin panel',
-                default: 'allowed'
+        try {
+            if (typeof parent.registerPermissions === 'function') {
+                parent.registerPermissions('usertracer', {
+                    'view_audit': {
+                        title: 'View Audit Log',
+                        desc: 'Can view the user-device audit trail',
+                        default: 'allowed'
+                    },
+                    'view_admin': {
+                        title: 'View Admin Panel',
+                        desc: 'Can access the global admin panel',
+                        default: 'allowed'
+                    }
+                });
+                console.log('PLUGIN: Permissions registered');
+            } else {
+                console.log('PLUGIN: registerPermissions not available, skipping');
             }
-        });
+        } catch (e) {
+            console.log('PLUGIN: registerPermissions ERROR: ' + e.message, e.stack);
+        }
     };
 
     // -----------------------------------------------------------------------
-    // Database (NeDB)
+    // Server startup
     // -----------------------------------------------------------------------
-    obj.initDB = function () {
-        var Datastore = require('nedb');
-        // Events collection
-        if (obj.eventsDb == null) {
-            obj.eventsDb = new Datastore({
-                filename: obj.meshServer.getConfigFilePath('plugin-usertracer-events.db'),
-                autoload: true
-            });
-            obj.eventsDb.persistence.setAutocompactionInterval(60000);
-            obj.eventsDb.ensureIndex({ fieldName: 'nodeid' });
-            obj.eventsDb.ensureIndex({ fieldName: 'detectedAt' });
-            obj.eventsDb.ensureIndex({ fieldName: 'username' });
-        }
-        // Snapshots collection (periodic full state)
-        if (obj.snapshotsDb == null) {
-            obj.snapshotsDb = new Datastore({
-                filename: obj.meshServer.getConfigFilePath('plugin-usertracer-snapshots.db'),
-                autoload: true
-            });
-            obj.snapshotsDb.persistence.setAutocompactionInterval(60000);
-            obj.snapshotsDb.ensureIndex({ fieldName: 'nodeid' });
-            obj.snapshotsDb.ensureIndex({ fieldName: 'timestamp' });
-        }
+    obj.server_startup = function () {
+        console.log('PLUGIN: server_startup called');
+        obj.initDB();
+        obj.registerPermissions();
+        obj.debug('plugin:usertracer', 'Server startup complete');
     };
 
     // -----------------------------------------------------------------------
     // Server hooks
     // -----------------------------------------------------------------------
-
-    obj.server_startup = function () {
-        obj.initDB();
-        obj.registerPermissions();
-        obj.debug('plugin:usertracer', 'Server startup complete');
-    };
 
     /**
      * Called when an agent first establishes a stable connection.
