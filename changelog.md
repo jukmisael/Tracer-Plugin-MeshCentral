@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.0.4 (2026-07-23)
+
+### Fixes
+- Removed vis-network CDN dependency (blocked by MeshCentral CSP)
+- Replaced vis.js network graph with inline relationship matrix (HTML/CSS/JS puro, zero dependências externas)
+
+### Notes
+- All content now served from `'self'` — fully CSP-compliant
+
 ## 1.0.3 (2026-07-23)
 
 ### Fixes
