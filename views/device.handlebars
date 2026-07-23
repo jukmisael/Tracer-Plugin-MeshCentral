@@ -2,64 +2,46 @@
 <html>
 <head>
 <meta charset="utf-8">
-<title>User-Device Tracer — <%= nodeName %></title>
+<title>User-Device Tracer — {{nodeName}}</title>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: 'Segoe UI', Tahoma, sans-serif; background: transparent; color: #333; padding: 12px; font-size: 13px; }
 h2 { font-size: 16px; margin-bottom: 4px; }
 .subtitle { color: #666; font-size: 12px; margin-bottom: 12px; }
-
 .controls { margin-bottom: 10px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .controls select, .controls input { padding: 4px 8px; border: 1px solid #ccc; border-radius: 3px; font-size: 12px; }
 .controls button { padding: 4px 12px; background: #1976D2; color: #fff; border: none; border-radius: 3px; cursor: pointer; font-size: 12px; }
 .controls button:hover { background: #1565C0; }
-
 .summary { display: flex; gap: 16px; margin-bottom: 12px; flex-wrap: wrap; }
 .summary-item { background: #fff; border: 1px solid #e0e0e0; border-radius: 6px; padding: 8px 14px; text-align: center; min-width: 100px; }
 .summary-item .num { font-size: 22px; font-weight: 600; color: #1976D2; }
 .summary-item .label { font-size: 11px; color: #666; }
-
 table { width: 100%; border-collapse: collapse; font-size: 12px; }
 th, td { padding: 5px 8px; text-align: left; border-bottom: 1px solid #eee; }
 th { background: #fafafa; font-weight: 600; position: sticky; top: 0; }
 tr:hover { background: #f0f7ff; }
-
 .event-userLogin td:first-child { border-left: 3px solid #4CAF50; }
 .event-userLogout td:first-child { border-left: 3px solid #F44336; }
 .event-sessionDisconnected td:first-child { border-left: 3px solid #FF9800; }
 .event-sessionReconnected td:first-child { border-left: 3px solid #2196F3; }
-
 .badge { display: inline-block; padding: 1px 6px; border-radius: 3px; font-size: 11px; font-weight: 600; }
 .badge-login { background: #E8F5E9; color: #2E7D32; }
 .badge-logout { background: #FFEBEE; color: #C62828; }
 .badge-disconnect { background: #FFF3E0; color: #E65100; }
 .badge-reconnect { background: #E3F2FD; color: #1565C0; }
-
 .loading { text-align: center; padding: 30px; color: #999; }
 </style>
 </head>
 <body>
 
 <h2>User-Device Tracer</h2>
-<p class="subtitle">Dispositivo: <%= nodeName %> — <span id="eventCount">0</span> eventos</p>
+<p class="subtitle">Dispositivo: {{nodeName}} — <span id="eventCount">0</span> eventos</p>
 
 <div class="summary">
-    <div class="summary-item">
-        <div class="num" id="sumLogin">0</div>
-        <div class="label">Logins</div>
-    </div>
-    <div class="summary-item">
-        <div class="num" id="sumLogout">0</div>
-        <div class="label">Logouts</div>
-    </div>
-    <div class="summary-item">
-        <div class="num" id="sumUsers">0</div>
-        <div class="label">Usuários</div>
-    </div>
-    <div class="summary-item">
-        <div class="num" id="sumDisc">0</div>
-        <div class="label">Desconexões</div>
-    </div>
+    <div class="summary-item"><div class="num" id="sumLogin">0</div><div class="label">Logins</div></div>
+    <div class="summary-item"><div class="num" id="sumLogout">0</div><div class="label">Logouts</div></div>
+    <div class="summary-item"><div class="num" id="sumUsers">0</div><div class="label">Usuários</div></div>
+    <div class="summary-item"><div class="num" id="sumDisc">0</div><div class="label">Desconexões</div></div>
 </div>
 
 <div class="controls">
@@ -76,16 +58,9 @@ tr:hover { background: #f0f7ff; }
 
 <div style="overflow-x:auto;">
     <table>
-        <thead>
-            <tr>
-                <th>Data/Hora</th>
-                <th>Evento</th>
-                <th>Usuário</th>
-                <th>Domínio</th>
-                <th>Sessão</th>
-                <th>Estado</th>
-            </tr>
-        </thead>
+        <thead><tr>
+            <th>Data/Hora</th><th>Evento</th><th>Usuário</th><th>Domínio</th><th>Sessão</th><th>Estado</th>
+        </tr></thead>
         <tbody id="eventsBody">
             <tr><td colspan="6" class="loading">Carregando eventos...</td></tr>
         </tbody>
@@ -93,33 +68,28 @@ tr:hover { background: #f0f7ff; }
 </div>
 
 <script>
-var nodeid = '<%= nodeid %>';
+var nodeid = '{{nodeid}}';
 var allData = [];
 
 // -----------------------------------------------------------------------
-// Communication with MeshCentral server
+// Communication via parent.meshserver (MeshCentral standard)
 // -----------------------------------------------------------------------
-function pktSend(data) {
-    var pkt = JSON.stringify({
+var meshserver = (typeof parent !== 'undefined' && parent.meshserver) ? parent.meshserver : (window.meshserver || null);
+
+function sendCmd(pluginaction, extra) {
+    if (!meshserver) return;
+    extra = extra || {};
+    meshserver.send(Object.assign({
         action: 'plugin',
         plugin: 'usertracer',
-        pluginaction: data.pluginaction,
-        nodeid: nodeid,
-        limit: data.limit || 200
-    });
-    try {
-        if (typeof pnetMsg !== 'undefined') {
-            pnetMsg(pkt);
-        } else if (typeof parent !== 'undefined' && parent.pnetMsg) {
-            parent.pnetMsg(pkt);
-        }
-    } catch(e) {}
+        pluginaction: pluginaction,
+        nodeid: nodeid
+    }, extra));
 }
 
 function loadData() {
-    document.getElementById('eventsBody').innerHTML =
-        '<tr><td colspan="6" class="loading">Carregando...</td></tr>';
-    pktSend({ pluginaction: 'getDeviceEvents', limit: 200 });
+    document.getElementById('eventsBody').innerHTML = '<tr><td colspan="6" class="loading">Carregando...</td></tr>';
+    sendCmd('getDeviceEvents', { limit: 200 });
 }
 
 // -----------------------------------------------------------------------
@@ -128,70 +98,42 @@ function loadData() {
 function render() {
     var filterType = document.getElementById('filterType').value;
     var filterUser = document.getElementById('filterUser').value.trim().toLowerCase();
-
     var tbody = document.getElementById('eventsBody');
-    var eventCount = 0;
-    var logins = 0, logouts = 0, discs = 0;
+    var eventCount = 0, logins = 0, logouts = 0, discs = 0;
     var users = {};
-
     var html = '';
+    var labels = { userLogin: '<span class="badge badge-login">Login</span>', userLogout: '<span class="badge badge-logout">Logout</span>', sessionDisconnected: '<span class="badge badge-disconnect">Desconectou</span>', sessionReconnected: '<span class="badge badge-reconnect">Reconectou</span>' };
+
     for (var i = 0; i < allData.length; i++) {
         var e = allData[i];
-
         if (filterType && e.eventType !== filterType) continue;
-        if (filterUser && (e.username || '').toLowerCase().indexOf(filterUser) === -1) continue;
-
+        if (filterUser && (e.username||'').toLowerCase().indexOf(filterUser)===-1) continue;
         eventCount++;
         if (e.eventType === 'userLogin') logins++;
         else if (e.eventType === 'userLogout') logouts++;
         else if (e.eventType === 'sessionDisconnected') discs++;
-
-        if (e.username) users[e.domain ? e.domain + '\\' + e.username : e.username] = true;
-
+        if (e.username) users[e.domain ? e.domain+'\\'+e.username : e.username] = true;
         var d = new Date(e.detectedAt);
-        var dateStr = d.toLocaleDateString() + ' ' + d.toLocaleTimeString();
-
-        var labels = {
-            userLogin: '<span class="badge badge-login">Login</span>',
-            userLogout: '<span class="badge badge-logout">Logout</span>',
-            sessionDisconnected: '<span class="badge badge-disconnect">Desconectou</span>',
-            sessionReconnected: '<span class="badge badge-reconnect">Reconectou</span>'
-        };
-
-        html += '<tr class="event-' + e.eventType + '">';
-        html += '<td>' + dateStr + '</td>';
-        html += '<td>' + (labels[e.eventType] || e.eventType) + '</td>';
-        html += '<td>' + (e.username || '') + '</td>';
-        html += '<td>' + (e.domain || '') + '</td>';
-        html += '<td>' + (e.sessionName || '') + '</td>';
-        html += '<td>' + (e.state || e.currentState || e.previousState || '') + '</td>';
-        html += '</tr>';
+        html += '<tr class="event-'+e.eventType+'">'
+            + '<td>'+d.toLocaleDateString()+' '+d.toLocaleTimeString()+'</td>'
+            + '<td>'+(labels[e.eventType]||e.eventType)+'</td>'
+            + '<td>'+(e.username||'')+'</td>'
+            + '<td>'+(e.domain||'')+'</td>'
+            + '<td>'+(e.sessionName||'')+'</td>'
+            + '<td>'+(e.state||e.currentState||e.previousState||'')+'</td>'
+            + '</tr>';
     }
-
     document.getElementById('eventCount').textContent = eventCount;
     document.getElementById('sumLogin').textContent = logins;
     document.getElementById('sumLogout').textContent = logouts;
     document.getElementById('sumUsers').textContent = Object.keys(users).length;
     document.getElementById('sumDisc').textContent = discs;
-
-    if (!html) {
-        tbody.innerHTML = '<tr><td colspan="6" class="loading">Nenhum evento encontrado.</td></tr>';
-    } else {
-        tbody.innerHTML = html;
-    }
-// -----------------------------------------------------------------------
-// Handle incoming messages via parent.pluginHandler registration
-// -----------------------------------------------------------------------
-function handleMessage(msg) {
-    switch (msg.method) {
-        case 'deviceEvents':
-            allData = msg.data || [];
-            render();
-            break;
-    }
+    tbody.innerHTML = html || '<tr><td colspan="6" class="loading">Nenhum evento encontrado.</td></tr>';
 }
 
-// Register on parent.pluginHandler so MeshCentral WS router delivers to us
+// -----------------------------------------------------------------------
+// Handle responses via pluginHandler registration
+// -----------------------------------------------------------------------
 (function registerHandlers() {
     var target = null;
     try {
@@ -201,18 +143,13 @@ function handleMessage(msg) {
             target = parent.pluginHandler.usertracer;
         }
     } catch(e) {}
-
-    if (!target) {
-        setTimeout(registerHandlers, 500);
-        return;
-    }
-
+    if (!target) { setTimeout(registerHandlers, 500); return; }
     target.deviceEvents = function(msg) {
-        handleMessage(msg);
+        allData = (msg && msg.data) ? msg.data : [];
+        render();
     };
 })();
 
-// Auto-load on page ready
 document.addEventListener('DOMContentLoaded', loadData);
 </script>
 

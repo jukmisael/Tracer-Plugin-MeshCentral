@@ -3,10 +3,13 @@
 ## 1.0.2 (2026-07-23)
 
 ### Fixes
-- Bypass Express `renderWrapper` with direct `fs.readFileSync` + `ejs.render` + `res.send` — resolves "Failed to lookup view" error on all MeshCentral versions
+- Converted templates from `.ejs` to `.handlebars` — MeshCentral's Express `renderWrapper` resolves Handlebars correctly, fixing "Failed to lookup view" error
+- Reverted `handleAdminReq` to standard `res.render('admin', {})` and `res.render('device', {})` per EventLog pattern
+- Frontend communication now uses `parent.meshserver.send()` (MeshCentral native) instead of `pnetMsg`
+- Views use `{{var}}` Handlebars syntax for server-injected variables (`nodeid`, `nodeName`)
 
 ### Notes
-- Upgrade by reinstalling from the same `configUrl`
+- Upgrade by reinstalling from the same `configUrl`; remove old plugin first to clear cached `.ejs` files
 
 ## 1.0.1 (2026-07-23)
 
