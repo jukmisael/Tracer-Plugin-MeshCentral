@@ -476,17 +476,8 @@ module.exports.usertracer = function (parent) {
     // -----------------------------------------------------------------------
 
     obj.handleAdminReq = function (req, res, user) {
-        // Device tab view (user=1 + nodeid)
-        if (req.query.user == 1) {
-            res.render('device', {
-                nodeid: req.query.nodeid || '',
-                nodeName: req.query.nodeid ? obj.getNodeName(req.query.nodeid) : 'Unknown'
-            });
-            return;
-        }
-        // Admin panel — requires site admin
-        if ((user.siteadmin & 0xFFFFFFFF) == 0) { res.sendStatus(401); return; }
-        res.render('admin', {});
+        // DEBUG: just send a plain text response to verify handler is called
+        res.status(200).send('DEBUG: handleAdminReq called. user=' + (user ? JSON.stringify({ id: user._id, name: user.name, siteadmin: user.siteadmin }) : 'no user'));
     };
 
     // -----------------------------------------------------------------------
