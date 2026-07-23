@@ -8,22 +8,36 @@
  */
 
 "use strict";
-console.log('PLUGIN: usertracer.js evaluated, starting module.exports...');
 
- module.exports.usertracer = function (parent) {
-    console.log('PLUGIN: usertracer() constructor called');
-     var obj = {};
-     obj.parent = parent;
-     obj.meshServer = parent.parent;
-    console.log('PLUGIN: parent OK, meshServer available:', obj.meshServer != null);
-     obj.debug = obj.meshServer.debug;
-     obj.db = null;
+// File-based debug log (writes to C:\usertracer-debug.log)
+var fs_dbg = require('fs');
+var dbgLog = function(msg) {
+    try {
+        fs_dbg.appendFileSync('C:\\usertracer-debug.log', new Date().toISOString() + ' ' + msg + '\n');
+    } catch(e) {}
+    console.log(msg);
+};
+dbgLog('PLUGIN: usertracer.js evaluated, starting module.exports...');
 
-     // Exports to frontend (web UI functions)
+module.exports.usertracer = function (parent) {
+    dbgLog('PLUGIN: usertracer() constructor called');
+
     var obj = {};
     obj.parent = parent;
-    obj.meshServer = parent.parent;
-    obj.debug = obj.meshServer.debug;
+
+    // Check parent availability
+    dbgLog('PLUGIN: parent type=' + (typeof parent) + ', parent keys=' + (parent ? Object.keys(parent).join(',') : 'null'));
+
+    obj.meshServer = (parent && parent.parent) ? parent.parent : null;
+    dbgLog('PLUGIN: meshServer available: ' + (obj.meshServer != null));
+
+    if (obj.meshServer) {
+        obj.debug = (typeof obj.meshServer.debug === 'function') ? obj.meshServer.debug : function() {};
+        dbgLog('PLUGIN: debug function available: ' + (typeof obj.debug === 'function'));
+    } else {
+        obj.debug = function() {};
+    }
+
     obj.db = null;
 
     // Exports to frontend (web UI functions)
@@ -55,9 +69,9 @@ console.log('PLUGIN: usertracer.js evaluated, starting module.exports...');
                 obj.snapshotsDb.ensureIndex({ fieldName: 'nodeid' });
                 obj.snapshotsDb.ensureIndex({ fieldName: 'timestamp' });
             }
-            console.log('PLUGIN: DB initialized successfully');
+            dbgLog('PLUGIN: DB initialized successfully');
         } catch (e) {
-            console.log('PLUGIN: DB init ERROR: ' + e.message, e.stack);
+            dbgLog('PLUGIN: DB init ERROR: ' + e.message);
         }
     };
 
@@ -79,12 +93,12 @@ console.log('PLUGIN: usertracer.js evaluated, starting module.exports...');
                         default: 'allowed'
                     }
                 });
-                console.log('PLUGIN: Permissions registered');
+                dbgLog('PLUGIN: Permissions registered');
             } else {
-                console.log('PLUGIN: registerPermissions not available, skipping');
+                dbgLog('PLUGIN: registerPermissions not available, skipping');
             }
         } catch (e) {
-            console.log('PLUGIN: registerPermissions ERROR: ' + e.message, e.stack);
+            dbgLog('PLUGIN: registerPermissions ERROR: ' + e.message);
         }
     };
 
@@ -92,7 +106,7 @@ console.log('PLUGIN: usertracer.js evaluated, starting module.exports...');
     // Server startup
     // -----------------------------------------------------------------------
     obj.server_startup = function () {
-        console.log('PLUGIN: server_startup called');
+        dbgLog('PLUGIN: server_startup called');
         obj.initDB();
         obj.registerPermissions();
         obj.debug('plugin:usertracer', 'Server startup complete');
@@ -476,12 +490,6 @@ console.log('PLUGIN: usertracer.js evaluated, starting module.exports...');
                         });
                     } else {
                         // Increment weight
-                        for (var j = 0; j < edges.length; j++) {
-                            if (edges[j].from === userIds[userName] &&
-                                edges[j].to === deviceIds[deviceName]) {
-                                edges[j].value++;
-                                edges[j].title = edges[j].value + ' connections';
-                                break;
                             }
                         }
                     }
@@ -501,14 +509,22 @@ console.log('PLUGIN: usertracer.js evaluated, starting module.exports...');
     // -----------------------------------------------------------------------
 
     obj.handleAdminReq = function (req, res, user) {
+        var userInfo = user ? JSON.stringify({ id: user._id, name: user.name, siteadmin: user.siteadmin }) : 'null';
+        dbgLog('PLUGIN: handleAdminReq called, user=' + userInfo + ', query.user=' + req.query.user);
         if (req.query.user == 1) {
+            dbgLog('PLUGIN: handleAdminReq rendering device tab');
             res.render('device', {
                 nodeid: req.query.nodeid || '',
                 nodeName: req.query.nodeid ? obj.getNodeName(req.query.nodeid) : 'Unknown'
             });
             return;
         }
-        if ((user.siteadmin & 0xFFFFFFFF) == 0) { res.sendStatus(401); return; }
+        if (!user || (user.siteadmin & 0xFFFFFFFF) == 0) {
+            dbgLog('PLUGIN: handleAdminReq UNAUTHORIZED - siteadmin check failed');
+            res.sendStatus(401);
+            return;
+        }
+        dbgLog('PLUGIN: handleAdminReq rendering admin template');
         res.render('admin', {});
     };
 
