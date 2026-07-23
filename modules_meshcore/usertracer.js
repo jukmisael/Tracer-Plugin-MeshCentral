@@ -214,29 +214,36 @@ function pollUserSessions() {
 function reportEvents(events) {
     if (!mesh) return;
     try {
-        mesh.SendCommand({
+        var cmd = {
             action: 'plugin',
             plugin: 'usertracer',
             pluginaction: 'sessionEvents',
             events: JSON.stringify(events)
-        });
+        };
+        if (mesh && mesh.info && (mesh.info._id || mesh.info.nodeid)) {
+            cmd.nodeid = mesh.info._id || mesh.info.nodeid;
+        }
+        mesh.SendCommand(cmd);
         dbg('Reported ' + events.length + ' event(s) to server');
     } catch (e) {
         dbg('reportEvents error: ' + (e.message || e));
     }
 }
 
-/** Send a full session snapshot for graph/timeline reconstruction. */
 function sendSnapshot(sessions) {
     if (!mesh) return;
     try {
-        mesh.SendCommand({
+        var cmd = {
             action: 'plugin',
             plugin: 'usertracer',
             pluginaction: 'sessionSnapshot',
             sessions: JSON.stringify(sessions),
             timestamp: new Date().toISOString()
-        });
+        };
+        if (mesh && mesh.info && (mesh.info._id || mesh.info.nodeid)) {
+            cmd.nodeid = mesh.info._id || mesh.info.nodeid;
+        }
+        mesh.SendCommand(cmd);
     } catch (e) {
         dbg('sendSnapshot error: ' + (e.message || e));
     }

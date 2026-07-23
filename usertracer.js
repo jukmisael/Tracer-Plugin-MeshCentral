@@ -108,16 +108,20 @@ module.exports.usertracer = function (parent) {
         var sessionid = null;
         try { sessionid = myparent.ws.sessionId; } catch (e) { /* from agent, no ws session */ }
 
+        // Derive nodeid: command may include it (frontend) or we get it from
+        // the agent connection context (myparent.nodeid for agent messages).
+        var nodeid = command.nodeid || (myparent ? myparent.nodeid : null) || (myparent && myparent.user ? null : null);
+
         switch (command.pluginaction) {
 
             // --- Agent → Server: session events (login/logout/disconnect/reconnect) ---
             case 'sessionEvents':
-                obj.handleSessionEvents(command, sessionid);
+                obj.handleSessionEvents(command, nodeid);
                 break;
 
             // --- Agent → Server: full session snapshot ---
             case 'sessionSnapshot':
-                obj.handleSessionSnapshot(command);
+                obj.handleSessionSnapshot(command, nodeid);
                 break;
 
             // --- Frontend → Server: query events for a node ---
@@ -156,14 +160,9 @@ module.exports.usertracer = function (parent) {
         }
     };
 
-    // -----------------------------------------------------------------------
-    // Agent data handlers
-    // -----------------------------------------------------------------------
-
-    obj.handleSessionEvents = function (command, sessionid) {
-        var nodeid = command.nodeid;
+    obj.handleSessionEvents = function (command, nodeid) {
         if (!nodeid) {
-            obj.debug('plugin:usertracer', 'sessionEvents missing nodeid');
+            obj.debug('plugin:usertracer', 'sessionEvents missing nodeid — agent message without connection context?');
             return;
         }
 
@@ -186,8 +185,7 @@ module.exports.usertracer = function (parent) {
         obj.debug('plugin:usertracer', 'Stored ' + events.length + ' event(s) for node ' + nodeName);
     };
 
-    obj.handleSessionSnapshot = function (command) {
-        var nodeid = command.nodeid;
+    obj.handleSessionSnapshot = function (command, nodeid) {
         if (!nodeid) return;
 
         var sessions = [];
@@ -199,6 +197,10 @@ module.exports.usertracer = function (parent) {
             sessions: sessions,
             timestamp: command.timestamp || new Date().toISOString()
         });
+    };
+        }
+
+        obj.debug('plugin:usertracer', 'Stored ' + events.length + ' event(s) for node ' + nodeName);
     };
 
     // -----------------------------------------------------------------------
