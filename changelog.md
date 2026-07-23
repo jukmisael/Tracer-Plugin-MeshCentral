@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.0.7 (2026-07-23)
+
+### Debug
+- Added `console.log('PLUGIN: ...')` at module load, constructor, `server_startup`, DB init, and permission registration
+- Wrapped `initDB()` and `registerPermissions()` in try-catch with error logging
+- Logs appear in **MeshCentral server terminal** (not browser DevTools) — needed because the plugin JS `require()` failure is server-side
+
+### Notes
+- Delete and reinstall; logs will show exactly where plugin loading stops
+
 ## 1.0.6 (2026-07-23)
 
 ### Fixes
