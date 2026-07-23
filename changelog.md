@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.0.2 (2026-07-23)
+
+### Fixes
+- Bypass Express `renderWrapper` with direct `fs.readFileSync` + `ejs.render` + `res.send` — resolves "Failed to lookup view" error on all MeshCentral versions
+
+### Notes
+- Upgrade by reinstalling from the same `configUrl`
+
 ## 1.0.1 (2026-07-23)
 
 ### Fixes
