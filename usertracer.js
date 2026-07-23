@@ -34,7 +34,7 @@ module.exports.usertracer = function (parent) {
             'view_admin': {
                 title: 'View Admin Panel',
                 desc: 'Can access the global admin panel',
-                default: 'denied'
+                default: 'allowed'
             }
         });
     };
