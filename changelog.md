@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.0.8 (2026-07-23)
+
+### Debug
+- Added file-based logging to `C:\usertracer-debug.log` (writes at every step: `require()`, constructor, `server_startup`, `handleAdminReq`, errors)
+- All `console.log('PLUGIN:')` replaced with `dbgLog()` that writes to file AND console
+- Added user/siteadmin detail logging in `handleAdminReq` to diagnose 401
+- Fixed duplicate `var obj = {}` in constructor
+
+### Notes
+- Delete and reinstall; check `C:\usertracer-debug.log` after reinstalling
+
 ## 1.0.7 (2026-07-23)
 
 ### Debug
