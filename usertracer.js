@@ -474,19 +474,39 @@ module.exports.usertracer = function (parent) {
     // -----------------------------------------------------------------------
 
     obj.handleAdminReq = function (req, res, user) {
+        // Direct EJS rendering — bypasses MeshCentral's renderWrapper
+        // which interferes with Express view resolution for plugins.
+        var fs = require('fs');
+        var ejs = require('ejs');
+        var viewPath = __dirname.replace(/\\/g, '/') + '/views/';
+
         // Device tab view (user=1 + nodeid)
         if (req.query.user == 1) {
-            var vars = {
-                nodeid: req.query.nodeid || '',
-                nodeName: req.query.nodeid ? obj.getNodeName(req.query.nodeid) : 'Unknown'
-            };
-            res.render('device', vars);
+            try {
+                var tpl = fs.readFileSync(viewPath + 'device.ejs', 'utf8');
+                var vars = {
+                    nodeid: req.query.nodeid || '',
+                    nodeName: req.query.nodeid ? obj.getNodeName(req.query.nodeid) : 'Unknown'
+                };
+                var html = ejs.render(tpl, vars);
+                res.send(html);
+            } catch (e) {
+                obj.debug('plugin:usertracer', 'Device view error: ' + e.message);
+                res.status(500).send('Error rendering device view: ' + e.message);
+            }
             return;
         }
 
         // Admin panel — requires site admin
         if ((user.siteadmin & 0xFFFFFFFF) == 0) { res.sendStatus(401); return; }
-        res.render('admin', {});
+        try {
+            var tpl = fs.readFileSync(viewPath + 'admin.ejs', 'utf8');
+            var html = ejs.render(tpl, {});
+            res.send(html);
+        } catch (e) {
+            obj.debug('plugin:usertracer', 'Admin view error: ' + e.message);
+            res.status(500).send('Error rendering admin view: ' + e.message);
+        }
     };
 
     // -----------------------------------------------------------------------
