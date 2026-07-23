@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.0.5 (2026-07-23)
+
+### Fixes
+- Agent `SendCommand` now includes `nodeid` (from `mesh.info._id`) so server can identify the source device
+- `serveraction` derives `nodeid` from agent WebSocket connection (`myparent.nodeid`) as fallback
+- Events no longer discarded — "sessionEvents missing nodeid" fixed
+
+### Notes
+- Server restart required; agents must reconnect to receive updated `modules_meshcore`
+
 ## 1.0.4 (2026-07-23)
 
 ### Fixes
