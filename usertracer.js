@@ -15,7 +15,6 @@ module.exports.usertracer = function (parent) {
     obj.meshServer = parent.parent;
     obj.debug = obj.meshServer.debug;
     obj.db = null;
-    obj.VIEWS = __dirname + '/views/';
 
     // Exports to frontend (web UI functions)
     obj.exports = [
@@ -481,13 +480,13 @@ module.exports.usertracer = function (parent) {
                 nodeid: req.query.nodeid || '',
                 nodeName: req.query.nodeid ? obj.getNodeName(req.query.nodeid) : 'Unknown'
             };
-            res.render(obj.VIEWS + 'device', vars);
+            res.render('device', vars);
             return;
         }
 
         // Admin panel — requires site admin
         if ((user.siteadmin & 0xFFFFFFFF) == 0) { res.sendStatus(401); return; }
-        res.render(obj.VIEWS + 'admin', {});
+        res.render('admin', {});
     };
 
     // -----------------------------------------------------------------------
