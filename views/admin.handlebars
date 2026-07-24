@@ -173,13 +173,14 @@ function renderXrefUser(events){
     var last=evs[0], first=evs[evs.length-1];
     h+='<div class="scard">'
       +'<div style="flex:1"><div class="tag">'+esc(name)+'</div>'
-      +'<div class="tagl">'+evs.length+' eventos · '+fmtDate(first.detectedAt)+' → '+fmtDate(last.detectedAt)+'</div></div>'
+      +'<div class="tagl">'+evs.length+' eventos · '+fmtDate(first.detectedAt)+' → '+(last.eventType==='userLogin'?'<b>Agora</b>':fmtDate(last.detectedAt))+'</div></div>'
       +'<span class="badge" style="color:'+(last.eventType==='userLogin'?'#2e7d32':'#888')+'">'+(last.eventType==='userLogin'?'Online':'Offline')+'</span>'
       +'</div>';
   });
   h+='</div>';
   document.getElementById('xrefUserResult').innerHTML=h;
 }
+
 function renderXrefDev(events){
   events=events||[];
   document.getElementById('sEvents').textContent=events.length;
@@ -199,7 +200,7 @@ function renderXrefDev(events){
     var un=splitUser(g.user);
     h+='<div class="scard">'
       +'<div style="flex:1"><div class="tag">'+esc(un.user||g.user)+'</div>'
-      +'<div class="tagl">'+(g.domain?esc(g.domain)+' · ':'')+evs.length+' eventos · '+fmtDate(first.detectedAt)+' → '+fmtDate(last.detectedAt)+'</div></div>'
+      +'<div class="tagl">'+(g.domain?esc(g.domain)+' · ':'')+evs.length+' eventos · '+fmtDate(first.detectedAt)+' → '+(last.eventType==='userLogin'?'<b>Agora</b>':fmtDate(last.detectedAt))+'</div></div>'
       +'<span class="badge" style="color:'+(last.eventType==='userLogin'?'#2e7d32':'#888')+'">'+(last.eventType==='userLogin'?'Online':'Offline')+'</span>'
       +'</div>';
   });
