@@ -25,12 +25,13 @@ function load(){
     document.getElementById('tbody').innerHTML='<tr><td colspan="3" class="loading">Carregando...</td></tr>';
     if(ms) ms.send({action:'plugin',plugin:'usertracer',pluginaction:'getCurrentUsers'});
 }
-(function(){
+(function register(){
     var t=null;
     try{t=(typeof pluginHandler!=='undefined'&&pluginHandler.usertracer)||(parent&&parent.pluginHandler&&parent.pluginHandler.usertracer);}catch(e){}
-    if(!t){setTimeout(arguments.callee,500);return;}
+    if(!t){setTimeout(register,500);return;}
     t.currentUsers=function(msg){
-        var d=msg&&msg.data?msg.data:[];
+        // msg can be the full {action,plugin,method,data:[...]} or just the data array
+        var d = (msg && msg.data) ? msg.data : (Array.isArray(msg) ? msg : []);
         var h='';
         for(var i=0;i<d.length;i++){
             var users=d[i].users||[];

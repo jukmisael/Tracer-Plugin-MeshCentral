@@ -19,14 +19,16 @@ h2{font-size:16px;margin-bottom:4px}
 var nodeid='{{nodeid}}';
 var ms=(typeof parent!=='undefined'&&parent.meshserver)||window.meshserver;
 function load(){
+    document.getElementById('info').innerHTML='<div class="loading">Carregando...</div>';
     if(ms) ms.send({action:'plugin',plugin:'usertracer',pluginaction:'getCurrentUsers'});
 }
-(function(){
+(function register(){
     var t=null;
     try{t=(typeof pluginHandler!=='undefined'&&pluginHandler.usertracer)||(parent&&parent.pluginHandler&&parent.pluginHandler.usertracer);}catch(e){}
-    if(!t){setTimeout(arguments.callee,500);return;}
+    if(!t){setTimeout(register,500);return;}
     t.currentUsers=function(msg){
-        var d=msg&&msg.data?msg.data:[],found=null;
+        var d=(msg&&msg.data)?msg.data:(Array.isArray(msg)?msg:[]);
+        var found=null;
         for(var i=0;i<d.length;i++){if(d[i].nodeid===nodeid){found=d[i];break;}}
         var el=document.getElementById('info');
         if(!found||!found.users||!found.users.length){el.innerHTML='<div class="loading">Nenhum usuário ativo.</div>';return;}

@@ -41,20 +41,13 @@ module.exports.usertracer = function (parent) {
                     try {
                         if (!err && docs && docs.length > 0) {
                             var d = docs[0];
-                            console.log('UT: nid=' + nid.substring(0, 40) + ' users=' + JSON.stringify(d.users) + ' lusers=' + JSON.stringify(d.lusers));
                             if (Array.isArray(d.users) && d.users.length > 0) {
                                 result.push({ nodeid: nid, nodeName: d.name || nid, users: d.users });
-                            } else if (Array.isArray(d.lusers) && d.lusers.length > 0) {
-                                result.push({ nodeid: nid, nodeName: d.name || nid, users: d.lusers });
                             }
-                        } else {
-                            console.log('UT: nid=' + (nid ? nid.substring(0, 40) : 'null') + ' err=' + (err ? err.message : 'null') + ' docs=' + (docs ? docs.length : 'null'));
                         }
-                    } catch (e) { console.log('UT: callback error: ' + e.message); }
+                    } catch (e) {}
                     pending--;
-                    console.log('UT: pending=' + pending);
                     if (pending <= 0) {
-                        console.log('UT: sending result with ' + result.length + ' items');
                         obj.send(sid, { action: 'plugin', plugin: 'usertracer', method: 'currentUsers', data: result });
                     }
                 });
