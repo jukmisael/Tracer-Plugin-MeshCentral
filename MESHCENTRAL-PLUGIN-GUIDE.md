@@ -1,7 +1,8 @@
 # MeshCentral Plugin Development Guide
 
-> **Documento técnico completo** — baseado na análise de 12 plugins da comunidade
-> e no desenvolvimento do plugin User-Device Tracer v3.x para MeshCentral v1.2.4.
+> **Documento técnico completo** — baseado na análise de 12 plugins da comunidade,
+> código-fonte do `pluginHandler.js`, e debug ao vivo do plugin User-Device Tracer v3.2
+> rodando em MeshCentral v1.2.4 com 10 agentes Windows conectados.
 
 ---
 
@@ -11,7 +12,7 @@
 2. [Estrutura do Plugin](#2-estrutura-do-plugin)
 3. [config.json](#3-configjson)
 4. [Server-Side: hooks e funções](#4-server-side-hooks-e-funções)
-5. [Banco de Dados: db.Get / db.Set](#5-banco-de-dados)
+5. [Banco de Dados](#5-banco-de-dados)
 6. [WebSocket: comunicação frontend ↔ server](#6-websocket-comunicação-frontend--server)
 7. [Frontend: templates e handlers](#7-frontend-templates-e-handlers)
 8. [Agent-Side: modules_meshcore](#8-agent-side-modules_meshcore)
@@ -24,48 +25,43 @@
 
 ## 1. Arquitetura e Cadeia de Objetos
 
-### Hierarquia de Objetos
+### Hierarquia
 
 ```
 plugin (this)                   = module.exports.nome(parent)
   .parent                       = pluginHandler (pluginHandler.js)
-  .parent.parent                = meshServer (meshserver.js / meshcentral.js)
+  .parent.parent                = meshServer (meshcentral.js / meshserver.js)
   .parent.parent.webserver      = webserver.js (Express + WebSocket)
+    .wsagents                   = { nodeId → WebSocket } — agentes (10 keys no debug)
+    .wssessions2               = { sessionId → WebSocket } — frontends (1 key no debug)
   .parent.parent.db             = banco de dados (NeDB / MongoDB)
-  .parent.parent.pluginHandler  = pluginHandler (referência circular)
+    .Get(key, fn)               = busca documento por ID (~26ms no debug)
+  .parent.parent.pluginHandler = pluginHandler (referência circular)
   .parent.parent.args           = argumentos de linha de comando
   .parent.parent.config         = configuração do MeshCentral
 ```
 
-### ⚠️ O que NÃO existe (erro comum)
+### ⚠️ O que NÃO existe
 
 | Código | Resultado |
 |--------|-----------|
-| `meshServer.parent` | **undefined** — não existe no contexto do plugin |
-| `meshServer.parent.agents` | **TypeError** — `meshServer.parent` é undefined |
-| `meshServer.parent.parent` | **TypeError** — `meshServer.parent` é undefined |
-| `parent.parent.parent` | **undefined** — não existe |
+| `meshServer.parent` | **undefined** |
+| `meshServer.parent.agents` | **TypeError** |
+| `meshServer.parent.parent` | **TypeError** |
+| `parent.parent.parent` | **undefined** |
 
-### Propriedades do meshServer
+### Propriedades do meshServer (confirmadas via debug)
 
-Acessíveis via `obj.meshServer.*`:
-
-| Propriedade | Tipo | Descrição |
-|-------------|------|-----------|
-| `webserver` | object | Servidor HTTP/WebSocket (Express) |
-| `webserver.wsagents` | object | `{ nodeId → WebSocket }` — agentes conectados |
-| `webserver.wssessions2` | object | `{ sessionId → WebSocket }` — sessões frontend |
-| `db` | object | Banco de dados (NeDB/MongoDB) |
-| `db.Get(key, callback)` | function | Busca documento por ID |
-| `db.Set(doc)` | function | Salva documento |
-| `parent` | object | Aplicação principal |
-| `parentpath` | string | Path do node_modules (ex: `require('path').join(meshserver.parentpath, 'node_modules')`) |
-| `args` | object | Argumentos do servidor |
-| `config` | object | Configuração do MeshCentral |
-| `debug(module, msg)` | function | Log de debug |
-| `DispatchEvent(targets, src, msg)` | function | Broadcast para frontends |
-| `encodeCookie(data, key)` | function | Codificar cookie |
-| `decodeCookie(data, key, expire)` | function | Decodificar cookie |
+```javascript
+obj.meshServer.webserver.wsagents      // 10 keys (agentes conectados)
+obj.meshServer.webserver.wssessions2   // 1 key (sessão admin logada)
+obj.meshServer.db.Get                  // function — callback ~26ms
+obj.meshServer.getConfigFilePath       // function — path do arquivo DB
+obj.meshServer.pluginHandler           // referência ao pluginHandler
+obj.meshServer.args                    // argumentos do servidor
+obj.meshServer.config                  // config do MeshCentral
+obj.meshServer.parentpath              // path do node_modules
+```
 
 ---
 
@@ -75,37 +71,38 @@ Acessíveis via `obj.meshServer.*`:
 plugin_name/
 ├── config.json                        # Metadados (OBRIGATÓRIO)
 ├── plugin_name.js                     # Server-side (OBRIGATÓRIO)
-├── modules_meshcore/                  # Opcional — código que roda no agente
+├── db.js                              # Módulo de banco (opcional, recomendado)
+├── modules_meshcore/                  # Opcional — código do agente
 │   └── plugin_name.js                 #   → incluído no meshcore
-├── views/                             # Opcional — templates Handlebars
+├── views/                             # Opcional — templates
 │   ├── admin.handlebars               #   Painel admin (hasAdminPanel: true)
 │   └── device.handlebars              #   Aba do dispositivo
-├── db.js                              # Opcional — módulo de banco de dados
-├── admin.js                           # Opcional — lógica do admin separada
-└── changelog.md                       # Recomendado
+└── changelog.md
 ```
 
-### Arquivo JS principal
-
-Deve ter o **mesmo nome** do `shortName` no config.json.
+### Plugin JS principal
 
 ```javascript
-// plugin_name.js
 "use strict";
 module.exports.shortName = function (parent) {
     var obj = {};
     obj.parent = parent;                              // pluginHandler
     obj.meshServer = parent.parent;                   // meshServer
-    obj.debug = obj.meshServer.debug;                 // função de debug
-    obj.db = obj.meshServer.db;                       // banco de dados
+    obj.debug = obj.meshServer.debug;
+    obj.db = obj.meshServer.db;                       // MeshCentral DB
+    obj.exports = ['onDeviceRefreshEnd'];
 
-    obj.exports = ['onDeviceRefreshEnd'];              // funções exportadas ao frontend
+    obj.server_startup = function () {
+        // Init DB próprio do plugin
+        obj.meshServer.pluginHandler.shortname_db = require(__dirname + '/db.js').CreateDB(obj.meshServer);
+        obj.db = obj.meshServer.pluginHandler.shortname_db;
+    };
 
-    // --- Hooks e handlers ---
-
-    obj.server_startup = function () { /* init */ };
-    obj.serveraction = function (command, myparent, gp) { /* msgs */ };
+    obj.hook_agentCoreIsStable = function (myparent, gp) { /* agente conectou */ };
+    obj.hook_processAgentData = function (data, nodeid) { /* dados do agente */ };
+    obj.serveraction = function (command, myparent, gp) { /* msgs WS */ };
     obj.handleAdminReq = function (req, res, user) { /* HTTP */ };
+    obj.onDeviceRefreshEnd = function () { /* frontend - aba */ };
 
     return obj;
 };
@@ -115,28 +112,26 @@ module.exports.shortName = function (parent) {
 
 ## 3. config.json
 
-### Campos Obrigatórios
+### Campos e validação
 
-| Campo | Tipo | Exemplo |
-|-------|------|---------|
-| `name` | string | `"User-Device Tracer"` |
-| `shortName` | string | `"usertracer"` (nome do arquivo .js) |
-| `version` | string | `"3.0.0"` (semver) |
-| `description` | string | Descrição do plugin |
-| `hasAdminPanel` | boolean | `true` se tem painel admin |
-| `homepage` | string | URL do repositório |
-| `changelogUrl` | string | URL raw do changelog |
-| `configUrl` | string | URL raw deste config.json |
-| `downloadUrl` | string | URL do ZIP (`archive/master.zip`) |
-| `repository` | object | `{ type: "git", url: "..." }` |
-| `meshCentralCompat` | string | `">=1.0.0"` |
+| Campo | Tipo | Obrigatório |
+|-------|------|-------------|
+| `name` | string | sim |
+| `shortName` | string | sim (nome do .js) |
+| `version` | string | sim (semver) |
+| `author` | string | não |
+| `description` | string | sim |
+| `hasAdminPanel` | boolean | sim |
+| `homepage` | string | sim |
+| `changelogUrl` | string | sim |
+| `configUrl` | string | sim (raw config.json) |
+| `downloadUrl` | string | sim (git → ZIP) |
+| `repository.type` | string | sim ("git") |
+| `repository.url` | string | sim |
+| `versionHistoryUrl` | string | não |
+| `meshCentralCompat` | string | sim (">=1.0.0") |
 
-### Validação (pluginHandler.js:isValidConfig)
-
-O MeshCentral valida o JSON ao baixar o plugin. Se falhar, retorna:
-```
-"Error getting plugin config. Check that you have valid JSON."
-```
+Erro se inválido: `"Error getting plugin config. Check that you have valid JSON."`
 
 ---
 
@@ -146,58 +141,73 @@ O MeshCentral valida o JSON ao baixar o plugin. Se falhar, retorna:
 
 ```javascript
 obj.server_startup = function () {
-    // Chamado quando o servidor inicia OU plugin é recarregado
-    // Uso: inicializar DB, timers, registrar callbacks periódicos
-    obj.intervalTimer = setInterval(obj.tick, 60000);
+    // Chamado quando servidor inicia OU plugin recarregado
+    // Uso: init DB, timers, scanners periódicos
+    obj.meshServer.pluginHandler.shortname_db = require(__dirname + '/db.js').CreateDB(obj.meshServer);
+    obj.db = obj.meshServer.pluginHandler.shortname_db;
+    obj.startScanner();
 };
 ```
 
 ### hook_agentCoreIsStable(myparent, gp)
 
+Disparado quando um agente estabelece conexão estável.
+
 ```javascript
 obj.hook_agentCoreIsStable = function (myparent, gp) {
-    // myparent = wsagents[nodeid] (conexão WebSocket do agente)
+    // myparent.nodeid          = ID do nó
+    // myparent.agentInfo       = { computerName, agentVersion, platformType, ... }
+    // myparent.name            = nome do dispositivo
+    // myparent.dbNodeKey       = "node/domain/nodeid"
+    // myparent.dbMeshKey       = "mesh/domain/meshid"
+    // myparent.domain          = domínio
+    // myparent.remoteaddr      = IP
+    // myparent.connectTime     = timestamp
+    // myparent.authenticated   = 1
     // gp = meshServer
-    // Chamado quando um agente estabelece conexão estável
-    
-    var nodeid = myparent ? myparent.nodeid : null;
-    // NÃO existe myparent.parent, myparent.parent.parent
 };
 ```
 
 ### hook_processAgentData(data, nodeid)
 
+Disparado quando o agente envia dados ao servidor.
+
 ```javascript
 obj.hook_processAgentData = function (data, nodeid) {
-    // data: mensagem completa enviada pelo agente
-    // nodeid: ID do nó (string)
-    // Chamado a cada dado que o agente envia ao servidor
+    // data.action    = "plugin" | "event" | etc
+    // data.plugin    = "usertracer" (se for do plugin)
+    // nodeid         = "node//domain/id"
 };
 ```
 
 ### serveraction(command, myparent, grandparent)
 
-**Ponto de entrada único para mensagens via WebSocket**, tanto do frontend quanto do agente.
+**Ponto de entrada único para mensagens via WebSocket.** Recebe comandos do frontend E respostas do agente.
 
 ```javascript
 obj.serveraction = function (command, myparent, gp) {
     if (command.plugin !== 'shortName') return;
 
-    // Extrair sessionId (apenas para msgs do frontend)
     var sessionid = null;
-    try { sessionid = myparent.ws.sessionId; } catch (e) {
-        // se falhar, a msg veio do agente (não tem sessão web)
-    }
+    try { sessionid = myparent.ws.sessionId; } catch (e) {}
 
-    // Extrair nodeid (apenas para msgs do agente)
     var nodeid = command.nodeid || (myparent ? myparent.nodeid : null);
+    // command.userid    ← ADICIONADO AUTOMATICAMENTE pelo MeshCentral!
+    //                     "user//domain/userid" (confirmado via debug)
 
     switch (command.pluginaction) {
-        case 'acaoFrontend':
-            obj.handleFrontend(command, sessionid);
-            break;
-        case 'acaoAgente':
-            obj.handleAgent(command, nodeid);
+        case 'getData':
+            var pending = ids.length;
+            ids.forEach(function (nid) {
+                obj.mdb.Get(nid, function (err, docs) {
+                    // docs[0] = documento do nó
+                    // callback ~26ms (medido via debug)
+                    pending--;
+                    if (pending <= 0) {
+                        obj.send(sessionid, { action:'plugin', plugin:'shortName', method:'callback', data: result });
+                    }
+                });
+            });
             break;
     }
 };
@@ -208,53 +218,34 @@ obj.serveraction = function (command, myparent, gp) {
 {
   "action": "plugin",
   "plugin": "shortName",
-  "pluginaction": "getCurrentUsers"
+  "pluginaction": "getCurrentUsers",
+  "userid": "user//01050000000000051500000076fdfd57..."  // ← INSERIDO PELO MeshCentral
 }
 ```
 
-#### Input (command) via agente:
-```json
-{
-  "action": "plugin",
-  "plugin": "shortName",
-  "pluginaction": "sessionEvents",
-  "nodeid": "node//xxx",
-  "events": "[...]"
-}
-```
-
-#### Output (resposta ao frontend):
+#### myparent (conexão do frontend):
 ```javascript
-// Enviar resposta para uma sessão específica
-obj.meshServer.webserver.wssessions2[sessionid].send(JSON.stringify({
-    action: 'plugin',
-    plugin: 'shortName',
-    method: 'callbackName',       // ← nome da função no frontend
-    data: result                  // ← qualquer dado serializável
-}));
+myparent.keys = SendServerStats,close,deviceLimit,deviceSkip,domain,send,serverStatsTimer,user,visibleDevices,ws
+// myparent.ws.sessionId = "user//domain/userid/randomhash"
+// myparent.send()       = alternativa para enviar dados (não recomendado)
 ```
 
 ### handleAdminReq(req, res, user)
 
 ```javascript
 obj.handleAdminReq = function (req, res, user) {
-    // req: Express Request
-    //   req.query.pin     = "shortName"
-    //   req.query.user    = "1" (se for aba do dispositivo)
-    //   req.query.nodeid  = ID do nó (se for aba do dispositivo)
-    // res: Express Response
-    // user: objeto do usuário logado
-    //   user._id         = "user//domain/id"
-    //   user.name        = "nome.usuario"
-    //   user.siteadmin   = 4294967295 (admin) | 0 (comum) | undefined
+    // req.query.pin     = "shortName"
+    // req.query.user    = "1" (aba do dispositivo)
+    // req.query.nodeid  = ID do nó
+    // user.name         = "misael.filho.admin"
+    // user._id          = "user//domain/userid"
+    // user.siteadmin    = 4294967295 (0xFFFFFFFF = admin)
+    // req.session       = objeto de sessão (present se logado)
+    // req.url           = "/pluginadmin.ashx?pin=usertracer"
 
-    // Aba do dispositivo (iframe):
     if (req.query.user == 1) {
-        res.render('device', { nodeid: req.query.nodeid, nodeName: '...' });
-        return;
+        return res.render('device', { nodeid, nodeName });
     }
-
-    // Painel admin:
     if (!user || (user.siteadmin & 0xFFFFFFFF) == 0) { res.sendStatus(401); return; }
     res.render('admin', {});
 };
@@ -265,20 +256,14 @@ obj.handleAdminReq = function (req, res, user) {
 Executado no **frontend** (navegador). Exportado via `exports[]`.
 
 ```javascript
-// No server-side:
 obj.exports = ['onDeviceRefreshEnd'];
 
-// Esta função é SERIALIZADA e enviada ao frontend.
-// No frontend ela roda como:
-//   pluginHandler.shortName.onDeviceRefreshEnd(nodeid, panel, refresh, event)
 obj.onDeviceRefreshEnd = function (nodeid, panel, refresh, event) {
-    if (typeof currentNode === 'undefined' || !currentNode) return;
-    pluginHandler.registerPluginTab({
-        tabTitle: 'Minha Aba',
-        tabId: 'pluginMinhaAba'
-    });
-    QA('pluginMinhaAba', '<iframe src="/pluginadmin.ashx?pin=shortName&nodeid=' +
-        encodeURIComponent(currentNode._id) + '&user=1" />');
+    // currentNode._id     = "node//xxx"
+    // currentNode.name    = "BR-24002"
+    // currentNode.osdesc  = "Windows 10 Pro"
+    pluginHandler.registerPluginTab({ tabTitle: 'Tab Name', tabId: 'pluginTabId' });
+    QA('pluginTabId', '<iframe src="/pluginadmin.ashx?pin=shortName&nodeid=...&user=1" />');
 };
 ```
 
@@ -286,221 +271,210 @@ obj.onDeviceRefreshEnd = function (nodeid, panel, refresh, event) {
 
 ## 5. Banco de Dados
 
-### db.Get(key, callback)
+### Estrutura do Documento de Nó (meshServer.db.Get)
+
+**Tempo de resposta:** ~26ms por consulta (medido via debug com 10 agentes).
 
 ```javascript
-// Entrada:
-//   key: string — ID do documento (ex: "node//domain/id")
-//   callback: function(err, docs) — docs é array
-
-// Exemplo:
-obj.meshServer.db.Get('node//' + domainId + '/' + nodeId, function(err, docs) {
-    if (err || !docs || docs.length === 0) return;
-    var doc = docs[0];
-    // doc = { _id, name, users, lusers, upnusers, domain, meshid, ... }
+obj.meshServer.db.Get(nodeid, function(err, docs) {
+    if (!docs || !docs.length) return;
+    var d = docs[0];
+    // d._id             = "node//BKSSERVICES/7pnmr09mJ88uYaX5G5..."
+    // d.name            = "BR-25005"
+    // d.domain          = "" (vazio = default)
+    // d.meshid          = "mesh//gYpSssggj4WflygNHtv7KDH..."
+    // d.mtype           = 2 (2 = Windows)
+    // d.host            = "BR-25005"
+    // d.icon            = 1 (tipo de ícone)
+    // d.osdesc          = "Windows 10 Pro"
+    // d.ip              = "26.74.237.68"
+    // d.users           = ["BKSSERVICES\\misael.filho"]    ← USUÁRIOS ATIVOS
+    // d.lusers          = ["BKSSERVICES\\misael.filho"]    ← com status de bloqueio
+    // d.upnusers        = ["misael.filho@BKSSERVICES.com"] ← formato UPN
+    // d.firstconnect    = 1721149200 (timestamp)
+    // d.lastbootuptime  = 1721149200
+    // d.idletime        = 300 (segundos)
+    // d.wsc             = 1 (Windows Security Center)
+    // d.av              = "Windows Defender"
+    // d.defender        = true
+    // d.agent           = "1.2.4" (versão do agente)
+    // d.rname           = nome real (opcional)
+    // d.type            = "node"
 });
 ```
 
-### Estrutura do Documento de Nó (node)
+### Event Store (plugin DB próprio — db.js)
+
+**NeDB com fallback chain:** `@seald-io/nedb` → `@yetzt/nedb` → `nedb`
 
 ```javascript
+var Datastore = require('@seald-io/nedb'); // tentar primeiro
+if (!Datastore) Datastore = require('@yetzt/nedb');
+if (!Datastore) Datastore = require('nedb');
+
+// Collection de eventos
+obj.events = new Datastore({
+    filename: meshserver.getConfigFilePath('plugin-name-events.db'),  // ← path automático
+    autoload: true
+});
+obj.events.setAutocompactionInterval(60000);
+obj.events.ensureIndex({ fieldName: 'nodeid' });
+obj.events.ensureIndex({ fieldName: 'username' });
+obj.events.ensureIndex({ fieldName: 'detectedAt' });
+```
+
+**Estrutura do documento de evento (confirmada via debug):**
+```json
 {
-    _id: "node//BKSSERVICES/7pnmr09mJ88uYaX5G5...",  // ID completo no DB
-    name: "BR-25005",                                  // Nome do dispositivo
-    domain: "",                                        // Domínio (vazio = default)
-    meshid: "mesh//gYpSssggj4WflygNHtv7KDH...",       // ID do grupo
-    mtype: 2,                                          // Tipo (2 = windows)
-    host: "BR-25005",                                  // Hostname
-    icon: 1,                                           // Ícone
-    osdesc: "Windows 10 Pro",                           // Descrição do SO
-    ip: "26.74.237.68",                                // Último IP
-    users: ["BKSSERVICES\\misael.filho"],              // ← USUÁRIOS ATIVOS
-    lusers: [],                                        // Usuários com status (bloqueado)
-    upnusers: ["misael.filho@BKSSERVICES.com"],        // Formato UPN
-    firstconnect: 1721149200,                          // Timestamp
-    lastbootuptime: 1721149200,                        // Último boot
-    idletime: 300,                                     // Tempo ocioso (segundos)
-    wsc: 1,                                            // Windows Security Center
-    av: "Windows Defender",                            // Antivírus
-    defender: true,                                    // Defender ativo
-    agent: "1.2.4",                                    // Versão do agente
-    type: "node"
+  "_id": "BQbtWXnMpeytUWvW",           // ← auto (NeDB)
+  "nodeid": "node//5dRbggK@IjI6N7c...", // ← ID do nó
+  "nodeName": "BR-26001",               // ← nome do dispositivo
+  "username": "fabiana.almeida",        // ← usuário (sem domínio)
+  "domain": "BKSSERVICES",             // ← domínio extraído
+  "displayUser": "BKSSERVICES\\fabiana.almeida",  // ← raw do agente
+  "eventType": "userLogin",             // ← "userLogin" | "userLogout"
+  "detectedAt": "2026-07-24T16:52:12.629Z",  // ← ISO 8601
+  "time": "2026-07-24T16:52:12.629Z"   // ← inserido por addEvent()
 }
 ```
 
-### db.Set(doc)
+### Métodos do DB
 
 ```javascript
-// Salvar/atualizar documento
-obj.meshServer.db.Set({
-    _id: 'node//domain/id',
-    name: 'NovoNome',
-    users: ['DOMAIN\\user']
-    // ...outros campos
-});
-```
-
-### NeDB vs MongoDB
-
-Plugins devem suportar ambos. O padrão é verificar `meshServer.args.mongodb`:
-
-```javascript
-if (meshServer.args.mongodb) {
-    // Usa MongoDB
-    var mongodb = require('mongodb');
-    // ...
-} else {
-    // Usa NeDB (padrão)
-    var Datastore = require('nedb'); // ou @seald-io/nedb, @yetzt/nedb
-    var db = new Datastore({ filename: 'plugin.db', autoload: true });
-}
+obj.addEvent(evt)                    // Insert
+obj.getEvents(query, limit, cb)      // Find com sort por detectedAt desc
+obj.getEventsByNode(nodeid, lim, cb) // Filtro por nodeid
+obj.getEventsByUser(username, lim, cb) // Filtro por username
 ```
 
 ---
 
 ## 6. WebSocket: comunicação frontend ↔ server
 
-### Fluxo Completo
+### Fluxo Real (confirmado via debug)
 
 ```
-┌─ Frontend (iframe/página) ──────────────────────┐
-│                                                   │
-│  const ms = parent.meshserver || window.meshserver │
-│  ms.send({                                       │
-│    action: 'plugin',                             │
-│    plugin: 'shortName',                          │
-│    pluginaction: 'getUsers'                      │
-│  })                                              │
-│         │                                        │
-│         ▼ (WebSocket)                            │
-│  ┌─────────────────────────────────┐            │
-│  │ MeshCentral server              │            │
-│  │  serveraction(command, myparent)│            │
-│  │    myparent.ws.sessionId → sid  │            │
-│  │    processa comando             │            │
-│  │    wssessions2[sid].send({      │            │
-│  │      action: 'plugin',          │            │
-│  │      plugin: 'shortName',       │            │
-│  │      method: 'callbackName',    │            │
-│  │      data: [...]                │            │
-│  │    })                          │            │
-│  └─────────────────────────────────┘            │
-│         │                                        │
-│         ▼ (WebSocket resposta)                   │
-│  RAW socket recebe:                              │
-│    {"action":"plugin","plugin":"shortName",      │
-│     "method":"callbackName","data":[...]}        │
-│                                                  │
-│  ⚠️ O MeshCentral framework processa esta        │
-│  mensagem antes do pluginHandler. O método       │
-│  CORRETO de capturar é hook no socket.onmessage: │
-│                                                  │
-│  ms.socket.onmessage = function(event) {         │
-│    var d = JSON.parse(event.data);               │
-│    if (d.action === 'plugin' &&                  │
-│        d.plugin === 'shortName') {               │
-│      // processar d.data                         │
-│    }                                              │
-│  }                                               │
-└───────────────────────────────────────────────────┘
-```
-
-### ⚠️ Problema Conhecido: pluginHandler NÃO funciona para respostas
-
-O MeshCentral chama handlers do `pluginHandler[plugin][method]()` com o **próprio objeto `meshserver`** durante a inicialização, não com a resposta do servidor. Portanto:
-
-```javascript
-// ❌ NÃO CONFIE NISSO:
-parent.pluginHandler.shortName.callbackName = function(msg) {
-    // msg pode ser o objeto meshserver, não a resposta!
-};
-
-// ✅ USE O SOCKET DIRETO:
-ms.socket.onmessage = function(event) {
-    var msg = JSON.parse(event.data);
-    if (msg.action === 'plugin' && msg.plugin === 'shortName') {
-        // msg.data é a resposta real
-    }
-};
+FRONTEND                               SERVER
+  │                                       │
+  │ ms.send({                             │
+  │   action: 'plugin',                   │
+  │   plugin: 'usertracer',               │
+  │   pluginaction: 'getCurrentUsers'     │
+  │ })                                    │
+  │──────────────────────────────────────>│
+  │                                       │
+  │                                       │ serveraction(command, myparent, gp)
+  │                                       │   command.userid = "user//..." (auto)
+  │                                       │   myparent.ws.sessionId → sid
+  │                                       │   command.pluginaction = "getCurrentUsers"
+  │                                       │
+  │                                       │ db.Get(nodeId) para CADA agente (10×)
+  │                                       │   cada callback ~26ms
+  │                                       │   extrai doc.users
+  │                                       │
+  │                                       │ wssessions2[sid].send({
+  │                                       │   action: 'plugin',
+  │                                       │   plugin: 'usertracer',
+  │                                       │   method: 'currentUsers',
+  │                                       │   data: [{nodeid,name,users}, ...]
+  │                                       │ })
+  │<──────────────────────────────────────│
+  │                                       │
+  │ ms.socket.onmessage(event)            │
+  │   JSON.parse(event.data)             │
+  │   action=plugin plugin=usertracer    │
+  │   method=currentUsers                │
+  │   data=array[10]                     │
+  │   → renderTable(data)                │
 ```
 
 ### Formato das Mensagens
 
-#### Frontend → Server (request):
+**Request (frontend → server):**
 ```json
 {
   "action": "plugin",
-  "plugin": "shortName",
-  "pluginaction": "commandName",
-  "nodeid": "node//xxx",
-  "limit": 200,
-  "outrosParametros": "..."
+  "plugin": "usertracer",
+  "pluginaction": "getCurrentUsers",
+  "userid": "user//domain/userid"  // ← INSERIDO AUTOMATICAMENTE PELO MeshCentral
 }
 ```
 
-#### Server → Frontend (response):
+**Response (server → frontend):**
 ```json
 {
   "action": "plugin",
-  "plugin": "shortName",
-  "method": "callbackName",
-  "data": [{ ... }, { ... }]
+  "plugin": "usertracer",
+  "method": "currentUsers",
+  "data": [
+    {
+      "nodeid": "node//$lw0atiOCWSyf1@G4IKf7bigKyaP65vqcJ8D$natdZ3OckkpWV0e7ZQH7rT$uYIf",
+      "nodeName": "BR-24002",
+      "users": ["BKSSERVICES\\Fabiana.Gomes"]
+    }
+  ]
+}
+```
+
+### ⚠️ Problema Conhecido: pluginHandler vs socket
+
+O MeshCentral chama handlers do `pluginHandler[plugin][method]()` com o **próprio objeto `meshserver`** durante a inicialização. Confirmado via debug:
+
+```
+RESPONSE: msg keys=State,connectstate,pingTimer,authCookie,...
+            ↑ São as KEYS do objeto meshserver!
+```
+
+**Solução comprovada:** hook no WebSocket REAL (`ms.socket.onmessage`).
+
+```javascript
+// ✅ FUNCIONAL — hook no socket real
+if (ms && ms.socket) {
+    var orig = ms.socket.onmessage;
+    ms.socket.onmessage = function(event) {
+        var d = JSON.parse(event.data);
+        if (d.action === 'plugin' && d.plugin === 'shortName' && d.method === 'callback') {
+            renderTable(d.data || []);
+            return;
+        }
+        if (typeof orig === 'function') orig.call(ms.socket, event);
+    };
 }
 ```
 
 ### sendToSession — Helper
 
 ```javascript
-obj.send = function (sessionid, data) {
+obj.send = function (sid, data) {
+    console.log('SEND: sid=' + sid.substring(0, 30) + ' method=' + data.method + ' data=' + (data.data ? 'array[' + data.data.length + ']' : typeof data.data));
     try {
-        if (obj.meshServer.webserver.wssessions2 &&
-            obj.meshServer.webserver.wssessions2[sessionid]) {
-            obj.meshServer.webserver.wssessions2[sessionid]
-                .send(JSON.stringify(data));
+        if (obj.meshServer.webserver.wssessions2 && obj.meshServer.webserver.wssessions2[sid]) {
+            obj.meshServer.webserver.wssessions2[sid].send(JSON.stringify(data));
+        } else {
+            console.log('SEND: session not found in wssessions2');
         }
     } catch (e) {}
 };
 ```
 
-### Broadcast para TODOS os frontends (DispatchEvent)
+### Broadcast (DispatchEvent)
 
 ```javascript
-obj.meshServer.DispatchEvent(
-    ['*', 'server-users'],   // targets
-    obj,                      // source
-    {                         // mensagem
-        nolog: true,
-        action: 'plugin',
-        plugin: 'shortName',
-        pluginaction: 'broadcastData',
-        data: { ... }
-    }
-);
-```
-
-### Comando para Agente
-
-```javascript
-// Server → Agent
-if (obj.meshServer.webserver.wsagents[nodeid]) {
-    obj.meshServer.webserver.wsagents[nodeid].send(JSON.stringify({
-        action: 'plugin',
-        plugin: 'shortName',
-        pluginaction: 'commandName',
-        data: { ... }
-    }));
-}
+obj.meshServer.DispatchEvent(['*', 'server-users'], obj, {
+    nolog: true, action: 'plugin', plugin: 'shortName',
+    pluginaction: 'broadcast', data: { ... }
+});
 ```
 
 ---
 
 ## 7. Frontend: templates e handlers
 
-### Template Engine: Handlebars
+### Handlebars
 
 MeshCentral usa **Handlebars** (`.handlebars`), **não EJS**.
 
-```
+```javascript
 res.render('admin', {})      →  views/admin.handlebars
 res.render('device', vars)   →  views/device.handlebars
 ```
@@ -508,70 +482,52 @@ res.render('device', vars)   →  views/device.handlebars
 ### Injeção de Variáveis
 
 ```handlebars
-// device.handlebars — servidor injeta:
-// res.render('device', { nodeid: '...', nodeName: '...' })
-
 <h2>{{nodeName}}</h2>
-<script>
-var nodeid = '{{nodeid}}';   // ← escapado por segurança
-</script>
+<script>var nodeid = '{{nodeid}}';</script>
 ```
 
-### meshserver: disponível via parent
+### meshserver no Frontend
 
 ```javascript
-// No iframe (admin panel, device tab):
-var ms = (typeof parent !== 'undefined' && parent.meshserver)
-       ? parent.meshserver
-       : (window.meshserver || null);
-
-// Propriedades do meshserver frontend:
-//   ms.State          — estado da conexão (2 = conectado)
-//   ms.connectstate   — estado (1 = conectado)
-//   ms.send(pkt)      — enviar comando ao servidor
-//   ms.socket         — WebSocket REAL (RAW)
-//   ms.onMessage      — callback do framework (NÃO USE para action:'plugin')
+var ms = (typeof parent !== 'undefined' && parent.meshserver) || (window.meshserver || null);
+// ms.socket         → WebSocket RAW (use este!)
+// ms.send(pkt)      → enviar comando
+// ms.State          → 2 = conectado
+// ms.onMessage      → NÃO USE (framework já processou)
 ```
 
-### Capturando Resposta do Servidor (funcional)
+### Hook no WebSocket (funcional)
 
 ```javascript
-// ✅ MÉTODO CORRETO: hook no WebSocket real
 if (ms && ms.socket) {
-    var origOnMsg = ms.socket.onmessage;
+    var orig = ms.socket.onmessage;
     ms.socket.onmessage = function(event) {
-        try {
-            var d = JSON.parse(event.data);
-            // d = { action, plugin, method, data, ... }
-            // O framework MeshCentral NÃO altera o dado cru do socket
-            // action = "plugin" | "event" | "serverstats" | etc
-            if (d.action === 'plugin' && d.plugin === 'shortName' && d.method === 'callbackName') {
-                renderTable(d.data || []);
-                return; // consumimos a msg, não encaminha
-            }
-        } catch(e) {}
-        if (typeof origOnMsg === 'function') origOnMsg.call(ms.socket, event);
+        var d = JSON.parse(event.data);
+        dlog('WS: action=' + d.action + ' plugin=' + d.plugin + ' method=' + d.method + ' data=' + (Array.isArray(d.data) ? d.data.length : typeof d.data));
+        if (d.action === 'plugin' && d.plugin === 'shortName') {
+            if (d.method === 'currentUsers') renderUsers(d.data || []);
+            else if (d.method === 'timeline') renderTimeline(d.data || []);
+            return;
+        }
+        if (typeof orig === 'function') orig.call(ms.socket, event);
     };
 }
-
-// ❌ NÃO FUNCIONA: pluginHandler é chamado com meshserver object
-pluginHandler.shortName.callbackName = function(msg) {
-    // msg === meshserver object (╯°□°)╯︵ ┻━┻
-};
 ```
 
-### Handler via pluginHandler (funciona com filtro)
+### Debug Collapsible
 
-```javascript
-// Funciona se filtrar o meshserver object:
-t.callbackName = function(msg) {
-    // MeshCentral chama este handler com o meshserver object durante init
-    if (msg && msg.State !== undefined) {
-        return; // IGNORAR — é o meshserver object
-    }
-    var data = (msg && msg.data) ? msg.data : (Array.isArray(msg) ? msg : []);
-    processar(data);
-};
+```html
+<div id="dbgToggle" onclick="var e=document.getElementById('debug');e.style.display=e.style.display==='none'?'block':'none'">🔽 Debug</div>
+<div id="debug" style="display:none;font-size:9px;font-family:monospace;max-height:200px;overflow:auto"></div>
+<script>
+var D = [];
+function dlog() {
+    var args = Array.prototype.slice.call(arguments);
+    D.push(new Date().toLocaleTimeString() + ' ' + args.join(' '));
+    document.getElementById('debug').innerHTML = D.join('\n');
+    console.log('[PLUGIN]', args.join(' '));
+}
+</script>
 ```
 
 ---
@@ -581,25 +537,19 @@ t.callbackName = function(msg) {
 ### Estrutura
 
 ```javascript
-// modules_meshcore/plugin_name.js
 "use strict";
 var mesh = null;
 var debug_flag = false;
-
-// Debug function (EventLog/ScriptTask pattern)
 var dbg = function(str) {
     if (debug_flag !== true) return;
-    try {
-        var fs = require('fs');
-        var logStream = fs.createWriteStream('plugin_name.txt', { flags: 'a' });
-        logStream.write('\n' + new Date().toLocaleString() + ': ' + str);
-        logStream.end('\n');
-    } catch (e) {}
+    var fs = require('fs');
+    var logStream = fs.createWriteStream('plugin.txt', { flags: 'a' });
+    logStream.write('\n' + new Date().toLocaleString() + ': ' + str);
+    logStream.end('\n');
 };
 
-// Entry point — chamado quando servidor envia comando
 function consoleaction(args, rights, sessionid, parent) {
-    mesh = parent;  // MeshAgent com SendCommand()
+    mesh = parent;  // MeshAgent
     switch (args.pluginaction) {
         case 'start': start(); break;
         case 'setDebug': debug_flag = (args.value === 'true'); break;
@@ -607,7 +557,7 @@ function consoleaction(args, rights, sessionid, parent) {
     return 'OK';
 }
 
-// Auto-start na inicialização do agente
+// Auto-start
 if (typeof setInterval !== 'undefined') {
     setTimeout(function () {
         if (process.platform === 'win32') {
@@ -621,22 +571,10 @@ if (typeof setInterval !== 'undefined') {
 
 | Prefixo | Plataforma |
 |---------|-----------|
-| `win-` | Windows (com e sem AMT) |
-| `linux-` | Linux (com e sem AMT) |
+| `win-` | Windows |
+| `linux-` | Linux |
 | `amt-` | Intel AMT |
 | (sem prefixo) | Todas |
-
-### Enviar dados ao servidor
-
-```javascript
-mesh.SendCommand({
-    action: 'plugin',
-    plugin: 'shortName',
-    pluginaction: 'eventData',
-    nodeid: (mesh.info && mesh.info._id) ? mesh.info._id : null,  // IMPORTANTE!
-    events: JSON.stringify(events)
-});
-```
 
 ---
 
@@ -645,116 +583,93 @@ mesh.SendCommand({
 ### Agentes Conectados
 
 ```javascript
-// Server-side:
 var ws = obj.meshServer.webserver.wsagents || {};
-// ws = { "node//xxx": WebSocket, "node//yyy": WebSocket, ... }
-
-for (var nodeid in ws) {
-    var agent = ws[nodeid];
-    agent.nodeid;                          // ID do nó
-    agent.name;                            // Nome do dispositivo
-    agent.agentInfo.computerName;           // Nome do computador
-    agent.agentInfo.agentVersion;           // Versão do agente
-    agent.agentInfo.platformType;           // 2 = Windows
-    agent.remoteaddr;                       // IP
-    agent.connectTime;                      // Timestamp de conexão
-    agent.domain;                           // Domínio
-    agent.meshid;                           // ID do grupo
-    agent.authenticated;                    // 1 = autenticado
-    agent.dbNodeKey;                        // "node/domain/nodeid"
-    agent.dbMeshKey;                        // "mesh/domain/meshid"
-    agent.send(JSON.stringify(msg));        // Enviar comando
+// keys = 10 (confirmado via debug com 10 agentes)
+for (var nid in ws) {
+    var a = ws[nid];
+    a.nodeid;               // "node//xxx"
+    a.name;                 // "BR-24002"
+    a.agentInfo = {         // informações do agente
+        computerName,        // "BR-24002"
+        agentVersion,        // "1.2.4"
+        platformType         // 2 = Windows
+    };
+    a.remoteaddr;           // IP
+    a.connectTime;          // timestamp
+    a.domain;               // domínio
+    a.meshid;               // ID do grupo
+    a.authenticated;        // 1
+    a.dbNodeKey;            // "node/domain/nodeid"
+    a.dbMeshKey;            // "mesh/domain/meshid"
 }
 ```
 
-### Usuários Ativos de Cada Dispositivo
+### Usuários Ativos
 
 ```javascript
-// ESTES DADOS ESTÃO NO BANCO, não no WebSocket do agente!
+// DADOS NO BANCO, NÃO no WebSocket
 obj.meshServer.db.Get(nodeid, function(err, docs) {
-    if (!err && docs && docs.length > 0) {
-        var doc = docs[0];
-        doc.users;      // ["DOMAIN\username"] — usuários ativos
-        doc.lusers;     // mesma lista com status de bloqueio
-        doc.upnusers;   // formato user@domain
-    }
+    var d = docs[0];
+    d.users;      // ["DOMAIN\username"] — usuários ativos
+    d.lusers;     // mesmo formato com status
+    d.upnusers;   // user@domain
 });
 ```
 
-### Nome do Dispositivo
+### Scanner de Mudanças (login/logout)
 
 ```javascript
-// Fonte 1: WebSocket do agente
-obj.meshServer.webserver.wsagents[nodeid].name;
-obj.meshServer.webserver.wsagents[nodeid].agentInfo.computerName;
+// 1. Primeiro scan → popula cache, NÃO gera eventos
+// 2. Scan subsequente → compara doc.users com cache
+//    - Se usuário novo → eventType: 'userLogin'
+//    - Se usuário sumiu → eventType: 'userLogout'
+//    - Se igual → nada
 
-// Fonte 2: Banco de dados
-obj.meshServer.db.Get(nodeid, function(err, docs) {
-    if (docs) docs[0].name;
-});
+obj.userCache = {}; // { nodeid: JSON.stringify(users) }
+
+obj.checkNode = function(nodeid) {
+    obj.mdb.Get(nodeid, function(err, docs) {
+        var current = (docs[0].users || []).sort();
+        var key = JSON.stringify(current);
+
+        if (!obj.userCache[nodeid]) {
+            obj.userCache[nodeid] = key;
+            // Verificar DB: se não há eventos → logar como first-ever
+            obj.db.getEventsByNode(nodeid, 1, function(events) {
+                if (!events || events.length === 0) {
+                    current.forEach(function(u) { storeEvent(nodeid, name, u, 'userLogin'); });
+                }
+            });
+            return;
+        }
+
+        if (prev === key) return; // sem mudança
+
+        // CHANGE DETECTED → logar diferenças
+        obj.userCache[nodeid] = key;
+        // usuários em current mas não em prev → LOGIN
+        // usuários em prev mas não em current → LOGOUT
+    });
+};
 ```
 
 ### Session ID do Frontend
 
 ```javascript
 // Dentro do serveraction:
+var sessionid = null;
+try { sessionid = myparent.ws.sessionId; } catch (e) {}
+// "user//01050000000000051500000076fdfd57/0e090210454b8987b0d547b5709b68ee0e0843fb"
+```
+
+### userid Automático
+
+```javascript
+// O MeshCentral INJETA automaticamente o userid no comando:
+// command.userid = "user//domain/userid"
+// Disponível no serveraction:
 obj.serveraction = function(command, myparent, gp) {
-    var sessionid = null;
-    try { sessionid = myparent.ws.sessionId; } catch (e) {}
-    // sessionid = "user//domain/userid/randomhash"
-};
-```
-
-### Sessões de Frontend Conectadas
-
-```javascript
-var sessions = obj.meshServer.webserver.wssessions2 || {};
-// sessions = { "user//domain/id/hash": WebSocket, ... }
-// Para enviar resposta:
-if (sessions[sessionid]) {
-    sessions[sessionid].send(JSON.stringify({ action: 'plugin', ... }));
-}
-```
-
-### Propriedades do Documento de Nó (DB)
-
-```javascript
-obj.meshServer.db.Get(nodeid, function(err, docs) {
-    if (!docs || !docs.length) return;
-    var d = docs[0];
-    // d._id             = "node//domain/nodeid"     ← chave primária
-    // d.name            = "BR-25005"                ← nome do dispositivo
-    // d.domain          = ""                        ← domínio
-    // d.meshid          = "mesh//domain/meshid"     ← grupo
-    // d.host            = "BR-25005"                ← hostname
-    // d.ip              = "192.168.0.100"           ← último IP
-    // d.osdesc          = "Windows 10 Pro"          ← sistema operacional
-    // d.mtype           = 2                         ← 2=Windows, 1=Linux
-    // d.users           = ["DOMAIN\\user"]          ← USUÁRIOS ATIVOS
-    // d.lusers          = [...]                     ← com status
-    // d.upnusers        = [...]                     ← formato UPN
-    // d.agent           = "1.2.4"                   ← versão do agente
-    // d.av              = "Windows Defender"        ← antivírus
-    // d.icon            = 1                         ← tipo de ícone
-    // d.firstconnect    = 1721149200                ← timestamp
-    // d.lastbootuptime  = 1721149200                ← último boot
-    // d.wsc             = 1                         ← Windows Security Center
-    // d.idletime        = 300                       ← segundos ocioso
-});
-```
-
-### Informações do Usuário MeshCentral
-
-```javascript
-// hook_userLoggedIn:
-obj.hook_userLoggedIn = function(user) {
-    user._id;       // "user//domain/username"
-    user.name;      // "nome.usuario"
-    user.siteadmin; // 0xFFFFFFFF = admin, 0 = comum
-    user.email;     // email do usuário
-    user.domain;    // domínio
-    user.realname;  // nome real
-    user.links;     // permissões { meshId: { rights } }
+    console.log(command.userid); // "user//010500000000000515000000..."
 };
 ```
 
@@ -765,64 +680,44 @@ obj.hook_userLoggedIn = function(user) {
 ### Server-Side (console.log)
 
 ```javascript
-// Adicione NO TOPO das funções:
-console.log('[PLUGIN] serveraction: action=' + command.pluginaction + ' sid=' + sessionid);
-console.log('[PLUGIN] db.Get callback: err=' + (err ? err.message : 'null') + ' docs=' + (docs ? docs.length : 0));
-console.log('[PLUGIN] send: ' + data.method + ' data.length=' + (data.data ? data.data.length : 0));
-console.log('[PLUGIN] handleAdminReq: user=' + (user ? user.name : 'null') + ' query=' + JSON.stringify(req.query));
+// No topo de cada função:
+console.log('=== UT FUNCAO ===');
+console.log('UT FUNCAO: param1=' + JSON.stringify(param1));
+console.log('UT FUNCAO: param2=' + param2);
+// Raw data:
+console.log('UT RAW: ' + JSON.stringify(data).substring(0, 500));
+// Timing:
+var tStart = Date.now();
+// ... async callback ...
+console.log('UT TIMING: ' + (Date.now() - tStart) + 'ms');
 ```
 
-### Frontend (collapsible debug panel)
+**Padrão de log dos plugins da comunidade:**
+```javascript
+console.log('PLUGIN: serveraction called, action=' + command.pluginaction);
+console.log('PLUGIN: db.Get callback, docs=' + (docs ? docs.length : 0));
+```
+
+### Frontend (collapsible)
 
 ```html
-<div id="dbgToggle" onclick="toggleDebug()">🔽 Debug</div>
-<div id="debug" style="display:none;font-size:10px;font-family:monospace;max-height:200px;overflow:auto"></div>
-<script>
-var D = [];
-function dlog() {
-    var args = Array.prototype.slice.call(arguments);
-    D.push(new Date().toLocaleTimeString() + ' ' + args.join(' '));
-    document.getElementById('debug').innerHTML = D.join('\n');
-    console.log('[PLUGIN]', args.join(' '));
-}
-function toggleDebug() {
-    var el = document.getElementById('debug');
-    el.style.display = el.style.display === 'none' ? 'block' : 'none';
-}
-</script>
+<div id="dbgToggle" onclick="toggle()">🔽 Debug <span id="dbgCount">0</span></div>
+<div id="debug" style="display:none;font-size:9px;font-family:monospace"></div>
 ```
 
-### Full WebSocket Trace (frontend)
+### WebSocket Trace
 
 ```javascript
-// Hook no WebSocket REAL para ver TODAS as mensagens
 if (ms && ms.socket) {
     var orig = ms.socket.onmessage;
     ms.socket.onmessage = function(event) {
-        try {
-            var raw = event.data;
-            dlog('WS RAW: len=' + raw.length + ' data=' + raw.substring(0, 500));
-            var parsed = JSON.parse(raw);
-            dlog('WS PARSE: action=' + parsed.action + ' plugin=' + parsed.plugin + ' method=' + parsed.method);
-        } catch(e) {}
+        var raw = event.data;
+        console.log('WS RAW: len=' + raw.length + ' data=' + raw.substring(0, 300));
+        var parsed = JSON.parse(raw);
+        console.log('WS PARSED: action=' + parsed.action + ' plugin=' + parsed.plugin + ' method=' + parsed.method);
         if (typeof orig === 'function') orig.call(ms.socket, event);
     };
 }
-```
-
-### Agent-Side (arquivo)
-
-```javascript
-var debug_flag = false; // ativar via comando 'setDebug'
-var dbg = function(str) {
-    if (debug_flag !== true) return;
-    try {
-        var fs = require('fs');
-        var logStream = fs.createWriteStream('plugin.txt', { flags: 'a' });
-        logStream.write('\n' + new Date().toLocaleString() + ': ' + str);
-        logStream.end('\n');
-    } catch (e) {}
-};
 ```
 
 ---
@@ -831,37 +726,30 @@ var dbg = function(str) {
 
 | Erro | Causa | Solução |
 |------|-------|---------|
-| **401 no admin panel** | Plugin não carregou em `obj.plugins` | Verificar console do servidor: "Error loading plugin" |
-| `Cannot read properties of undefined (reading 'agents')` | `meshServer.parent` não existe | Use `meshServer.webserver.wsagents` |
-| `module 'nedb' not found` | NeDB não está disponível no MeshCentral v1.2.4 | Use cadeia de fallback: `@seald-io/nedb` → `@yetzt/nedb` → `nedb` |
-| `Failed to lookup view` | Template não encontrado OU extensão errada | Use `.handlebars`, NÃO `.ejs`. `res.render('nome')` sem path |
-| `pluginHandler.handler é chamado com meshserver object` | MeshCentral chama handlers do plugin com o meshserver | Hook direto no `ms.socket.onmessage` |
-| Resposta WebSocket nunca chega ao handler | `ms.onMessage` recebe msgs já processadas (sem action/plugin) | Use `ms.socket.onmessage` (RAW) |
-| Contagem `pending` nunca zera | Um callback `db.Get` nunca retorna | Use timeout ou verifique se todos os agentes estão no DB |
-| Admin panel mostra "Nenhum usuário ativo" | DB query retornou vazio OU handler não processou | Verificar serveraction e socket.onmessage |
-| Plugin carrega mas serveraction não é chamado | Comando não chega via WebSocket | Verificar `ms.send` e `ms.socket.readyState` |
-| `SyntaxError: Unexpected token '}'` | Bloco duplicado no JS | Lint com `node -e "new Function(require('fs').readFileSync('file.js','utf8'))"` |
-| `EPERM: operation not permitted` | Arquivo do plugin com permissão travada | Deletar manualmente como Administrador |
+| **401 no admin panel** | Plugin não carregou em `obj.plugins` | Ver console: "Error loading plugin" |
+| `Cannot read 'agents' of undefined` | `meshServer.parent` não existe | Use `meshServer.webserver.wsagents` |
+| `module 'nedb' not found` | NeDB não disponível | Fallback: `@seald-io/nedb` → `@yetzt/nedb` → `nedb` |
+| `Failed to lookup view` | Extensão errada | Use `.handlebars`, `res.render('nome')` sem path |
+| Handler chamado com meshserver object | MeshCentral chama `pluginHandler[method]()` com meshserver | Hook em `ms.socket.onmessage` |
+| `getTimeline` chamado 4× mesmo carregando uma vez | Aba timeline dispara múltiplos requests | Verificar loop de renderização |
+| Resposta chega no `ms.onMessage` sem `action`/`plugin` | Framework já processou a mensagem | Use `ms.socket.onmessage` (RAW) |
+| `pending` nunca zera | Callback não retorna | Adicionar timeout |
+| `EPERM: operation not permitted` | Permissão de arquivo | Deletar manualmente como Admin |
+| `SyntaxError: Unexpected token '}'` | Bloco duplicado | Lint: `new Function(readFile('file.js'))` |
 
 ---
 
-## 12. Exemplo Completo: User-Device Tracer
+## 12. Exemplo Completo: User-Device Tracer v3.2
 
-### O que faz
+### Funcionalidade
 
-Lê os usuários ativos de cada dispositivo conectado ao MeshCentral
-e exibe em uma tabela no admin panel e na aba do dispositivo.
+- Lê `doc.users` do banco MeshCentral para cada agente conectado
+- Scanner periódico (30s) detecta login/logout por diff
+- Timeline persistente em NeDB (`plugin-usertracer-events.db`)
+- Admin panel: Usuários Ativos + Timeline com filtros
+- Device tab: Agora + Histórico
 
-### Arquitetura
-
-```
-Usuário abre admin panel → HTML/JS envia comando via WebSocket
-  → serveraction(getCurrentUsers) → db.Get(nodeId) para cada agente
-  → extrai doc.users → envia resposta via WebSocket
-  → socket.onmessage captura → renderTable() atualiza DOM
-```
-
-### Server-Side (usertracer.js)
+### Server-Side (simplificado)
 
 ```javascript
 "use strict";
@@ -871,116 +759,78 @@ module.exports.usertracer = function (parent) {
     obj.meshServer = parent.parent;
     obj.debug = obj.meshServer.debug;
     obj.exports = ['onDeviceRefreshEnd'];
-    obj.db = obj.meshServer.db;
+    obj.mdb = obj.meshServer.db;       // MeshCentral DB
+    obj.db = null;                      // Plugin DB (db.js)
+    obj.userCache = {};
 
-    obj.handleAdminReq = function (req, res, user) {
-        if (req.query.user == 1) {
-            return res.render('device', {
-                nodeid: req.query.nodeid || '',
-                nodeName: req.query.nodeid ? obj.getNodeName(req.query.nodeid) : 'Unknown'
-            });
-        }
-        if (!user || (user.siteadmin & 0xFFFFFFFF) == 0) { res.sendStatus(401); return; }
-        res.render('admin', {});
+    obj.server_startup = function () {
+        obj.meshServer.pluginHandler.usertracer_db = require(__dirname + '/db.js').CreateDB(obj.meshServer);
+        obj.db = obj.meshServer.pluginHandler.usertracer_db;
+        obj.startScanner();
     };
 
-    obj.serveraction = function (command, myparent, gp) {
-        if (command.plugin !== 'usertracer') return;
-        var sid = null;
-        try { sid = myparent.ws.sessionId; } catch (e) {}
-        if (!sid || !obj.db || typeof obj.db.Get !== 'function') return;
+    // Scanner 30s
+    obj.startScanner = function () { obj.scanNow(); setInterval(obj.scanNow, 30000); };
 
-        if (command.pluginaction === 'getCurrentUsers') {
-            var result = [];
-            var ws = obj.meshServer.webserver.wsagents || {};
-            var ids = Object.keys(ws);
-            if (ids.length === 0) { obj.send(sid, { action:'plugin', plugin:'usertracer', method:'currentUsers', data: result }); return; }
-
-            var pending = ids.length;
-            ids.forEach(function (nid) {
-                obj.db.Get(nid, function (err, docs) {
-                    if (!err && docs && docs.length > 0) {
-                        var d = docs[0];
-                        if (Array.isArray(d.users) && d.users.length > 0) {
-                            result.push({ nodeid: nid, nodeName: d.name || nid, users: d.users });
-                        }
-                    }
-                    pending--;
-                    if (pending <= 0) {
-                        obj.send(sid, { action:'plugin', plugin:'usertracer', method:'currentUsers', data: result });
-                    }
-                });
-            });
-        }
+    obj.scanNow = function () {
+        var ws = obj.meshServer.webserver.wsagents || {};
+        for (var nid in ws) obj.checkNode(nid);
     };
 
-    obj.getNodeName = function (nid) {
-        try { return obj.meshServer.webserver.wsagents[nid].name || nid; } catch (e) { return nid; }
+    obj.checkNode = function (nodeid) {
+        obj.mdb.Get(nodeid, function (err, docs) {
+            if (!docs || !docs.length) return;
+            var doc = docs[0];
+            var current = (doc.users || []).sort();
+            var key = JSON.stringify(current);
+            var prev = obj.userCache[nodeid];
+            obj.userCache[nodeid] = key;
+            if (!prev) return; // first time
+            if (prev === key) return; // no change
+            // diff → log login/logout
+        });
     };
 
-    obj.send = function (sid, data) {
-        try {
-            if (obj.meshServer.webserver.wssessions2 && obj.meshServer.webserver.wssessions2[sid])
-                obj.meshServer.webserver.wssessions2[sid].send(JSON.stringify(data));
-        } catch (e) {}
-    };
-
-    obj.onDeviceRefreshEnd = function () {
-        if (typeof currentNode === 'undefined' || !currentNode) return;
-        if (currentNode.osdesc && currentNode.osdesc.toLowerCase().indexOf('windows') === -1) return;
-        pluginHandler.registerPluginTab({ tabTitle: 'User Tracer', tabId: 'pluginUserTracer' });
-        QA('pluginUserTracer', '<iframe id="pluginIframeUserTracer" style="width:100%;height:200px;overflow:auto" scrolling="yes" frameBorder=0 src="/pluginadmin.ashx?pin=usertracer&nodeid=' + encodeURIComponent(currentNode._id) + '&user=1" />');
-    };
+    // HTTP + WS handlers
+    obj.handleAdminReq = function (req, res, user) { /* ... */ };
+    obj.serveraction = function (command, myparent, gp) { /* getCurrentUsers, getTimeline */ };
+    obj.onDeviceRefreshEnd = function () { /* registra aba */ };
 
     return obj;
 };
 ```
 
-### Frontend (admin.handlebars) — Esqueleto
+### db.js
 
-```html
-<div id="dbgToggle" onclick="toggleDebug()">🔽 Debug</div>
-<div id="debug"></div>
-<table><thead><tr><th>Dispositivo</th><th>Usuário</th><th>Domínio</th></tr></thead>
-<tbody id="tbody"><tr><td colspan="3">Carregando...</td></tr></tbody></table>
+```javascript
+"use strict";
+module.exports.CreateDB = function (meshserver) {
+    var obj = {};
+    module.paths.push(require('path').join(meshserver.parentpath, 'node_modules'));
 
-<script>
-var ms = parent.meshserver || window.meshserver;
+    var Datastore;
+    try { Datastore = require('@seald-io/nedb'); } catch (ex) {}
+    if (!Datastore) try { Datastore = require('@yetzt/nedb'); } catch (ex) {}
+    if (!Datastore) Datastore = require('nedb');
 
-// Hook no socket real para capturar resposta
-if (ms && ms.socket) {
-    var orig = ms.socket.onmessage;
-    ms.socket.onmessage = function(event) {
-        var d = JSON.parse(event.data);
-        if (d.action === 'plugin' && d.plugin === 'usertracer' && d.method === 'currentUsers') {
-            renderTable(d.data || []);
-            return;
-        }
-        if (typeof orig === 'function') orig.call(ms.socket, event);
-    };
-}
+    obj.events = new Datastore({ filename: meshserver.getConfigFilePath('plugin-usertracer-events.db'), autoload: true });
+    obj.events.setAutocompactionInterval(60000);
+    obj.events.ensureIndex({ fieldName: 'nodeid' });
+    obj.events.ensureIndex({ fieldName: 'username' });
+    obj.events.ensureIndex({ fieldName: 'detectedAt' });
 
-function renderTable(data) {
-    var h = '';
-    for (var i = 0; i < data.length; i++) {
-        (data[i].users || []).forEach(function(u) {
-            var parts = u.split('\\');
-            var dom = parts.length > 1 ? parts[0] : '';
-            var usr = parts.length > 1 ? parts[1] : u;
-            h += '<tr><td>' + data[i].nodeName + '</td><td>' + usr + '</td><td>' + dom + '</td></tr>';
-        });
-    }
-    document.getElementById('tbody').innerHTML = h;
-}
+    obj.addEvent = function (evt) { evt.time = new Date(); obj.events.insert(evt); };
+    obj.getEvents = function (q, lim, cb) { obj.events.find(q || {}).sort({ detectedAt: -1 }).limit(lim || 500).exec(function(e,d){cb(d||[]);}); };
+    obj.getEventsByNode = function (nid, lim, cb) { obj.getEvents({ nodeid: nid }, lim, cb); };
 
-ms.send({ action: 'plugin', plugin: 'usertracer', pluginaction: 'getCurrentUsers' });
-</script>
+    return obj;
+};
 ```
 
 ---
 
-> **Documento gerado em 23/07/2026** baseado na análise de 12 plugins reais
-> (ScriptTask, EventLog, RegEdit, RoutePlus, FileDistribution, WorkFromHome,
-> DevTools, Sample, PluginHookScheduler, Agentname2Servername, PrinterControl,
-> PluginHookExample) + código-fonte do `pluginHandler.js` + desenvolvimento
-> do plugin User-Device Tracer v3.x para MeshCentral v1.2.4.
+> **Documento gerado em 24/07/2026.** Baseado em:
+> - 12 plugins da comunidade (ScriptTask, EventLog, RegEdit, RoutePlus, FileDistribution, WorkFromHome, DevTools, Sample, PluginHookScheduler, Agentname2Servername, PrinterControl, PluginHookExample)
+> - Código-fonte do `pluginHandler.js` (MeshCentral v1.2.4)
+> - Debug ao vivo do User-Device Tracer v3.2 com 10 agentes Windows
+> - Tempos de resposta: db.Get ~26ms, scanner 30s, WS response <100ms
