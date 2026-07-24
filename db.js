@@ -67,6 +67,7 @@ module.exports.CreateDB = function (meshserver) {
 
     obj.getEventsByNode = function (nodeid, opts, callback) {
         if (typeof opts === 'function') { callback = opts; opts = {}; }
+        if (typeof opts === 'number') { opts = { limit: opts }; }
         opts.nodeids = [nodeid];
         obj.getEvents({}, opts, callback);
     };

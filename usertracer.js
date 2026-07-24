@@ -93,7 +93,7 @@ module.exports.usertracer = function (parent) {
                     obj.userCache[nodeid] = key;
                     // Check DB for existing events
                     console.log('UT CHECKNODE: checking DB for existing events...');
-                    obj.db.getEventsByNode(nodeid, 1, function(events) {
+                    obj.db.getEventsByNode(nodeid, { limit: 1 }, function(events) {
                         console.log('UT CHECKNODE: DB events found=' + (events ? events.length : 0));
                         if (!events || events.length === 0) {
                             console.log('UT CHECKNODE: FIRST EVER - logging ' + currentUsers.length + ' initial logins');
