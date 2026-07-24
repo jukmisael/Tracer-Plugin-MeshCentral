@@ -1,5 +1,13 @@
 # Changelog
 
+## 3.1.0 (2026-07-23)
+
+### Melhorias
+- Plugin funcional: exibe usuários ativos de cada dispositivo via `db.Get(nodeId)` → `doc.users`
+- Debug completo: collapsible panel no frontend + console.log no servidor
+- Listener WebSocket no `ms.socket.onmessage` (RAW) — captura resposta antes do framework
+- Guia de desenvolvimento expandido (MESHCENTRAL-PLUGIN-GUIDE.md) com estruturas de dados, I/O, fluxos
+
 ## 3.0.3 (2026-07-23)
 
 ### Debug
