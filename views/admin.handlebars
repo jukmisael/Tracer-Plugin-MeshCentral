@@ -32,12 +32,11 @@ function dlog() {
 }
 
 dlog('INIT: loaded');
-
 var ms = (typeof parent !== 'undefined' && parent.meshserver) || (window.meshserver || null);
-dlog('INIT: meshserver=' + (ms ? 'available' : 'NULL'));
+dlog('INIT: meshserver=' + (ms ? 'available' : 'NULL') + ' socket=' + (ms && ms.socket ? 'present' : 'null'));
 
 function renderTable(d) {
-    dlog('RENDER: ' + d.length + ' devices');
+    dlog('RENDER: ' + d.length + ' devices, sample=' + (d[0] ? JSON.stringify(d[0]).substring(0,100) : ''));
     var h = '';
     for (var i = 0; i < d.length; i++) {
         var users = d[i].users || [];
@@ -49,62 +48,52 @@ function renderTable(d) {
         }
     }
     document.getElementById('tbody').innerHTML = h || '<tr><td colspan="3" class="loading">Nenhum usuário ativo.</td></tr>';
-    dlog('RENDER: done, hasContent=' + (h.length > 0));
+    dlog('RENDER: done');
 }
 
-// Direct WebSocket listener (catches the server response before pluginHandler)
-dlog('WS: setting up direct listener...');
-if (ms) {
-    var origSend = ms.send;
-    ms.send = function(pkt) { dlog('WS: send() called, action=' + pkt.action + ' pluginaction=' + pkt.pluginaction); return origSend.call(ms, pkt); };
-
-    var origOnMsg = ms.onMessage;
-    ms.onMessage = function(e) {
+// Hook into the REAL WebSocket onmessage (BEFORE MeshCentral processes it)
+if (ms && ms.socket) {
+    var ws = ms.socket;
+    var origOnMsg = ws.onmessage;
+    ws.onmessage = function(event) {
         try {
-            var d = (typeof e === 'string') ? JSON.parse(e) : (e.data ? JSON.parse(e.data) : e);
-            dlog('WS: message received, action=' + d.action + ' plugin=' + d.plugin + ' method=' + d.method);
+            var d = JSON.parse(event.data);
+            dlog('SOCKET: raw msg action=' + d.action + ' plugin=' + d.plugin + ' method=' + d.method);
             if (d && d.action === 'plugin' && d.plugin === 'usertracer' && d.method === 'currentUsers') {
-                dlog('WS: MATCHED usertracer response! data length=' + (d.data ? d.data.length : 0));
+                dlog('SOCKET: MATCH! data=' + (Array.isArray(d.data) ? 'array[' + d.data.length + ']' : typeof d.data));
                 renderTable(d.data || []);
                 return;
             }
-        } catch(ex) { dlog('WS: message error: ' + ex.message); }
-        if (typeof origOnMsg === 'function') origOnMsg(e);
+        } catch(e) { dlog('SOCKET: parse error: ' + e.message); }
+        if (typeof origOnMsg === 'function') origOnMsg.call(ws, event);
     };
-    dlog('WS: listener installed');
+    dlog('SOCKET: listener installed');
+} else {
+    dlog('SOCKET: no socket available, fallback to pluginHandler');
+    (function register() {
+        var t = null;
+        try {
+            if (typeof pluginHandler !== 'undefined' && pluginHandler.usertracer) t = pluginHandler.usertracer;
+            else if (parent && parent.pluginHandler && parent.pluginHandler.usertracer) t = parent.pluginHandler.usertracer;
+        } catch(e) {}
+        if (!t) { setTimeout(register, 500); return; }
+        t.currentUsers = function(msg) {
+            dlog('PH: handler called, keys=' + (msg ? Object.keys(msg).join(',') : 'null'));
+            if (msg && msg.State !== undefined) { dlog('PH: IGNORED - meshserver obj'); return; }
+            var d = (msg && msg.data) ? msg.data : (Array.isArray(msg) ? msg : []);
+            if (d.length > 0) renderTable(d);
+        };
+        dlog('PH: registered');
+    })();
 }
-
-// Also register on pluginHandler as fallback
-dlog('PH: registering on pluginHandler...');
-(function register() {
-    var t = null;
-    try {
-        if (typeof pluginHandler !== 'undefined' && pluginHandler.usertracer) { t = pluginHandler.usertracer; dlog('PH: found direct'); }
-        else if (parent && parent.pluginHandler && parent.pluginHandler.usertracer) { t = parent.pluginHandler.usertracer; dlog('PH: found via parent'); }
-    } catch(e) { dlog('PH: error: ' + e.message); }
-    if (!t) { dlog('PH: not found, retry'); setTimeout(register, 500); return; }
-    t.currentUsers = function(msg) {
-        dlog('PH: handler called, keys=' + (msg ? Object.keys(msg).join(',') : 'null'));
-        // Filter: MeshCentral calls this handler with meshserver object during init
-        if (msg && msg.State !== undefined) { dlog('PH: IGNORED - meshserver object'); return; }
-        var d = (msg && msg.data) ? msg.data : (Array.isArray(msg) ? msg : []);
-        dlog('PH: data length=' + d.length);
-        if (d.length > 0) renderTable(d);
-    };
-    dlog('PH: registered');
-})();
 
 function load() {
     dlog('LOAD: sending getCurrentUsers');
     document.getElementById('tbody').innerHTML = '<tr><td colspan="3" class="loading">Carregando...</td></tr>';
     if (ms) { ms.send({action:'plugin', plugin:'usertracer', pluginaction:'getCurrentUsers'}); dlog('LOAD: sent'); }
-    else { dlog('LOAD: FAIL - no meshserver'); }
 }
 
-document.addEventListener('DOMContentLoaded', function() {
-    dlog('DOM: ready, calling load()');
-    load();
-});
+document.addEventListener('DOMContentLoaded', load);
 dlog('INIT: complete');
 </script>
 </body>
