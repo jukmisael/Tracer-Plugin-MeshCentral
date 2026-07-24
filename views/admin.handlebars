@@ -10,27 +10,42 @@ th,td{padding:6px 10px;text-align:left;border-bottom:1px solid #eee}
 th{background:#fafafa;font-weight:600}
 tr:hover{background:#f0f7ff}
 .loading{text-align:center;padding:40px;color:#999}
-#debug{display:none;background:#fff3cd;border:1px solid #ffeeba;padding:8px;margin-bottom:12px;font-size:10px;font-family:monospace;white-space:pre-wrap;max-height:400px;overflow:auto}
+#dbgToggle{cursor:pointer;font-size:11px;color:#1976D2;margin-bottom:4px;user-select:none}
+#dbgToggle:hover{text-decoration:underline}
+#debug{display:none;background:#fff3cd;border:1px solid #ffeeba;padding:8px;margin-bottom:12px;font-size:10px;font-family:monospace;white-space:pre-wrap;max-height:300px;overflow:auto}
+#dbgCount{color:#999;font-size:10px;margin-left:8px}
 </style>
 </head>
 <body>
 <h1>User Tracer</h1>
 <p class="sub">Usuários ativos nos dispositivos neste momento</p>
-<div id="debug">ativando debug...</div>
+<div id="dbgToggle" onclick="toggleDebug()">🔽 Debug <span id="dbgCount">0</span></div>
+<div id="debug">aguardando eventos...</div>
 <div style="overflow-x:auto">
 <table><thead><tr><th>Dispositivo</th><th>Usuário</th><th>Domínio</th></tr></thead>
 <tbody id="tbody"><tr><td colspan="3" class="loading">Carregando...</td></tr></tbody></table>
 </div>
 <script>
-// === FULL WS DEBUG ===
+// === FULL WS DEBUG — COLLAPSIBLE ===
 var D = [];
+var dbgVisible = false;
+
 function dlog() {
     var args = Array.prototype.slice.call(arguments);
     var msg = new Date().toLocaleTimeString() + ' ' + args.join(' ');
     D.push(msg);
     console.log('[UTRACER]', args.join(' '));
     var el = document.getElementById('debug');
-    if (el) { el.innerHTML = D.join('\n'); el.style.display = 'block'; el.scrollTop = el.scrollHeight; }
+    var ct = document.getElementById('dbgCount');
+    if (el) { el.innerHTML = D.join('\n'); el.scrollTop = el.scrollHeight; }
+    if (ct) ct.textContent = D.length;
+}
+function toggleDebug() {
+    var el = document.getElementById('debug');
+    var tg = document.getElementById('dbgToggle');
+    dbgVisible = !dbgVisible;
+    if (el) el.style.display = dbgVisible ? 'block' : 'none';
+    if (tg) tg.innerHTML = (dbgVisible ? '🔼' : '🔽') + ' Debug <span id="dbgCount">' + D.length + '</span>';
 }
 
 dlog('=== INIT START ===');
@@ -74,8 +89,7 @@ if (ms) {
     var _origSend = ms.send;
     if (typeof _origSend === 'function') {
         ms.send = function(pkt) {
-            dlog('SEND: ' + JSON.stringify(pkt).substring(0, 300));
-            dlog('SEND: action=' + pkt.action + ' plugin=' + pkt.plugin + ' pluginaction=' + pkt.pluginaction);
+            dlog('SEND: action=' + pkt.action + ' plugin=' + pkt.plugin + ' pluginaction=' + pkt.pluginaction + ' full=' + JSON.stringify(pkt).substring(0,300));
             return _origSend.call(ms, pkt);
         };
         dlog('WS: ms.send wrapped');
@@ -86,10 +100,8 @@ if (ms) {
     // 2. Intercept ALL raw WebSocket activity
     if (ms.socket) {
         var ws = ms.socket;
-        dlog('WS: socket.readyState=' + ws.readyState);
-        dlog('WS: socket.bufferedAmount=' + ws.bufferedAmount);
+        dlog('WS: socket.readyState=' + ws.readyState + ' buffered=' + ws.bufferedAmount);
         
-        // Hook ALL event listeners on the socket
         var events = ['open', 'close', 'error', 'message'];
         events.forEach(function(evtName) {
             var origHandler = ws['on' + evtName];
@@ -97,73 +109,56 @@ if (ms) {
                 if (evtName === 'message') {
                     try {
                         var raw = (typeof event.data === 'string') ? event.data : '[non-string]';
-                        dlog('WS RAW ' + evtName + ': data.length=' + raw.length + ' data=' + raw.substring(0, 500));
+                        dlog('WS MSG: len=' + raw.length + ' raw=' + raw.substring(0,600));
                         try {
                             var parsed = JSON.parse(raw);
-                            dlog('WS PARSED: action=' + parsed.action + ' plugin=' + parsed.plugin + ' method=' + parsed.method + ' keys=' + Object.keys(parsed).join(','));
-                            if (parsed.action === 'plugin' && parsed.plugin === 'usertracer' && parsed.method === 'currentUsers') {
-                                dlog('WS *** MATCHED usertracer.currentUsers ***');
-                                dlog('WS data=' + JSON.stringify(parsed.data).substring(0, 300));
-                                renderTable(parsed.data || []);
-                                return; // don't forward to original handler — we consumed it
+                            dlog('WS PARSE: action=' + parsed.action + ' plugin=' + parsed.plugin + ' method=' + parsed.method);
+                            if (parsed.action === 'plugin' && parsed.plugin === 'usertracer') {
+                                dlog('WS >>> USERTRACER MATCH <<<');
+                                if (parsed.method === 'currentUsers') {
+                                    renderTable(parsed.data || []);
+                                    return;
+                                }
                             }
                         } catch(ep) {
-                            dlog('WS PARSER: not JSON, ' + ep.message);
+                            dlog('WS PARSE FAIL: ' + ep.message.substring(0,100));
                         }
                     } catch(e) {
-                        dlog('WS RAW ERROR: ' + e.message);
+                        dlog('WS RAW FAIL: ' + e.message);
                     }
                 } else {
-                    dlog('WS EVENT: ' + evtName + (event.code !== undefined ? ' code=' + event.code : '') + (event.reason ? ' reason=' + event.reason : ''));
+                    dlog('WS EVT: ' + evtName + (event.code !== undefined ? ' code=' + event.code : '') + (event.reason ? ' reason=' + event.reason : ''));
                 }
-                // Forward to original handler
-                if (typeof origHandler === 'function') {
-                    origHandler.call(ws, event);
-                }
+                if (typeof origHandler === 'function') origHandler.call(ws, event);
             };
         });
-        dlog('WS: all event listeners hooked');
+        dlog('WS: all events hooked');
     } else {
-        dlog('WS: NO SOCKET AVAILABLE');
-        // Fallback: try ms.onMessage
-        dlog('WS: trying ms.onMessage fallback...');
+        dlog('WS: NO SOCKET, fallback to ms.onMessage');
         var _origOnMsg = ms.onMessage;
         ms.onMessage = function(e) {
-            dlog('MS.ONMESSAGE called, e.type=' + (e ? typeof e : 'null'));
             try {
                 var d = (typeof e === 'string') ? JSON.parse(e) : (e.data ? JSON.parse(e.data) : e);
-                dlog('MS.ONMESSAGE: action=' + d.action + ' plugin=' + d.plugin);
+                dlog('MS.ONMSG: action=' + d.action + ' plugin=' + d.plugin);
                 if (d.action === 'plugin' && d.plugin === 'usertracer' && d.method === 'currentUsers') {
-                    dlog('MS.ONMESSAGE: *** MATCHED ***');
-                    renderTable(d.data || []);
-                    return;
+                    renderTable(d.data || []); return;
                 }
-            } catch(ex) { dlog('MS.ONMESSAGE: error: ' + ex.message); }
+            } catch(ex) { dlog('MS.ONMSG error: ' + ex.message); }
             if (typeof _origOnMsg === 'function') _origOnMsg(e);
         };
-        dlog('WS: ms.onMessage fallback installed');
+        dlog('WS: ms.onMessage installed');
     }
 } else {
-    dlog('FATAL: no meshserver available at all');
+    dlog('FATAL: no meshserver');
 }
 
 function load() {
-    dlog('LOAD: calling ms.send(getCurrentUsers)');
+    dlog('LOAD: sending getCurrentUsers');
     document.getElementById('tbody').innerHTML = '<tr><td colspan="3" class="loading">Carregando...</td></tr>';
-    if (ms) {
-        var pkt = {action:'plugin', plugin:'usertracer', pluginaction:'getCurrentUsers'};
-        dlog('LOAD: pkt=' + JSON.stringify(pkt));
-        ms.send(pkt);
-        dlog('LOAD: send returned');
-    } else {
-        dlog('LOAD: FAIL - ms is null');
-    }
+    if (ms) { ms.send({action:'plugin', plugin:'usertracer', pluginaction:'getCurrentUsers'}); dlog('LOAD: sent'); }
 }
 
-document.addEventListener('DOMContentLoaded', function() {
-    dlog('DOM: ready, calling load()');
-    load();
-});
+document.addEventListener('DOMContentLoaded', function() { dlog('DOM: ready'); load(); });
 dlog('=== INIT END ===');
 </script>
 </body>
