@@ -184,7 +184,7 @@ module.exports.usertracer = function (parent) {
     };
 
     obj.hook_processAgentData = function (data, nodeid) {
-        var nid = (typeof nodeid === 'string') ? nodeid : (data && typeof data.nodeid === 'string' ? data.nodeid : null);
+        var nid = (typeof nodeid === 'string') ? nodeid : (nodeid && typeof nodeid === 'object' ? nodeid.nodeid || nodeid._id : null);
         console.log('UT HOOKDATA: entry nodeid=' + nid);
         console.log('UT HOOKDATA: data.type=' + typeof data);
         if (data && typeof data === 'object') {
