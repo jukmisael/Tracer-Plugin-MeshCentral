@@ -1,6 +1,5 @@
 /**
- * User-Device Tracer — minimal
- * Lê o usuário ativo que o MeshCentral já tem de cada agente.
+ * User-Device Tracer — debug
  */
 "use strict";
 
@@ -28,29 +27,47 @@ module.exports.usertracer = function (parent) {
         if (command.pluginaction === 'getCurrentUsers') {
             var result = [];
             try {
-                // Source 1: parent.agents
-                var src1 = obj.meshServer.parent.agents || {};
-                console.log('UT: parent.agents count=' + Object.keys(src1).length);
-                for (var nid in src1) {
-                    var a = src1[nid];
-                    console.log('UT: agent ' + nid + ' type=' + typeof a + ' keys=' + Object.keys(a).sort().join(','));
-                    var u = obj.findUser(a);
-                    if (u) { obj.addResult(result, nid, a.name || nid, u); }
-                }
-                // Source 2: wsagents
-                var src2 = obj.meshServer.webserver.wsagents || {};
-                console.log('UT: wsagents count=' + Object.keys(src2).length);
-                for (var nid in src2) {
-                    if (obj.hasResult(result, nid)) continue;
-                    var a = src2[nid];
-                    console.log('UT: ws ' + nid + ' type=' + typeof a + ' keys=' + Object.keys(a).sort().join(','));
-                    var u = obj.findUser(a);
-                    if (u) { obj.addResult(result, nid, obj.getNodeName(nid), u); }
-                }
-                // Also try meshServer.parent (the main app)
-                var pa = obj.meshServer.parent;
-                console.log('UT: meshServer.parent keys=' + Object.keys(pa).sort().join(','));
-            } catch (e) { console.log('UT error: ' + e.message + ' ' + e.stack); }
+                // Dump meshServer structure
+                console.log('UT: meshServer type=' + typeof obj.meshServer);
+                console.log('UT: meshServer keys=' + Object.keys(obj.meshServer).sort().join(','));
+
+                // Source 1: Try obj.meshServer.agents directly
+                try {
+                    if (obj.meshServer.agents) {
+                        console.log('UT: meshServer.agents count=' + Object.keys(obj.meshServer.agents).length);
+                        for (var nid in obj.meshServer.agents) {
+                            var a = obj.meshServer.agents[nid];
+                            console.log('UT: agents[' + nid + '] keys=' + Object.keys(a).sort().join(','));
+                            var u = obj.findUser(a);
+                            if (u) obj.addResult(result, nid, a.name || nid, u);
+                        }
+                    } else { console.log('UT: meshServer.agents is ' + typeof obj.meshServer.agents); }
+                } catch (e) { console.log('UT: agents error: ' + e.message); }
+
+                // Source 2: wsagents via webserver
+                try {
+                    var ws = obj.meshServer.webserver ? obj.meshServer.webserver.wsagents || {} : {};
+                    console.log('UT: wsagents count=' + Object.keys(ws).length);
+                    for (var nid in ws) {
+                        if (obj.hasResult(result, nid)) continue;
+                        var a = ws[nid];
+                        console.log('UT: ws[' + nid + '] keys=' + Object.keys(a).sort().join(','));
+                        var u = obj.findUser(a);
+                        if (u) obj.addResult(result, nid, obj.getNodeName(nid), u);
+                    }
+                } catch (e) { console.log('UT: wsagents error: ' + e.message); }
+
+                // Source 3: obj.meshServer.parent
+                try {
+                    var p = obj.meshServer.parent;
+                    console.log('UT: meshServer.parent type=' + typeof p);
+                    if (p) {
+                        console.log('UT: meshServer.parent keys=' + Object.keys(p).sort().join(','));
+                        if (p.agents) console.log('UT: parent.agents count=' + Object.keys(p.agents).length);
+                    }
+                } catch (e) { console.log('UT: parent error: ' + e.message); }
+
+            } catch (e) { console.log('UT: fatal: ' + e.message); }
             console.log('UT result: ' + result.length + ' devices');
             if (sid) obj.send(sid, { action: 'plugin', plugin: 'usertracer', method: 'currentUsers', data: result });
         }
@@ -78,7 +95,7 @@ module.exports.usertracer = function (parent) {
     };
 
     obj.getNodeName = function (nid) {
-        try { return obj.meshServer.parent.agents[nid].name || nid; } catch (e) { return nid; }
+        try { return obj.meshServer.webserver.wsagents[nid].name || nid; } catch (e) { return nid; }
     };
 
     obj.send = function (sid, data) {
