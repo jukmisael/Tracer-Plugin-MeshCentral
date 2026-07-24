@@ -1,5 +1,15 @@
 # Changelog
 
+
+## 3.3.0 (2026-07-24)
+
+### UI redesign
+- Admin panel dark theme: cards de usuários ativos, stats, busca
+- Timeline Gantt profissional: eixo de tempo, sessões login→logout coloridas por usuário
+- Filtros: Hoje / 7d / 30d / mês + range custom + chips multi-dispositivo
+- Device tab alinhada (Agora + Timeline com range)
+- Tooltip de sessão com duração; barra tracejada = sessão aberta
+
 ## 3.2.0 (2026-07-23)
 
 ### Timeline persistente

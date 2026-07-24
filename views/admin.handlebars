@@ -1,206 +1,471 @@
 <html>
-<head><meta charset="utf-8"><title>User Tracer</title>
+<head>
+<meta charset="utf-8">
+<title>User Tracer</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'Segoe UI',sans-serif;background:#f5f5f5;color:#333;padding:20px;font-size:13px}
-h1{font-size:20px;margin-bottom:2px}
-.sub{color:#666;font-size:12px;margin-bottom:12px}
-.tab-bar{border-bottom:2px solid #ddd;margin-bottom:12px}
-.tab-bar button{padding:8px 14px;border:none;background:#eee;cursor:pointer;font-size:12px;margin-bottom:-2px;border-bottom:2px solid transparent}
-.tab-bar button:hover{background:#e0e0e0}
-.tab-bar button.active{background:#fff;border-bottom-color:#1976D2;font-weight:600;color:#1976D2}
-.pane{display:none}.pane.active{display:block}
-table{width:100%;border-collapse:collapse;font-size:12px}
-th,td{padding:5px 8px;text-align:left;border-bottom:1px solid #eee}
-th{background:#fafafa;font-weight:600}
-tr:hover{background:#f0f7ff}
-.loading{text-align:center;padding:30px;color:#999}
-.ctrl{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:10px}
-.ctrl select,.ctrl input{padding:4px 8px;border:1px solid #ccc;border-radius:3px;font-size:12px}
-.ctrl button{padding:4px 12px;background:#1976D2;color:#fff;border:none;border-radius:3px;cursor:pointer;font-size:12px}
-.ctrl label{font-size:11px;color:#666;font-weight:600}
-.lk{color:#4CAF50;font-weight:600}.lo{color:#F44336;font-weight:600}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:#0f1419;color:#e7ecf3;padding:18px;font-size:13px;line-height:1.4}
+.header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:16px;flex-wrap:wrap}
+.header h1{font-size:22px;font-weight:700;letter-spacing:-.02em;color:#fff}
+.header .sub{color:#8b98a8;font-size:12px;margin-top:2px}
+.stats{display:flex;gap:8px;flex-wrap:wrap}
+.stat{background:#1a2332;border:1px solid #2a3544;border-radius:10px;padding:10px 14px;min-width:90px}
+.stat .n{font-size:20px;font-weight:700;color:#5eb1ff}
+.stat .l{font-size:10px;color:#8b98a8;text-transform:uppercase;letter-spacing:.04em;margin-top:2px}
 
-/* Gantt chart */
-.gantt{overflow-x:auto;background:#fff;border:1px solid #e0e0e0;border-radius:4px;padding:8px}
-.gantt-row{display:flex;align-items:center;min-height:32px;border-bottom:1px solid #f0f0f0;position:relative}
-.gantt-row:hover{background:#f8f9ff}
-.gantt-label{width:120px;font-size:11px;font-weight:600;padding:4px;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.gantt-bars{flex:1;position:relative;height:28px;min-width:200px}
-.gantt-bar{position:absolute;height:20px;border-radius:3px;top:4px;min-width:2px;cursor:pointer;font-size:8px;line-height:20px;padding:0 4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#fff;font-weight:600}
-.gantt-bar.login{background:#4CAF50}
-.gantt-bar.logout{background:#F44336}
-.gantt-time{font-size:9px;color:#999;padding:2px 0}
-#dbgToggle{cursor:pointer;font-size:11px;color:#1976D2;user-select:none}
-#debug{display:none;background:#fff3cd;border:1px solid #ffeeba;padding:6px;margin-bottom:10px;font-size:9px;font-family:monospace;max-height:150px;overflow:auto}
+.tabs{display:flex;gap:4px;background:#1a2332;padding:4px;border-radius:12px;margin-bottom:16px;width:fit-content;border:1px solid #2a3544}
+.tabs button{border:none;background:transparent;color:#8b98a8;padding:8px 16px;border-radius:9px;cursor:pointer;font-size:12px;font-weight:600;transition:all .15s}
+.tabs button:hover{color:#e7ecf3}
+.tabs button.active{background:#2563eb;color:#fff;box-shadow:0 2px 8px rgba(37,99,235,.35)}
+
+.pane{display:none}.pane.active{display:block}
+.card{background:#1a2332;border:1px solid #2a3544;border-radius:14px;padding:14px;margin-bottom:12px}
+.card-title{font-size:11px;font-weight:700;color:#8b98a8;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px}
+
+.toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px}
+.toolbar .group{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.toolbar label{font-size:11px;color:#8b98a8;font-weight:600}
+.toolbar input[type=date],.toolbar input[type=text],.toolbar select{
+  background:#0f1419;border:1px solid #2a3544;color:#e7ecf3;border-radius:8px;padding:7px 10px;font-size:12px;outline:none
+}
+.toolbar input:focus,.toolbar select:focus{border-color:#2563eb}
+.btn{border:none;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:600;cursor:pointer;transition:all .15s}
+.btn-primary{background:#2563eb;color:#fff}
+.btn-primary:hover{background:#1d4ed8}
+.btn-ghost{background:#243044;color:#c5d0de}
+.btn-ghost:hover{background:#2f3f56}
+.btn-chip{background:#243044;color:#c5d0de;padding:5px 10px;font-size:11px}
+.btn-chip.active{background:#1e3a5f;color:#5eb1ff;border:1px solid #2563eb}
+.btn-chip.on{background:#164e3b;color:#34d399;border:1px solid #059669}
+
+.chips{display:flex;flex-wrap:wrap;gap:6px;max-height:96px;overflow:auto;padding:2px}
+.chip{display:inline-flex;align-items:center;gap:6px;background:#243044;border:1px solid #2a3544;border-radius:999px;padding:5px 10px;font-size:11px;cursor:pointer;user-select:none;color:#c5d0de}
+.chip:hover{border-color:#3b4f66}
+.chip.sel{background:#1e3a5f;border-color:#2563eb;color:#93c5fd}
+.chip .dot{width:7px;height:7px;border-radius:50%;background:#475569}
+.chip.sel .dot{background:#3b82f6}
+
+/* Users grid */
+.ugrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px}
+.ucard{background:#121a24;border:1px solid #2a3544;border-radius:12px;padding:14px;display:flex;gap:12px;align-items:center;transition:border-color .15s}
+.ucard:hover{border-color:#3b82f6}
+.uav{width:42px;height:42px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;color:#fff;flex-shrink:0}
+.umeta{min-width:0;flex:1}
+.uname{font-weight:700;font-size:13px;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.udev{font-size:12px;color:#8b98a8;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ubadge{display:inline-block;margin-top:4px;font-size:10px;padding:2px 7px;border-radius:999px;background:#1e3a5f;color:#93c5fd;font-weight:600}
+.online{width:8px;height:8px;border-radius:50%;background:#22c55e;box-shadow:0 0 0 3px rgba(34,197,94,.2);flex-shrink:0}
+
+/* Timeline Gantt */
+.tl-wrap{overflow:auto;border:1px solid #2a3544;border-radius:12px;background:#121a24}
+.tl-axis{display:flex;border-bottom:1px solid #2a3544;position:sticky;top:0;background:#1a2332;z-index:3;min-width:100%}
+.tl-axis-label{width:140px;flex-shrink:0;padding:8px 10px;font-size:10px;color:#8b98a8;font-weight:700;border-right:1px solid #2a3544;position:sticky;left:0;background:#1a2332;z-index:4}
+.tl-axis-track{flex:1;position:relative;height:34px;min-width:640px}
+.tl-tick{position:absolute;top:0;bottom:0;border-left:1px dashed #2a3544;width:0}
+.tl-tick span{position:absolute;top:8px;left:4px;font-size:9px;color:#6b7a8d;white-space:nowrap}
+
+.tl-row{display:flex;border-bottom:1px solid #1e2936;min-height:48px}
+.tl-row:hover{background:rgba(37,99,235,.06)}
+.tl-dev{width:140px;flex-shrink:0;padding:10px;border-right:1px solid #2a3544;position:sticky;left:0;background:#121a24;z-index:2;display:flex;flex-direction:column;justify-content:center}
+.tl-row:hover .tl-dev{background:#152033}
+.tl-dev .dn{font-weight:700;font-size:12px;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tl-dev .dc{font-size:10px;color:#6b7a8d;margin-top:2px}
+.tl-track{flex:1;position:relative;min-width:640px;min-height:48px;background-image:linear-gradient(to right,transparent 0,transparent calc(100% - 1px),#1e2936 calc(100% - 1px))}
+
+.sess{position:absolute;top:12px;height:24px;border-radius:6px;min-width:4px;cursor:pointer;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.35);border:1px solid rgba(255,255,255,.12);display:flex;align-items:center;padding:0 6px;font-size:10px;font-weight:700;color:#fff;white-space:nowrap;text-overflow:ellipsis}
+.sess:hover{filter:brightness(1.12);z-index:5;outline:2px solid #fff}
+.sess.open{border-style:dashed}
+.marker{position:absolute;top:10px;width:10px;height:28px;border-radius:3px;cursor:pointer;z-index:1;opacity:.9}
+.marker.login{background:#22c55e}
+.marker.logout{background:#ef4444}
+
+.legend{display:flex;gap:12px;flex-wrap:wrap;margin-top:10px;font-size:11px;color:#8b98a8}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:5px;vertical-align:middle}
+
+.tip{position:fixed;z-index:9999;background:#0b1220;border:1px solid #3b4f66;color:#e7ecf3;padding:8px 10px;border-radius:8px;font-size:11px;pointer-events:none;box-shadow:0 8px 24px rgba(0,0,0,.45);max-width:280px;display:none}
+.tip b{color:#fff;display:block;margin-bottom:3px}
+.empty{text-align:center;padding:48px 20px;color:#6b7a8d}
+.empty .ico{font-size:28px;margin-bottom:8px;opacity:.5}
+.loading{text-align:center;padding:40px;color:#6b7a8d}
+.muted{color:#6b7a8d;font-size:11px}
+
+#dbgToggle{cursor:pointer;font-size:11px;color:#5eb1ff;user-select:none;margin-top:14px}
+#debug{display:none;background:#1a1508;border:1px solid #5c4a12;color:#e8d48b;padding:8px;margin-top:6px;font-size:10px;font-family:Consolas,monospace;max-height:160px;overflow:auto;border-radius:8px;white-space:pre-wrap}
 </style>
 </head>
 <body>
-<h1>User Tracer</h1>
-<p class="sub">Rastreio de usuários nos dispositivos</p>
-<div id="dbgToggle" onclick="var e=document.getElementById('debug');e.style.display=e.style.display==='none'?'block':'none'">🔽 Debug</div>
-<div id="debug">aguardando...</div>
-<div class="tab-bar">
-    <button class="active" onclick="switchTab('users')">Usuários Ativos</button>
-    <button onclick="switchTab('timeline')">Timeline</button>
+<div class="header">
+  <div>
+    <h1>User Tracer</h1>
+    <div class="sub">Lastro AD · usuários × dispositivos · auditoria de sessão</div>
+  </div>
+  <div class="stats">
+    <div class="stat"><div class="n" id="sDevices">—</div><div class="l">Dispositivos</div></div>
+    <div class="stat"><div class="n" id="sUsers">—</div><div class="l">Usuários ativos</div></div>
+    <div class="stat"><div class="n" id="sEvents">—</div><div class="l">Eventos (filtro)</div></div>
+  </div>
+</div>
+
+<div class="tabs">
+  <button class="active" id="tabUsers" onclick="switchTab('users')">Usuários ativos</button>
+  <button id="tabTl" onclick="switchTab('timeline')">Timeline</button>
 </div>
 
 <div id="pane-users" class="pane active">
-    <div style="overflow-x:auto">
-    <table><thead><tr><th>Dispositivo</th><th>Usuário</th><th>Domínio</th></tr></thead>
-    <tbody id="tbody"><tr><td colspan="3" class="loading">Carregando...</td></tr></tbody></table>
+  <div class="card">
+    <div class="toolbar">
+      <div class="group">
+        <label>Buscar</label>
+        <input type="text" id="userSearch" placeholder="usuário ou máquina..." style="width:220px" oninput="filterUsers()">
+      </div>
+      <button class="btn btn-ghost" onclick="loadUsers()">Atualizar</button>
+      <span class="muted" id="userHint"></span>
     </div>
+    <div id="userGrid" class="ugrid"><div class="loading">Carregando usuários...</div></div>
+  </div>
 </div>
 
 <div id="pane-timeline" class="pane">
-    <div class="ctrl">
-        <label>De:</label>
+  <div class="card">
+    <div class="card-title">Período</div>
+    <div class="toolbar">
+      <div class="group">
+        <button class="btn btn-chip" data-r="today" onclick="setRange('today',this)">Hoje</button>
+        <button class="btn btn-chip active" data-r="7d" onclick="setRange('7d',this)">7 dias</button>
+        <button class="btn btn-chip" data-r="30d" onclick="setRange('30d',this)">30 dias</button>
+        <button class="btn btn-chip" data-r="month" onclick="setRange('month',this)">Este mês</button>
+      </div>
+      <div class="group">
+        <label>De</label>
         <input type="date" id="dStart">
-        <label>Até:</label>
+        <label>Até</label>
         <input type="date" id="dEnd">
-        <label>Dispositivos:</label>
-        <select id="devFilter" multiple style="height:60px;width:200px"></select>
-        <button onclick="loadTimeline()">Buscar</button>
-        <button onclick="selectAllDevs(true)" style="background:#666">Todos</button>
-        <button onclick="selectAllDevs(false)" style="background:#666">Nenhum</button>
-        <span id="tlCount" style="font-size:11px;color:#999;margin-left:8px"></span>
+      </div>
+      <button class="btn btn-primary" onclick="loadTimeline()">Aplicar</button>
+      <span class="muted" id="tlHint"></span>
     </div>
-    <div id="ganttContainer" class="loading">Selecione um período e dispositivos, depois clique Buscar.</div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Dispositivos</div>
+    <div class="toolbar" style="margin-bottom:8px">
+      <button class="btn btn-ghost" onclick="selectAllDevs(true)">Todos</button>
+      <button class="btn btn-ghost" onclick="selectAllDevs(false)">Nenhum</button>
+      <input type="text" id="devSearch" placeholder="filtrar dispositivos..." style="width:180px" oninput="filterDevChips()">
+    </div>
+    <div class="chips" id="devChips"><span class="muted">Carregando...</span></div>
+  </div>
+
+  <div class="card" style="padding:0;overflow:hidden">
+    <div style="padding:12px 14px;border-bottom:1px solid #2a3544;display:flex;justify-content:space-between;align-items:center">
+      <div class="card-title" style="margin:0">Sessões no período</div>
+      <div class="legend">
+        <span><i style="background:linear-gradient(90deg,#3b82f6,#60a5fa)"></i>Sessão</span>
+        <span><i style="background:#22c55e"></i>Login</span>
+        <span><i style="background:#ef4444"></i>Logout</span>
+        <span class="muted">barra tracejada = sessão aberta</span>
+      </div>
+    </div>
+    <div id="ganttContainer"><div class="loading">Selecione período e clique Aplicar.</div></div>
+  </div>
 </div>
 
-<script>
-var D=[],ms=(typeof parent!=='undefined'&&parent.meshserver)||window.meshserver;
-function dlog(){var a=Array.prototype.slice.call(arguments);D.push(new Date().toLocaleTimeString()+' '+a.join(' '));var e=document.getElementById('debug');if(e)e.innerHTML=D.join('\n');console.log('[UTRACER]',a.join(' '));}
-dlog('INIT ms='+(ms?'OK':'NULL'));
+<div id="tip" class="tip"></div>
+<div id="dbgToggle" onclick="var e=document.getElementById('debug');e.style.display=e.style.display==='none'?'block':'none'">Debug</div>
+<div id="debug">aguardando...</div>
 
-// Set default date range (last 7 days)
-(function(){
-    var d=new Date(); document.getElementById('dEnd').value=d.toISOString().split('T')[0];
-    d.setDate(d.getDate()-7); document.getElementById('dStart').value=d.toISOString().split('T')[0];
-})();
+<script>
+var D=[], ms=(typeof parent!=='undefined'&&parent.meshserver)||window.meshserver;
+var rawUsers=[], deviceList=[], selectedDevs={};
+var USER_COLORS=['#3b82f6','#8b5cf6','#06b6d4','#10b981','#f59e0b','#ef4444','#ec4899','#14b8a6','#6366f1','#84cc16','#f97316','#a855f7'];
+function dlog(){var a=Array.prototype.slice.call(arguments);D.push(new Date().toLocaleTimeString()+' '+a.join(' '));var e=document.getElementById('debug');if(e)e.innerHTML=D.slice(-80).join('\n');}
+function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function colorFor(key){var h=0,s=String(key||'');for(var i=0;i<s.length;i++)h=((h<<5)-h)+s.charCodeAt(i)|0;return USER_COLORS[Math.abs(h)%USER_COLORS.length];}
+function initials(name){var p=String(name||'?').replace(/[._-]/g,' ').split(/\s+/).filter(Boolean);if(!p.length)return'?';if(p.length===1)return p[0].substring(0,2).toUpperCase();return (p[0][0]+p[1][0]).toUpperCase();}
+function splitUser(u){var p=String(u||'').split('\\');return p.length>1?{domain:p[0],user:p[1]}:{domain:'',user:u||''};}
+function fmtDate(d){var x=new Date(d);if(isNaN(x))return'—';return x.toLocaleString();}
+function fmtDur(ms){if(ms<0)ms=0;var m=Math.floor(ms/60000),h=Math.floor(m/60),d=Math.floor(h/24);m%=60;h%=24;if(d>0)return d+'d '+h+'h';if(h>0)return h+'h '+m+'m';return m+'m';}
+function ymd(d){var x=new Date(d);var m=x.getMonth()+1,day=x.getDate();return x.getFullYear()+'-'+(m<10?'0':'')+m+'-'+(day<10?'0':'')+day;}
+
+function setRange(kind,btn){
+  document.querySelectorAll('.btn-chip[data-r]').forEach(function(b){b.classList.remove('active');});
+  if(btn)btn.classList.add('active');
+  var end=new Date(), start=new Date();
+  if(kind==='today'){start=new Date(end.getFullYear(),end.getMonth(),end.getDate());}
+  else if(kind==='7d'){start.setDate(end.getDate()-6);}
+  else if(kind==='30d'){start.setDate(end.getDate()-29);}
+  else if(kind==='month'){start=new Date(end.getFullYear(),end.getMonth(),1);}
+  document.getElementById('dStart').value=ymd(start);
+  document.getElementById('dEnd').value=ymd(end);
+}
 
 function switchTab(n){
-    document.querySelectorAll('.tab-bar button').forEach(function(b){b.classList.remove('active');});
-    document.querySelectorAll('.pane').forEach(function(p){p.classList.remove('active');});
-    var btns=document.querySelectorAll('.tab-bar button');
-    for(var i=0;i<btns.length;i++){if(btns[i].textContent.toLowerCase().includes(n))btns[i].classList.add('active');}
-    document.getElementById('pane-'+n).classList.add('active');
-    if(n==='users')loadUsers();
-    else { loadDeviceNames(); loadTimeline(); }
+  document.getElementById('tabUsers').classList.toggle('active',n==='users');
+  document.getElementById('tabTl').classList.toggle('active',n==='timeline');
+  document.getElementById('pane-users').classList.toggle('active',n==='users');
+  document.getElementById('pane-timeline').classList.toggle('active',n==='timeline');
+  if(n==='users')loadUsers();
+  else{loadDeviceNames();loadTimeline();}
+}
+
+/* ===== USERS ===== */
+function loadUsers(){
+  document.getElementById('userGrid').innerHTML='<div class="loading">Carregando usuários...</div>';
+  if(ms)ms.send({action:'plugin',plugin:'usertracer',pluginaction:'getCurrentUsers'});
+}
+function renderUsers(list){
+  rawUsers=[];
+  (list||[]).forEach(function(row){
+    (row.users||[]).forEach(function(u){
+      var s=splitUser(u);
+      rawUsers.push({nodeid:row.nodeid,nodeName:row.nodeName||row.nodeid,user:s.user,domain:s.domain,raw:u});
+    });
+  });
+  var devs={}; rawUsers.forEach(function(r){devs[r.nodeName]=1;});
+  document.getElementById('sDevices').textContent=Object.keys(devs).length;
+  document.getElementById('sUsers').textContent=rawUsers.length;
+  filterUsers();
+}
+function filterUsers(){
+  var q=(document.getElementById('userSearch').value||'').toLowerCase().trim();
+  var rows=rawUsers.filter(function(r){
+    if(!q)return true;
+    return (r.user+' '+r.domain+' '+r.nodeName).toLowerCase().indexOf(q)>=0;
+  });
+  document.getElementById('userHint').textContent=rows.length+' de '+rawUsers.length;
+  if(!rows.length){
+    document.getElementById('userGrid').innerHTML='<div class="empty"><div class="ico">∅</div>Nenhum usuário ativo encontrado.</div>';
+    return;
+  }
+  rows.sort(function(a,b){return a.user.localeCompare(b.user)||a.nodeName.localeCompare(b.nodeName);});
+  var h='';
+  rows.forEach(function(r){
+    var c=colorFor(r.raw);
+    h+='<div class="ucard">';
+    h+='<div class="uav" style="background:'+c+'">'+esc(initials(r.user))+'</div>';
+    h+='<div class="umeta"><div class="uname" title="'+esc(r.raw)+'">'+esc(r.user)+'</div>';
+    h+='<div class="udev" title="'+esc(r.nodeName)+'">'+esc(r.nodeName)+'</div>';
+    if(r.domain)h+='<span class="ubadge">'+esc(r.domain)+'</span>';
+    h+='</div><div class="online" title="Online"></div></div>';
+  });
+  document.getElementById('userGrid').innerHTML=h;
+}
+
+/* ===== DEVICES ===== */
+function loadDeviceNames(){if(ms)ms.send({action:'plugin',plugin:'usertracer',pluginaction:'getDeviceNames'});}
+function renderDeviceNames(list){
+  deviceList=(list||[]).slice().sort(function(a,b){return String(a.name).localeCompare(String(b.name));});
+  if(!Object.keys(selectedDevs).length){
+    deviceList.forEach(function(d){selectedDevs[d.nodeid]=true;});
+  }
+  renderDevChips();
+}
+function renderDevChips(){
+  var q=(document.getElementById('devSearch').value||'').toLowerCase().trim();
+  var h='';
+  deviceList.forEach(function(d){
+    if(q && String(d.name).toLowerCase().indexOf(q)<0) return;
+    var on=!!selectedDevs[d.nodeid];
+    h+='<div class="chip'+(on?' sel':'')+'" data-id="'+esc(d.nodeid)+'" onclick="toggleDev(this)">'
+      +'<span class="dot"></span>'+esc(d.name)+'</div>';
+  });
+  document.getElementById('devChips').innerHTML=h||'<span class="muted">Nenhum dispositivo no histórico.</span>';
+}
+function filterDevChips(){renderDevChips();}
+function toggleDev(el){
+  var id=el.getAttribute('data-id');
+  if(selectedDevs[id]) delete selectedDevs[id]; else selectedDevs[id]=true;
+  el.classList.toggle('sel', !!selectedDevs[id]);
 }
 function selectAllDevs(yes){
-    var sel=document.getElementById('devFilter');
-    for(var i=0;i<sel.options.length;i++) sel.options[i].selected=yes;
+  selectedDevs={};
+  if(yes) deviceList.forEach(function(d){selectedDevs[d.nodeid]=true;});
+  renderDevChips();
 }
 
-// === CURRENT USERS ===
-function loadUsers(){
-    document.getElementById('tbody').innerHTML='<tr><td colspan="3" class="loading">Carregando...</td></tr>';
-    if(ms)ms.send({action:'plugin',plugin:'usertracer',pluginaction:'getCurrentUsers'});
-}
-function renderUsers(d){
-    var h='';
-    for(var i=0;i<d.length;i++){
-        (d[i].users||[]).forEach(function(u){
-            var p=u.split('\\'),dom=p.length>1?p[0]:'',usr=p.length>1?p[1]:u;
-            h+='<tr><td>'+d[i].nodeName+'</td><td>'+usr+'</td><td>'+(dom||'-')+'</td></tr>';
-        });
-    }
-    document.getElementById('tbody').innerHTML=h||'<tr><td colspan="3" class="loading">Nenhum usuário ativo.</td></tr>';
-}
-
-// === DEVICE LIST ===
-function loadDeviceNames(){
-    if(ms)ms.send({action:'plugin',plugin:'usertracer',pluginaction:'getDeviceNames'});
-}
-function renderDeviceNames(d){
-    var sel=document.getElementById('devFilter');
-    sel.innerHTML='';
-    d.sort(function(a,b){return a.name.localeCompare(b.name);});
-    d.forEach(function(dev){
-        var opt=document.createElement('option');
-        opt.value=dev.nodeid; opt.textContent=dev.name;
-        sel.appendChild(opt);
-    });
-}
-
-// === TIMELINE GANTT ===
+/* ===== TIMELINE ===== */
 function loadTimeline(){
-    var start=document.getElementById('dStart').value;
-    var end=document.getElementById('dEnd').value;
-    if(!start||!end){document.getElementById('ganttContainer').innerHTML='<div class="loading">Selecione data início e fim.</div>';return;}
-    end=end+'T23:59:59';
-    start=start+'T00:00:00';
-
-    var sel=document.getElementById('devFilter');
-    var nodeids=[];
-    for(var i=0;i<sel.options.length;i++){if(sel.options[i].selected)nodeids.push(sel.options[i].value);}
-
-    dlog('loadTimeline: start='+start+' end='+end+' devs='+nodeids.length);
-    document.getElementById('ganttContainer').innerHTML='<div class="loading">Carregando timeline...</div>';
-    if(ms)ms.send({action:'plugin',plugin:'usertracer',pluginaction:'getTimeline',startDate:start,endDate:end,nodeids:nodeids,limit:5000});
+  var start=document.getElementById('dStart').value;
+  var end=document.getElementById('dEnd').value;
+  if(!start||!end){
+    document.getElementById('ganttContainer').innerHTML='<div class="empty"><div class="ico">📅</div>Selecione data início e fim.</div>';
+    return;
+  }
+  var nodeids=Object.keys(selectedDevs);
+  document.getElementById('ganttContainer').innerHTML='<div class="loading">Montando timeline...</div>';
+  document.getElementById('tlHint').textContent=nodeids.length? (nodeids.length+' dispositivos') : 'todos os dispositivos';
+  if(ms)ms.send({
+    action:'plugin', plugin:'usertracer', pluginaction:'getTimeline',
+    startDate:start+'T00:00:00', endDate:end+'T23:59:59.999',
+    nodeids:nodeids, limit:8000
+  });
 }
 
-function renderTimeline(d){
-    document.getElementById('tlCount').textContent=d.length+' eventos';
-    if(!d||!d.length){document.getElementById('ganttContainer').innerHTML='<div class="loading">Nenhum evento no período selecionado.</div>';return;}
-
-    // Group events by nodeName
-    var byDevice={};
-    d.forEach(function(e){
-        var name=e.nodeName||e.nodeid;
-        if(!byDevice[name]){byDevice[name]={nodeName:name,events:[]};}
-        byDevice[name].events.push(e);
+function buildSessions(events, rangeStart, rangeEnd){
+  // group by device+user, pair login/logout into sessions
+  var byKey={};
+  events.slice().sort(function(a,b){return new Date(a.detectedAt)-new Date(b.detectedAt);}).forEach(function(e){
+    var k=(e.nodeid||'')+'|'+(e.displayUser||e.username||'');
+    if(!byKey[k]) byKey[k]={nodeid:e.nodeid,nodeName:e.nodeName,user:e.username,display:e.displayUser||e.username,domain:e.domain,events:[]};
+    byKey[k].events.push(e);
+  });
+  var sessions=[];
+  Object.keys(byKey).forEach(function(k){
+    var g=byKey[k], open=null;
+    g.events.forEach(function(e){
+      var t=new Date(e.detectedAt).getTime();
+      if(e.eventType==='userLogin'){
+        if(open){ // previous open without logout
+          sessions.push({nodeid:g.nodeid,nodeName:g.nodeName,user:g.user,display:g.display,domain:g.domain,start:open,end:t,open:false,orphan:true});
+        }
+        open=t;
+      } else if(e.eventType==='userLogout'){
+        if(open!=null){
+          sessions.push({nodeid:g.nodeid,nodeName:g.nodeName,user:g.user,display:g.display,domain:g.domain,start:open,end:t,open:false});
+          open=null;
+        } else {
+          // logout alone — short marker session
+          sessions.push({nodeid:g.nodeid,nodeName:g.nodeName,user:g.user,display:g.display,domain:g.domain,start:Math.max(rangeStart,t-30*60000),end:t,open:false,logoutOnly:true});
+        }
+      }
     });
-    var deviceNames=Object.keys(byDevice).sort();
-
-    // Determine time range
-    var minT=Infinity,maxT=-Infinity;
-    d.forEach(function(e){var t=new Date(e.detectedAt).getTime();if(t<minT)minT=t;if(t>maxT)maxT=t;});
-    var rangeMs=maxT-minT||86400000;
-    var pad=rangeMs*0.05; minT-=pad; maxT+=pad;
-    var totalMs=maxT-minT;
-
-    // Build Gantt HTML
-    var h='<div class="gantt">';
-    deviceNames.forEach(function(name){
-        var dev=byDevice[name];
-        h+='<div class="gantt-row">';
-        h+='<div class="gantt-label" title="'+name+'">'+name+'</div>';
-        h+='<div class="gantt-bars">';
-        dev.events.forEach(function(e){
-            var t=new Date(e.detectedAt).getTime();
-            var pct=((t-minT)/totalMs)*100;
-            var cls=e.eventType==='userLogin'?'login':'logout';
-            var lbl=e.eventType==='userLogin'?'✓':'✕';
-            var usr=e.username||'';
-            h+='<div class="gantt-bar '+cls+'" style="left:'+pct+'%" title="'+e.detectedAt+' '+usr+' '+e.eventType+'">'+lbl+' '+usr+'</div>';
-        });
-        h+='</div></div>';
-    });
-    h+='</div>';
-    document.getElementById('ganttContainer').innerHTML=h;
+    if(open!=null){
+      sessions.push({nodeid:g.nodeid,nodeName:g.nodeName,user:g.user,display:g.display,domain:g.domain,start:open,end:Math.min(rangeEnd, Date.now()),open:true});
+    }
+  });
+  return sessions;
 }
 
-// === WS HOOK ===
+function renderTimeline(events){
+  events=events||[];
+  document.getElementById('sEvents').textContent=events.length;
+  if(!events.length){
+    document.getElementById('ganttContainer').innerHTML='<div class="empty"><div class="ico">∅</div>Nenhum evento no período selecionado.</div>';
+    return;
+  }
+
+  var startStr=document.getElementById('dStart').value+'T00:00:00';
+  var endStr=document.getElementById('dEnd').value+'T23:59:59.999';
+  var rangeStart=new Date(startStr).getTime();
+  var rangeEnd=new Date(endStr).getTime();
+  if(isNaN(rangeStart)||isNaN(rangeEnd)||rangeEnd<=rangeStart){
+    // fallback from data
+    rangeStart=Infinity; rangeEnd=-Infinity;
+    events.forEach(function(e){var t=new Date(e.detectedAt).getTime(); if(t<rangeStart)rangeStart=t; if(t>rangeEnd)rangeEnd=t;});
+    if(rangeEnd<=rangeStart) rangeEnd=rangeStart+86400000;
+  }
+  var total=rangeEnd-rangeStart;
+
+  var sessions=buildSessions(events, rangeStart, rangeEnd);
+
+  // group by device
+  var byDev={};
+  sessions.forEach(function(s){
+    var n=s.nodeName||s.nodeid||'?';
+    if(!byDev[n]) byDev[n]={name:n,nodeid:s.nodeid,sessions:[]};
+    byDev[n].sessions.push(s);
+  });
+  // also ensure devices with only raw events appear
+  events.forEach(function(e){
+    var n=e.nodeName||e.nodeid||'?';
+    if(!byDev[n]) byDev[n]={name:n,nodeid:e.nodeid,sessions:[]};
+  });
+  var names=Object.keys(byDev).sort();
+
+  // ticks
+  var dayMs=86400000, hourMs=3600000;
+  var spanDays=total/dayMs;
+  var step= spanDays<=2 ? hourMs*3 : (spanDays<=14 ? dayMs : (spanDays<=60 ? dayMs*2 : dayMs*7));
+  var ticks=[];
+  var t0=Math.ceil(rangeStart/step)*step;
+  for(var t=t0;t<=rangeEnd;t+=step){
+    var d=new Date(t);
+    var label= step<dayMs
+      ? (d.getHours()<10?'0':'')+d.getHours()+':00'
+      : (d.getDate()<10?'0':'')+d.getDate()+'/'+(d.getMonth()+1<10?'0':'')+(d.getMonth()+1);
+    ticks.push({pct:((t-rangeStart)/total)*100, label:label});
+  }
+
+  var trackMin=Math.max(720, Math.min(2400, Math.floor(spanDays*90)));
+  var h='<div class="tl-wrap"><div class="tl-axis">';
+  h+='<div class="tl-axis-label">DISPOSITIVO</div>';
+  h+='<div class="tl-axis-track" style="min-width:'+trackMin+'px">';
+  ticks.forEach(function(tk){h+='<div class="tl-tick" style="left:'+tk.pct+'%"><span>'+esc(tk.label)+'</span></div>';});
+  h+='</div></div>';
+
+  names.forEach(function(name){
+    var dev=byDev[name];
+    var cnt=dev.sessions.length;
+    h+='<div class="tl-row">';
+    h+='<div class="tl-dev"><div class="dn" title="'+esc(name)+'">'+esc(name)+'</div><div class="dc">'+cnt+' sessão'+(cnt===1?'':'ões')+'</div></div>';
+    h+='<div class="tl-track" style="min-width:'+trackMin+'px">';
+    ticks.forEach(function(tk){h+='<div class="tl-tick" style="left:'+tk.pct+'%"></div>';});
+
+    // lane stacking simple: offset by user hash
+    var lanes={};
+    dev.sessions.forEach(function(s){
+      var left=Math.max(0, ((s.start-rangeStart)/total)*100);
+      var right=Math.min(100, ((s.end-rangeStart)/total)*100);
+      if(right<=left) right=left+0.15;
+      var w=Math.max(0.2, right-left);
+      var c=colorFor(s.display||s.user);
+      var openCls=s.open?' open':'';
+      var title=esc(s.display||s.user)+' · '+fmtDate(s.start)+(s.open?' → agora':' → '+fmtDate(s.end))+' · '+fmtDur(s.end-s.start);
+      h+='<div class="sess'+openCls+'" style="left:'+left+'%;width:'+w+'%;background:'+c+'" '
+        +'data-tip="'+title+'" onmouseenter="showTip(event,this)" onmouseleave="hideTip()">'
+        +esc(s.user||'')+'</div>';
+    });
+
+    // raw login/logout markers for visibility when sessions collapse
+    events.filter(function(e){return (e.nodeName||e.nodeid)===name;}).forEach(function(e){
+      var tt=new Date(e.detectedAt).getTime();
+      if(tt<rangeStart||tt>rangeEnd)return;
+      var pct=((tt-rangeStart)/total)*100;
+      var cls=e.eventType==='userLogin'?'login':'logout';
+      var tip=esc(e.eventType)+' · '+esc(e.displayUser||e.username)+' · '+fmtDate(tt);
+      h+='<div class="marker '+cls+'" style="left:calc('+pct+'% - 4px)" data-tip="'+tip+'" onmouseenter="showTip(event,this)" onmouseleave="hideTip()"></div>';
+    });
+
+    h+='</div></div>';
+  });
+  h+='</div>';
+  document.getElementById('ganttContainer').innerHTML=h;
+  document.getElementById('tlHint').textContent=events.length+' eventos · '+sessions.length+' sessões · '+names.length+' máquinas';
+}
+
+function showTip(ev,el){
+  var tip=document.getElementById('tip');
+  tip.innerHTML='<b>'+ (el.getAttribute('data-tip')||'') +'</b>';
+  tip.style.display='block';
+  var x=ev.clientX+12, y=ev.clientY+12;
+  if(x+220>window.innerWidth)x=ev.clientX-220;
+  if(y+80>window.innerHeight)y=ev.clientY-80;
+  tip.style.left=x+'px'; tip.style.top=y+'px';
+}
+function hideTip(){document.getElementById('tip').style.display='none';}
+
+/* ===== WS ===== */
 if(ms&&ms.socket){
-    var orig=ms.socket.onmessage;
-    ms.socket.onmessage=function(event){
-        try{
-            var d=JSON.parse(event.data);
-            if(d.action==='plugin'&&d.plugin==='usertracer'){
-                if(d.method==='currentUsers')renderUsers(d.data||[]);
-                else if(d.method==='timeline')renderTimeline(d.data||[]);
-                else if(d.method==='deviceNames')renderDeviceNames(d.data||[]);
-                return;
-            }
-        }catch(e){}
-        if(typeof orig==='function')orig.call(ms.socket,event);
-    };
-    dlog('socket hooked');
+  var orig=ms.socket.onmessage;
+  ms.socket.onmessage=function(event){
+    try{
+      var d=JSON.parse(event.data);
+      if(d.action==='plugin'&&d.plugin==='usertracer'){
+        dlog('WS', d.method, Array.isArray(d.data)?('n='+d.data.length):typeof d.data);
+        if(d.method==='currentUsers')renderUsers(d.data||[]);
+        else if(d.method==='timeline')renderTimeline(d.data||[]);
+        else if(d.method==='deviceNames')renderDeviceNames(d.data||[]);
+        return;
+      }
+    }catch(e){}
+    if(typeof orig==='function')orig.call(ms.socket,event);
+  };
+  dlog('socket hooked');
 }
 
-document.addEventListener('DOMContentLoaded',function(){loadUsers();});
+// defaults
+setRange('7d', document.querySelector('.btn-chip[data-r="7d"]'));
+document.addEventListener('DOMContentLoaded', function(){ loadUsers(); });
 </script>
 </body>
 </html>

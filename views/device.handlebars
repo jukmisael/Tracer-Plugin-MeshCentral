@@ -1,120 +1,229 @@
 <html>
-<head><meta charset="utf-8"><title>{{nodeName}}</title>
+<head>
+<meta charset="utf-8">
+<title>{{nodeName}}</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'Segoe UI',sans-serif;background:transparent;color:#333;padding:12px;font-size:13px}
-h2{font-size:16px;margin-bottom:2px}
-.sub{color:#666;font-size:12px;margin-bottom:8px}
-.tab-bar{border-bottom:2px solid #ddd;margin-bottom:8px}
-.tab-bar button{padding:6px 12px;border:none;background:#eee;cursor:pointer;font-size:11px;margin-bottom:-2px;border-bottom:2px solid transparent}
-.tab-bar button:hover{background:#e0e0e0}
-.tab-bar button.active{background:#fff;border-bottom-color:#1976D2;font-weight:600;color:#1976D2}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:transparent;color:#e7ecf3;padding:12px;font-size:12px}
+h2{font-size:16px;font-weight:700;color:#fff}
+.sub{color:#8b98a8;font-size:11px;margin:2px 0 10px}
+.tabs{display:flex;gap:4px;background:#1a2332;padding:3px;border-radius:10px;width:fit-content;border:1px solid #2a3544;margin-bottom:10px}
+.tabs button{border:none;background:transparent;color:#8b98a8;padding:6px 12px;border-radius:8px;cursor:pointer;font-size:11px;font-weight:600}
+.tabs button.active{background:#2563eb;color:#fff}
 .pane{display:none}.pane.active{display:block}
-.info{background:#e3f2fd;border:1px solid #90caf9;border-radius:6px;padding:10px;margin-bottom:8px}
-.info .lbl{font-size:11px;color:#666}
-.info .val{font-size:18px;font-weight:600;color:#1976D2}
-.gantt{overflow-x:auto;background:#fff;border:1px solid #e0e0e0;border-radius:4px;padding:6px;min-height:60px}
-.gantt-row{display:flex;align-items:center;min-height:28px}
-.gantt-label{width:80px;font-size:10px;font-weight:600;padding:2px;flex-shrink:0}
-.gantt-bars{flex:1;position:relative;height:24px}
-.gantt-bar{position:absolute;height:16px;border-radius:2px;top:4px;min-width:2px;font-size:7px;line-height:16px;padding:0 3px;color:#fff;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer}
-.gantt-bar.login{background:#4CAF50}
-.gantt-bar.logout{background:#F44336}
-.ctrl{display:flex;gap:4px;flex-wrap:wrap;align-items:center;margin-bottom:6px}
-.ctrl input,.ctrl select{font-size:11px;padding:3px 6px;border:1px solid #ccc;border-radius:3px}
-.ctrl button{font-size:11px;padding:3px 10px;background:#1976D2;color:#fff;border:none;border-radius:3px;cursor:pointer}
-.loading{text-align:center;padding:20px;color:#999}
-.dbg{font-size:9px;color:#999;margin-top:6px;cursor:pointer}
-#debug{display:none;background:#fff3cd;border:1px solid #ffeeba;padding:4px;margin-top:4px;font-size:8px;font-family:monospace;max-height:120px;overflow:auto}
+.card{background:#1a2332;border:1px solid #2a3544;border-radius:12px;padding:12px;margin-bottom:8px}
+.ucard{display:flex;gap:10px;align-items:center;background:#121a24;border:1px solid #2a3544;border-radius:10px;padding:12px;margin-bottom:8px}
+.uav{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;flex-shrink:0}
+.uname{font-weight:700;color:#fff;font-size:13px}
+.udev{color:#8b98a8;font-size:11px;margin-top:2px}
+.ubadge{display:inline-block;margin-top:4px;font-size:10px;padding:2px 6px;border-radius:999px;background:#1e3a5f;color:#93c5fd}
+.online{width:8px;height:8px;border-radius:50%;background:#22c55e;box-shadow:0 0 0 3px rgba(34,197,94,.2);margin-left:auto}
+.toolbar{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:8px}
+.toolbar input{background:#0f1419;border:1px solid #2a3544;color:#e7ecf3;border-radius:7px;padding:5px 8px;font-size:11px}
+.btn{border:none;border-radius:7px;padding:5px 10px;font-size:11px;font-weight:600;cursor:pointer;background:#2563eb;color:#fff}
+.btn-chip{background:#243044;color:#c5d0de}
+.btn-chip.active{background:#1e3a5f;color:#5eb1ff;border:1px solid #2563eb}
+.tl-wrap{overflow:auto;border:1px solid #2a3544;border-radius:10px;background:#121a24}
+.tl-axis{display:flex;border-bottom:1px solid #2a3544;background:#1a2332;position:sticky;top:0;z-index:2}
+.tl-axis-label{width:90px;flex-shrink:0;padding:6px 8px;font-size:9px;color:#8b98a8;font-weight:700;border-right:1px solid #2a3544}
+.tl-axis-track{flex:1;position:relative;height:28px;min-width:520px}
+.tl-tick{position:absolute;top:0;bottom:0;border-left:1px dashed #2a3544}
+.tl-tick span{position:absolute;top:6px;left:3px;font-size:8px;color:#6b7a8d;white-space:nowrap}
+.tl-row{display:flex;min-height:42px;border-bottom:1px solid #1e2936}
+.tl-dev{width:90px;flex-shrink:0;padding:8px;border-right:1px solid #2a3544;font-size:10px;color:#8b98a8;display:flex;align-items:center}
+.tl-track{flex:1;position:relative;min-width:520px;min-height:42px}
+.sess{position:absolute;top:10px;height:20px;border-radius:5px;min-width:3px;font-size:9px;font-weight:700;color:#fff;padding:0 5px;display:flex;align-items:center;overflow:hidden;white-space:nowrap;border:1px solid rgba(255,255,255,.12);cursor:pointer}
+.sess.open{border-style:dashed}
+.marker{position:absolute;top:8px;width:8px;height:24px;border-radius:2px;opacity:.9}
+.marker.login{background:#22c55e}.marker.logout{background:#ef4444}
+.empty,.loading{text-align:center;padding:28px;color:#6b7a8d}
+.tip{position:fixed;z-index:99;background:#0b1220;border:1px solid #3b4f66;color:#e7ecf3;padding:6px 8px;border-radius:7px;font-size:10px;display:none;max-width:240px;pointer-events:none}
+.dbg{margin-top:8px;font-size:10px;color:#5eb1ff;cursor:pointer}
+#debug{display:none;background:#1a1508;border:1px solid #5c4a12;color:#e8d48b;padding:6px;margin-top:4px;font-size:9px;font-family:Consolas,monospace;max-height:100px;overflow:auto;border-radius:6px;white-space:pre-wrap}
+.legend{display:flex;gap:10px;font-size:10px;color:#8b98a8;margin-top:6px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:middle}
 </style>
 </head>
 <body>
 <h2>User Tracer</h2>
-<p class="sub">{{nodeName}}</p>
-<div class="tab-bar">
-    <button class="active" onclick="switchTab('now')">Agora</button>
-    <button onclick="switchTab('history')">Timeline</button>
+<div class="sub">{{nodeName}}</div>
+<div class="tabs">
+  <button class="active" id="tNow" onclick="switchTab('now')">Agora</button>
+  <button id="tHist" onclick="switchTab('history')">Timeline</button>
 </div>
-<div id="pane-now" class="pane active"><div id="info" class="loading">Carregando...</div></div>
+
+<div id="pane-now" class="pane active">
+  <div class="card" id="info"><div class="loading">Carregando...</div></div>
+</div>
+
 <div id="pane-history" class="pane">
-    <div class="ctrl">
-        <label style="font-size:10px">De:</label>
-        <input type="date" id="dStart" style="width:110px">
-        <label style="font-size:10px">Até:</label>
-        <input type="date" id="dEnd" style="width:110px">
-        <button onclick="loadHistory()">Buscar</button>
+  <div class="card">
+    <div class="toolbar">
+      <button class="btn btn-chip" data-r="today" onclick="setRange('today',this)">Hoje</button>
+      <button class="btn btn-chip active" data-r="7d" onclick="setRange('7d',this)">7 dias</button>
+      <button class="btn btn-chip" data-r="30d" onclick="setRange('30d',this)">30 dias</button>
+      <input type="date" id="dStart">
+      <input type="date" id="dEnd">
+      <button class="btn" onclick="loadHistory()">Aplicar</button>
     </div>
-    <div id="gantt" class="loading">Selecione o período.</div>
+    <div class="legend">
+      <span><i style="background:#3b82f6"></i>Sessão</span>
+      <span><i style="background:#22c55e"></i>Login</span>
+      <span><i style="background:#ef4444"></i>Logout</span>
+    </div>
+  </div>
+  <div id="gantt"><div class="loading">Selecione o período.</div></div>
 </div>
-<div class="dbg" onclick="var d=document.getElementById('debug');d.style.display=d.style.display==='none'?'block':'none'">🔽 Debug</div>
+
+<div id="tip" class="tip"></div>
+<div class="dbg" onclick="var d=document.getElementById('debug');d.style.display=d.style.display==='none'?'block':'none'">Debug</div>
 <div id="debug">aguardando...</div>
 
 <script>
-var D=[],nodeid='{{nodeid}}',ms=(typeof parent!=='undefined'&&parent.meshserver)||window.meshserver;
-function dlog(){var a=Array.prototype.slice.call(arguments);D.push(new Date().toLocaleTimeString()+' '+a.join(' '));var e=document.getElementById('debug');if(e)e.innerHTML=D.join('\n');console.log('[UTRACER-DEV]',a.join(' '));}
-dlog('INIT');
+var D=[], nodeid='{{nodeid}}', nodeName='{{nodeName}}';
+var ms=(typeof parent!=='undefined'&&parent.meshserver)||window.meshserver;
+var COLORS=['#3b82f6','#8b5cf6','#06b6d4','#10b981','#f59e0b','#ef4444','#ec4899','#14b8a6'];
+function dlog(){var a=Array.prototype.slice.call(arguments);D.push(new Date().toLocaleTimeString()+' '+a.join(' '));var e=document.getElementById('debug');if(e)e.innerHTML=D.slice(-60).join('\n');}
+function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function colorFor(k){var h=0,s=String(k||'');for(var i=0;i<s.length;i++)h=((h<<5)-h)+s.charCodeAt(i)|0;return COLORS[Math.abs(h)%COLORS.length];}
+function initials(n){var p=String(n||'?').replace(/[._-]/g,' ').split(/\s+/).filter(Boolean);if(!p.length)return'?';return p.length===1?p[0].substring(0,2).toUpperCase():(p[0][0]+p[1][0]).toUpperCase();}
+function splitUser(u){var p=String(u||'').split('\\');return p.length>1?{d:p[0],u:p[1]}:{d:'',u:u||''};}
+function ymd(d){var x=new Date(d),m=x.getMonth()+1,day=x.getDate();return x.getFullYear()+'-'+(m<10?'0':'')+m+'-'+(day<10?'0':'')+day;}
+function fmtDate(d){var x=new Date(d);return isNaN(x)?'—':x.toLocaleString();}
+function fmtDur(ms){if(ms<0)ms=0;var m=Math.floor(ms/60000),h=Math.floor(m/60);m%=60;if(h>24)return Math.floor(h/24)+'d '+(h%24)+'h';if(h)return h+'h '+m+'m';return m+'m';}
 
-// Set default range (last 7 days)
-(function(){var d=new Date();document.getElementById('dEnd').value=d.toISOString().split('T')[0];d.setDate(d.getDate()-7);document.getElementById('dStart').value=d.toISOString().split('T')[0];})();
-
+function setRange(kind,btn){
+  document.querySelectorAll('.btn-chip[data-r]').forEach(function(b){b.classList.remove('active');});
+  if(btn)btn.classList.add('active');
+  var end=new Date(),start=new Date();
+  if(kind==='today')start=new Date(end.getFullYear(),end.getMonth(),end.getDate());
+  else if(kind==='7d')start.setDate(end.getDate()-6);
+  else if(kind==='30d')start.setDate(end.getDate()-29);
+  document.getElementById('dStart').value=ymd(start);
+  document.getElementById('dEnd').value=ymd(end);
+}
 function switchTab(n){
-    document.querySelectorAll('.tab-bar button').forEach(function(b){b.classList.remove('active');});
-    var btns=document.querySelectorAll('.tab-bar button');
-    for(var i=0;i<btns.length;i++){if(btns[i].textContent.toLowerCase()===n)btns[i].classList.add('active');}
-    document.querySelectorAll('.pane').forEach(function(p){p.classList.remove('active');});
-    document.getElementById('pane-'+n).classList.add('active');
-    if(n==='now')loadNow();else loadHistory();
+  document.getElementById('tNow').classList.toggle('active',n==='now');
+  document.getElementById('tHist').classList.toggle('active',n==='history');
+  document.getElementById('pane-now').classList.toggle('active',n==='now');
+  document.getElementById('pane-history').classList.toggle('active',n==='history');
+  if(n==='now')loadNow(); else loadHistory();
 }
 function loadNow(){if(ms)ms.send({action:'plugin',plugin:'usertracer',pluginaction:'getCurrentUsers'});}
-
 function loadHistory(){
-    var s=document.getElementById('dStart').value,e=document.getElementById('dEnd').value;
-    if(!s||!e){document.getElementById('gantt').innerHTML='<div class="loading">Selecione data início e fim.</div>';return;}
-    e=e+'T23:59:59';s=s+'T00:00:00';
-    document.getElementById('gantt').innerHTML='<div class="loading">Carregando...</div>';
-    if(ms)ms.send({action:'plugin',plugin:'usertracer',pluginaction:'getTimeline',nodeid:nodeid,startDate:s,endDate:e,limit:1000});
+  var s=document.getElementById('dStart').value,e=document.getElementById('dEnd').value;
+  if(!s||!e){document.getElementById('gantt').innerHTML='<div class="empty">Selecione datas.</div>';return;}
+  document.getElementById('gantt').innerHTML='<div class="loading">Carregando...</div>';
+  if(ms)ms.send({action:'plugin',plugin:'usertracer',pluginaction:'getTimeline',nodeid:nodeid,startDate:s+'T00:00:00',endDate:e+'T23:59:59.999',limit:2000});
 }
 
-function renderGantt(d){
-    if(!d||!d.length){document.getElementById('gantt').innerHTML='<div class="loading">Nenhum evento no período.</div>';return;}
-    var minT=Infinity,maxT=-Infinity;
-    d.forEach(function(e){var t=new Date(e.detectedAt).getTime();if(t<minT)minT=t;if(t>maxT)maxT=t;});
-    var rangeMs=maxT-minT||86400000;
-    var pad=rangeMs*0.05;minT-=pad;maxT+=pad;
-    var totalMs=maxT-minT;
-    var h='<div class="gantt"><div class="gantt-row"><div class="gantt-label">'+d[0].nodeName+'</div><div class="gantt-bars">';
-    d.forEach(function(e){
-        var t=new Date(e.detectedAt).getTime();
-        var pct=((t-minT)/totalMs)*100;
-        var cls=e.eventType==='userLogin'?'login':'logout';
-        var lbl=e.eventType==='userLogin'?'✓':'✕';
-        h+='<div class="gantt-bar '+cls+'" style="left:'+pct+'%" title="'+e.detectedAt+' '+e.username+'">'+lbl+' '+e.username+'</div>';
-    });
-    h+='</div></div></div>';
-    document.getElementById('gantt').innerHTML=h;
+function renderNow(list){
+  var found=null;
+  for(var i=0;i<(list||[]).length;i++){if(list[i].nodeid===nodeid){found=list[i];break;}}
+  var el=document.getElementById('info');
+  if(!found||!found.users||!found.users.length){el.innerHTML='<div class="empty">Nenhum usuário ativo neste dispositivo.</div>';return;}
+  var h='';
+  found.users.forEach(function(u){
+    var s=splitUser(u),c=colorFor(u);
+    h+='<div class="ucard"><div class="uav" style="background:'+c+'">'+esc(initials(s.u))+'</div>';
+    h+='<div><div class="uname">'+esc(s.u)+'</div><div class="udev">'+esc(nodeName)+'</div>';
+    if(s.d)h+='<span class="ubadge">'+esc(s.d)+'</span>';
+    h+='</div><div class="online"></div></div>';
+  });
+  el.innerHTML=h;
 }
+
+function buildSessions(events,rs,re){
+  var by={};
+  events.slice().sort(function(a,b){return new Date(a.detectedAt)-new Date(b.detectedAt);}).forEach(function(e){
+    var k=e.displayUser||e.username||'?';
+    if(!by[k])by[k]={user:e.username,display:k,events:[]};
+    by[k].events.push(e);
+  });
+  var out=[];
+  Object.keys(by).forEach(function(k){
+    var g=by[k],open=null;
+    g.events.forEach(function(e){
+      var t=new Date(e.detectedAt).getTime();
+      if(e.eventType==='userLogin'){
+        if(open!=null)out.push({user:g.user,display:g.display,start:open,end:t,open:false});
+        open=t;
+      } else if(e.eventType==='userLogout'){
+        if(open!=null){out.push({user:g.user,display:g.display,start:open,end:t,open:false});open=null;}
+        else out.push({user:g.user,display:g.display,start:Math.max(rs,t-30*60000),end:t,open:false});
+      }
+    });
+    if(open!=null)out.push({user:g.user,display:g.display,start:open,end:Math.min(re,Date.now()),open:true});
+  });
+  return out;
+}
+
+function renderGantt(events){
+  events=events||[];
+  if(!events.length){document.getElementById('gantt').innerHTML='<div class="empty">Nenhum evento no período.</div>';return;}
+  var rs=new Date(document.getElementById('dStart').value+'T00:00:00').getTime();
+  var re=new Date(document.getElementById('dEnd').value+'T23:59:59.999').getTime();
+  if(isNaN(rs)||isNaN(re)||re<=rs){rs=Infinity;re=-Infinity;events.forEach(function(e){var t=new Date(e.detectedAt).getTime();if(t<rs)rs=t;if(t>re)re=t;});if(re<=rs)re=rs+86400000;}
+  var total=re-rs;
+  var sessions=buildSessions(events,rs,re);
+  var dayMs=86400000,hourMs=3600000,span=total/dayMs;
+  var step=span<=2?hourMs*3:(span<=14?dayMs:dayMs*2);
+  var ticks=[],t0=Math.ceil(rs/step)*step;
+  for(var t=t0;t<=re;t+=step){
+    var d=new Date(t);
+    ticks.push({pct:((t-rs)/total)*100,label:step<dayMs?((d.getHours()<10?'0':'')+d.getHours()+':00'):((d.getDate()<10?'0':'')+d.getDate()+'/'+(d.getMonth()+1<10?'0':'')+(d.getMonth()+1))});
+  }
+  var mw=Math.max(520,Math.min(1800,Math.floor(span*80)));
+  var h='<div class="tl-wrap"><div class="tl-axis"><div class="tl-axis-label">SESSÃO</div><div class="tl-axis-track" style="min-width:'+mw+'px">';
+  ticks.forEach(function(tk){h+='<div class="tl-tick" style="left:'+tk.pct+'%"><span>'+esc(tk.label)+'</span></div>';});
+  h+='</div></div>';
+
+  // one row per user
+  var byUser={};
+  sessions.forEach(function(s){var k=s.display||s.user||'?';if(!byUser[k])byUser[k]=[];byUser[k].push(s);});
+  var users=Object.keys(byUser).sort();
+  if(!users.length)users=['—'];
+  users.forEach(function(u){
+    h+='<div class="tl-row"><div class="tl-dev">'+esc(u)+'</div><div class="tl-track" style="min-width:'+mw+'px">';
+    ticks.forEach(function(tk){h+='<div class="tl-tick" style="left:'+tk.pct+'%"></div>';});
+    (byUser[u]||[]).forEach(function(s){
+      var left=Math.max(0,((s.start-rs)/total)*100);
+      var right=Math.min(100,((s.end-rs)/total)*100);
+      if(right<=left)right=left+0.2;
+      var w=Math.max(0.25,right-left),c=colorFor(s.display||s.user);
+      var tip=esc(s.display)+' · '+fmtDate(s.start)+(s.open?' → agora':' → '+fmtDate(s.end))+' · '+fmtDur(s.end-s.start);
+      h+='<div class="sess'+(s.open?' open':'')+'" style="left:'+left+'%;width:'+w+'%;background:'+c+'" data-tip="'+tip+'" onmouseenter="showTip(event,this)" onmouseleave="hideTip()">'+esc(s.user||'')+'</div>';
+    });
+    events.forEach(function(e){
+      if((e.displayUser||e.username||'?')!==u && users.length>1) return;
+      var tt=new Date(e.detectedAt).getTime(); if(tt<rs||tt>re)return;
+      var pct=((tt-rs)/total)*100;
+      h+='<div class="marker '+(e.eventType==='userLogin'?'login':'logout')+'" style="left:calc('+pct+'% - 3px)" data-tip="'+esc(e.eventType+' · '+fmtDate(tt))+'" onmouseenter="showTip(event,this)" onmouseleave="hideTip()"></div>';
+    });
+    h+='</div></div>';
+  });
+  h+='</div>';
+  document.getElementById('gantt').innerHTML=h;
+}
+
+function showTip(ev,el){var tip=document.getElementById('tip');tip.textContent=el.getAttribute('data-tip')||'';tip.style.display='block';tip.style.left=(ev.clientX+10)+'px';tip.style.top=(ev.clientY+10)+'px';}
+function hideTip(){document.getElementById('tip').style.display='none';}
 
 if(ms&&ms.socket){
-    var orig=ms.socket.onmessage;
-    ms.socket.onmessage=function(event){
-        try{
-            var d=JSON.parse(event.data);
-            if(d.action==='plugin'&&d.plugin==='usertracer'){
-                if(d.method==='currentUsers'){
-                    var found=null;
-                    for(var i=0;i<(d.data||[]).length;i++){if(d.data[i].nodeid===nodeid){found=d.data[i];break;}}
-                    var el=document.getElementById('info');
-                    if(!found||!found.users||!found.users.length){el.innerHTML='<div class="loading">Nenhum usuário ativo.</div>';return;}
-                    var h='';
-                    found.users.forEach(function(u){var usr=u.indexOf('\\')>=0?u.split('\\')[1]:u;h+='<div class="info"><div class="lbl">Usuário ativo</div><div class="val">'+usr+'</div></div>';});
-                    el.innerHTML=h;
-                } else if(d.method==='timeline'){renderGantt(d.data||[]);}
-                return;
-            }
-        }catch(e){}
-        if(typeof orig==='function')orig.call(ms.socket,event);
-    };
+  var orig=ms.socket.onmessage;
+  ms.socket.onmessage=function(event){
+    try{
+      var d=JSON.parse(event.data);
+      if(d.action==='plugin'&&d.plugin==='usertracer'){
+        if(d.method==='currentUsers')renderNow(d.data||[]);
+        else if(d.method==='timeline')renderGantt(d.data||[]);
+        return;
+      }
+    }catch(e){}
+    if(typeof orig==='function')orig.call(ms.socket,event);
+  };
 }
+setRange('7d', document.querySelector('.btn-chip[data-r="7d"]'));
 document.addEventListener('DOMContentLoaded',function(){loadNow();});
 </script>
 </body>
