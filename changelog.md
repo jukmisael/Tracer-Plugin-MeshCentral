@@ -1,5 +1,21 @@
 # Changelog
 
+## 2.0.1 (2026-07-23)
+
+### Fixes
+- `db.js`: cadeia de fallback NeDB (`@seald-io/nedb` → `@yetzt/nedb` → `nedb`) seguindo padrão ScriptTask — resolve `Cannot find module 'nedb'` no MeshCentral v1.2.4
+- Adicionado `module.paths.push()` com `meshserver.parentpath` para resolução de módulos NeDB
+- Adicionado debug server-side com `obj.debug()` em todos os pontos críticos (EventLog/RegEdit pattern)
+- Adicionado debug agent-side com `dbg()` + `debug_flag` + `setDebug` (EventLog/ScriptTask pattern)
+- Removido `.gitignore` do repositório para evitar `EPERM` na extração do ZIP
+
+### Agora é necessário deletar manualmente a pasta do plugin
+O `.gitignore` e `changelog.md` antigos estão com permissão travada no disco. Rode como **Administrador**:
+```powershell
+takeown /f "C:\Program Files\Open Source\MeshCentral\meshcentral-data\plugins\usertracer" /r /d y 2>$null; icacls "C:\Program Files\Open Source\MeshCentral\meshcentral-data\plugins\usertracer" /grant Administradores:F /t /q 2>$null; rmdir -recurse -force "C:\Program Files\Open Source\MeshCentral\meshcentral-data\plugins\usertracer"
+```
+Depois reinstale pela URL do `config.json`.
+
 ## 2.0.0 (2026-07-23)
 
 ### Rewrite completo
