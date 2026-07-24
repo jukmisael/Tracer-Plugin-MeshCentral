@@ -184,21 +184,22 @@ module.exports.usertracer = function (parent) {
     };
 
     obj.hook_processAgentData = function (data, nodeid) {
-        console.log('UT HOOKDATA: entry nodeid=' + (nodeid ? nodeid.substring(0, 30) : 'null'));
+        var nid = (typeof nodeid === 'string') ? nodeid : (data && typeof data.nodeid === 'string' ? data.nodeid : null);
+        console.log('UT HOOKDATA: entry nodeid=' + nid);
         console.log('UT HOOKDATA: data.type=' + typeof data);
         if (data && typeof data === 'object') {
             console.log('UT HOOKDATA: data.action=' + data.action + ' data.plugin=' + data.plugin);
         }
-        if (!nodeid) return;
-        if (obj._pendingCheck && obj._pendingCheck[nodeid]) {
-            console.log('UT HOOKDATA: clearing existing pending check for ' + nodeid.substring(0, 30));
-            clearTimeout(obj._pendingCheck[nodeid]);
+        if (!nid) return;
+        if (obj._pendingCheck && obj._pendingCheck[nid]) {
+            console.log('UT HOOKDATA: clearing existing pending check for ' + nid);
+            clearTimeout(obj._pendingCheck[nid]);
         }
         if (!obj._pendingCheck) obj._pendingCheck = {};
-        obj._pendingCheck[nodeid] = setTimeout(function () {
-            console.log('UT HOOKDATA: debounce expired, calling checkNode for ' + nodeid.substring(0, 30));
-            obj.checkNode(nodeid);
-            delete obj._pendingCheck[nodeid];
+        obj._pendingCheck[nid] = setTimeout(function () {
+            console.log('UT HOOKDATA: debounce expired, calling checkNode for ' + nid);
+            obj.checkNode(nid);
+            delete obj._pendingCheck[nid];
         }, 2000);
         console.log('UT HOOKDATA: scheduled check in 2s');
     };
