@@ -296,33 +296,35 @@ module.exports.usertracer = function (parent) {
         if (command.pluginaction === 'getTimeline') {
             console.log('=== UT CMD: getTimeline ===');
             console.log('UT CMD: nodeid=' + (command.nodeid ? command.nodeid.substring(0, 30) : 'null'));
+            console.log('UT CMD: startDate=' + command.startDate + ' endDate=' + command.endDate);
+            console.log('UT CMD: nodeids=' + (command.nodeids ? JSON.stringify(command.nodeids).substring(0, 100) : 'null'));
             console.log('UT CMD: limit=' + command.limit);
-            console.log('UT CMD: db.getEvents available=' + (typeof obj.db.getEventsByNode));
-            console.log('UT CMD: db.events=' + (obj.db && obj.db.events ? 'present' : 'null'));
 
-            if (!obj.db || !obj.db.getEventsByNode) {
-                console.log('UT CMD: db not ready, sending empty');
+            if (!obj.db || !obj.db.getEvents) {
                 obj.send(sid, { action:'plugin', plugin:'usertracer', method:'timeline', data: [] });
-                console.log('=== UT CMD END ===');
                 return;
             }
 
-            if (command.nodeid) {
-                console.log('UT CMD: querying events for node=' + command.nodeid.substring(0, 30));
-                obj.db.getEventsByNode(command.nodeid, command.limit || 200, function (docs) {
-                    console.log('UT CMD: timeline results=' + (docs ? docs.length : 0));
-                    console.log('UT CMD: first event=' + (docs && docs[0] ? JSON.stringify(docs[0]) : 'none'));
-                    obj.send(sid, { action:'plugin', plugin:'usertracer', method:'timeline', data: docs || [] });
-                    console.log('=== UT CMD END ===');
+            var opts = { limit: command.limit || 5000 };
+            if (command.startDate) opts.startDate = command.startDate;
+            if (command.endDate) opts.endDate = command.endDate;
+            if (command.nodeids && command.nodeids.length > 0) opts.nodeids = command.nodeids;
+            else if (command.nodeid) opts.nodeids = [command.nodeid];
+
+            obj.db.getEvents({}, opts, function (docs) {
+                obj.send(sid, { action:'plugin', plugin:'usertracer', method:'timeline', data: docs || [] });
+            });
+            return;
+        }
+
+        // --- getDeviceNames ---
+        if (command.pluginaction === 'getDeviceNames') {
+            if (obj.db && obj.db.getDeviceNames) {
+                obj.db.getDeviceNames(function(d) {
+                    obj.send(sid, { action:'plugin', plugin:'usertracer', method:'deviceNames', data: d || [] });
                 });
             } else {
-                console.log('UT CMD: querying ALL events');
-                obj.db.getEvents({}, command.limit || 500, function (docs) {
-                    console.log('UT CMD: all events results=' + (docs ? docs.length : 0));
-                    console.log('UT CMD: first event=' + (docs && docs[0] ? JSON.stringify(docs[0]).substring(0, 300) : 'none'));
-                    obj.send(sid, { action:'plugin', plugin:'usertracer', method:'timeline', data: docs || [] });
-                    console.log('=== UT CMD END ===');
-                });
+                obj.send(sid, { action:'plugin', plugin:'usertracer', method:'deviceNames', data: [] });
             }
             return;
         }

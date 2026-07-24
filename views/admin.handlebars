@@ -15,15 +15,24 @@ th,td{padding:5px 8px;text-align:left;border-bottom:1px solid #eee}
 th{background:#fafafa;font-weight:600}
 tr:hover{background:#f0f7ff}
 .loading{text-align:center;padding:30px;color:#999}
-.ctrl{margin-bottom:8px;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
-.ctrl input,.ctrl select{padding:4px 8px;border:1px solid #ccc;border-radius:3px;font-size:12px}
+.ctrl{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:10px}
+.ctrl select,.ctrl input{padding:4px 8px;border:1px solid #ccc;border-radius:3px;font-size:12px}
 .ctrl button{padding:4px 12px;background:#1976D2;color:#fff;border:none;border-radius:3px;cursor:pointer;font-size:12px}
+.ctrl label{font-size:11px;color:#666;font-weight:600}
 .lk{color:#4CAF50;font-weight:600}.lo{color:#F44336;font-weight:600}
-.badge{display:inline-block;padding:1px 6px;border-radius:3px;font-size:11px}
-.badge-login{background:#E8F5E9;color:#2E7D32}
-.badge-logout{background:#FFEBEE;color:#C62828}
+
+/* Gantt chart */
+.gantt{overflow-x:auto;background:#fff;border:1px solid #e0e0e0;border-radius:4px;padding:8px}
+.gantt-row{display:flex;align-items:center;min-height:32px;border-bottom:1px solid #f0f0f0;position:relative}
+.gantt-row:hover{background:#f8f9ff}
+.gantt-label{width:120px;font-size:11px;font-weight:600;padding:4px;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.gantt-bars{flex:1;position:relative;height:28px;min-width:200px}
+.gantt-bar{position:absolute;height:20px;border-radius:3px;top:4px;min-width:2px;cursor:pointer;font-size:8px;line-height:20px;padding:0 4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#fff;font-weight:600}
+.gantt-bar.login{background:#4CAF50}
+.gantt-bar.logout{background:#F44336}
+.gantt-time{font-size:9px;color:#999;padding:2px 0}
 #dbgToggle{cursor:pointer;font-size:11px;color:#1976D2;user-select:none}
-#debug{display:none;background:#fff3cd;border:1px solid #ffeeba;padding:6px;margin-bottom:10px;font-size:9px;font-family:monospace;white-space:pre-wrap;max-height:200px;overflow:auto}
+#debug{display:none;background:#fff3cd;border:1px solid #ffeeba;padding:6px;margin-bottom:10px;font-size:9px;font-family:monospace;max-height:150px;overflow:auto}
 </style>
 </head>
 <body>
@@ -45,15 +54,18 @@ tr:hover{background:#f0f7ff}
 
 <div id="pane-timeline" class="pane">
     <div class="ctrl">
-        <select id="fTipo"><option value="">Todos eventos</option><option value="userLogin">Login</option><option value="userLogout">Logout</option></select>
-        <input type="text" id="fUser" placeholder="Filtrar usuário..." style="width:160px">
-        <input type="text" id="fDevice" placeholder="Filtrar dispositivo..." style="width:160px">
-        <button onclick="loadTimeline()">Atualizar</button>
+        <label>De:</label>
+        <input type="date" id="dStart">
+        <label>Até:</label>
+        <input type="date" id="dEnd">
+        <label>Dispositivos:</label>
+        <select id="devFilter" multiple style="height:60px;width:200px"></select>
+        <button onclick="loadTimeline()">Buscar</button>
+        <button onclick="selectAllDevs(true)" style="background:#666">Todos</button>
+        <button onclick="selectAllDevs(false)" style="background:#666">Nenhum</button>
+        <span id="tlCount" style="font-size:11px;color:#999;margin-left:8px"></span>
     </div>
-    <div style="overflow-x:auto">
-    <table><thead><tr><th>Data</th><th>Evento</th><th>Usuário</th><th>Domínio</th><th>Dispositivo</th></tr></thead>
-    <tbody id="tlbody"><tr><td colspan="5" class="loading">Carregando...</td></tr></tbody></table>
-    </div>
+    <div id="ganttContainer" class="loading">Selecione um período e dispositivos, depois clique Buscar.</div>
 </div>
 
 <script>
@@ -61,21 +73,32 @@ var D=[],ms=(typeof parent!=='undefined'&&parent.meshserver)||window.meshserver;
 function dlog(){var a=Array.prototype.slice.call(arguments);D.push(new Date().toLocaleTimeString()+' '+a.join(' '));var e=document.getElementById('debug');if(e)e.innerHTML=D.join('\n');console.log('[UTRACER]',a.join(' '));}
 dlog('INIT ms='+(ms?'OK':'NULL'));
 
+// Set default date range (last 7 days)
+(function(){
+    var d=new Date(); document.getElementById('dEnd').value=d.toISOString().split('T')[0];
+    d.setDate(d.getDate()-7); document.getElementById('dStart').value=d.toISOString().split('T')[0];
+})();
+
 function switchTab(n){
     document.querySelectorAll('.tab-bar button').forEach(function(b){b.classList.remove('active');});
     document.querySelectorAll('.pane').forEach(function(p){p.classList.remove('active');});
     var btns=document.querySelectorAll('.tab-bar button');
     for(var i=0;i<btns.length;i++){if(btns[i].textContent.toLowerCase().includes(n))btns[i].classList.add('active');}
     document.getElementById('pane-'+n).classList.add('active');
-    if(n==='users')loadUsers();else loadTimeline();
+    if(n==='users')loadUsers();
+    else { loadDeviceNames(); loadTimeline(); }
+}
+function selectAllDevs(yes){
+    var sel=document.getElementById('devFilter');
+    for(var i=0;i<sel.options.length;i++) sel.options[i].selected=yes;
 }
 
+// === CURRENT USERS ===
 function loadUsers(){
     document.getElementById('tbody').innerHTML='<tr><td colspan="3" class="loading">Carregando...</td></tr>';
     if(ms)ms.send({action:'plugin',plugin:'usertracer',pluginaction:'getCurrentUsers'});
 }
 function renderUsers(d){
-    dlog('users: '+d.length);
     var h='';
     for(var i=0;i<d.length;i++){
         (d[i].users||[]).forEach(function(u){
@@ -86,42 +109,80 @@ function renderUsers(d){
     document.getElementById('tbody').innerHTML=h||'<tr><td colspan="3" class="loading">Nenhum usuário ativo.</td></tr>';
 }
 
-// ===== TIMELINE COM FILTROS =====
-var _tlData=[];
-function loadTimeline(){
-    document.getElementById('tlbody').innerHTML='<tr><td colspan="5" class="loading">Carregando...</td></tr>';
-    if(ms)ms.send({action:'plugin',plugin:'usertracer',pluginaction:'getTimeline',limit:500});
+// === DEVICE LIST ===
+function loadDeviceNames(){
+    if(ms)ms.send({action:'plugin',plugin:'usertracer',pluginaction:'getDeviceNames'});
 }
-function renderTimeline(d){
-    _tlData=d||[];
-    dlog('timeline raw: '+_tlData.length+' events');
-    applyFilters();
-}
-function applyFilters(){
-    var ft=document.getElementById('fTipo').value;
-    var fu=document.getElementById('fUser').value.toLowerCase().trim();
-    var fd=document.getElementById('fDevice').value.toLowerCase().trim();
-    var filtered=_tlData.filter(function(e){
-        if(ft&&e.eventType!==ft)return false;
-        if(fu&&(!e.username||e.username.toLowerCase().indexOf(fu)===-1))return false;
-        if(fd&&(!e.nodeName||e.nodeName.toLowerCase().indexOf(fd)===-1))return false;
-        return true;
+function renderDeviceNames(d){
+    var sel=document.getElementById('devFilter');
+    sel.innerHTML='';
+    d.sort(function(a,b){return a.name.localeCompare(b.name);});
+    d.forEach(function(dev){
+        var opt=document.createElement('option');
+        opt.value=dev.nodeid; opt.textContent=dev.name;
+        sel.appendChild(opt);
     });
-    dlog('timeline filtered: '+filtered.length);
-    var h='';
-    for(var i=0;i<filtered.length;i++){
-        var e=filtered[i],dt=e.detectedAt?new Date(e.detectedAt):new Date();
-        var lbl=e.eventType==='userLogin'?'<span class="badge badge-login">Login</span>':'<span class="badge badge-logout">Logout</span>';
-        h+='<tr><td>'+dt.toLocaleDateString()+' '+dt.toLocaleTimeString()+'</td>'
-          +'<td>'+lbl+'</td>'
-          +'<td>'+(e.username||'')+'</td>'
-          +'<td>'+(e.domain||'-')+'</td>'
-          +'<td>'+(e.nodeName||'')+'</td></tr>';
-    }
-    document.getElementById('tlbody').innerHTML=h||'<tr><td colspan="5" class="loading">Nenhum evento encontrado.</td></tr>';
 }
 
-// WebSocket hook
+// === TIMELINE GANTT ===
+function loadTimeline(){
+    var start=document.getElementById('dStart').value;
+    var end=document.getElementById('dEnd').value;
+    if(!start||!end){document.getElementById('ganttContainer').innerHTML='<div class="loading">Selecione data início e fim.</div>';return;}
+    end=end+'T23:59:59';
+    start=start+'T00:00:00';
+
+    var sel=document.getElementById('devFilter');
+    var nodeids=[];
+    for(var i=0;i<sel.options.length;i++){if(sel.options[i].selected)nodeids.push(sel.options[i].value);}
+
+    dlog('loadTimeline: start='+start+' end='+end+' devs='+nodeids.length);
+    document.getElementById('ganttContainer').innerHTML='<div class="loading">Carregando timeline...</div>';
+    if(ms)ms.send({action:'plugin',plugin:'usertracer',pluginaction:'getTimeline',startDate:start,endDate:end,nodeids:nodeids,limit:5000});
+}
+
+function renderTimeline(d){
+    document.getElementById('tlCount').textContent=d.length+' eventos';
+    if(!d||!d.length){document.getElementById('ganttContainer').innerHTML='<div class="loading">Nenhum evento no período selecionado.</div>';return;}
+
+    // Group events by nodeName
+    var byDevice={};
+    d.forEach(function(e){
+        var name=e.nodeName||e.nodeid;
+        if(!byDevice[name]){byDevice[name]={nodeName:name,events:[]};}
+        byDevice[name].events.push(e);
+    });
+    var deviceNames=Object.keys(byDevice).sort();
+
+    // Determine time range
+    var minT=Infinity,maxT=-Infinity;
+    d.forEach(function(e){var t=new Date(e.detectedAt).getTime();if(t<minT)minT=t;if(t>maxT)maxT=t;});
+    var rangeMs=maxT-minT||86400000;
+    var pad=rangeMs*0.05; minT-=pad; maxT+=pad;
+    var totalMs=maxT-minT;
+
+    // Build Gantt HTML
+    var h='<div class="gantt">';
+    deviceNames.forEach(function(name){
+        var dev=byDevice[name];
+        h+='<div class="gantt-row">';
+        h+='<div class="gantt-label" title="'+name+'">'+name+'</div>';
+        h+='<div class="gantt-bars">';
+        dev.events.forEach(function(e){
+            var t=new Date(e.detectedAt).getTime();
+            var pct=((t-minT)/totalMs)*100;
+            var cls=e.eventType==='userLogin'?'login':'logout';
+            var lbl=e.eventType==='userLogin'?'✓':'✕';
+            var usr=e.username||'';
+            h+='<div class="gantt-bar '+cls+'" style="left:'+pct+'%" title="'+e.detectedAt+' '+usr+' '+e.eventType+'">'+lbl+' '+usr+'</div>';
+        });
+        h+='</div></div>';
+    });
+    h+='</div>';
+    document.getElementById('ganttContainer').innerHTML=h;
+}
+
+// === WS HOOK ===
 if(ms&&ms.socket){
     var orig=ms.socket.onmessage;
     ms.socket.onmessage=function(event){
@@ -130,6 +191,7 @@ if(ms&&ms.socket){
             if(d.action==='plugin'&&d.plugin==='usertracer'){
                 if(d.method==='currentUsers')renderUsers(d.data||[]);
                 else if(d.method==='timeline')renderTimeline(d.data||[]);
+                else if(d.method==='deviceNames')renderDeviceNames(d.data||[]);
                 return;
             }
         }catch(e){}

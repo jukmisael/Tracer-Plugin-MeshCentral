@@ -13,17 +13,19 @@ h2{font-size:16px;margin-bottom:2px}
 .info{background:#e3f2fd;border:1px solid #90caf9;border-radius:6px;padding:10px;margin-bottom:8px}
 .info .lbl{font-size:11px;color:#666}
 .info .val{font-size:18px;font-weight:600;color:#1976D2}
-table{width:100%;border-collapse:collapse;font-size:11px}
-th,td{padding:4px 6px;text-align:left;border-bottom:1px solid #eee}
-th{background:#fafafa;font-weight:600}
+.gantt{overflow-x:auto;background:#fff;border:1px solid #e0e0e0;border-radius:4px;padding:6px;min-height:60px}
+.gantt-row{display:flex;align-items:center;min-height:28px}
+.gantt-label{width:80px;font-size:10px;font-weight:600;padding:2px;flex-shrink:0}
+.gantt-bars{flex:1;position:relative;height:24px}
+.gantt-bar{position:absolute;height:16px;border-radius:2px;top:4px;min-width:2px;font-size:7px;line-height:16px;padding:0 3px;color:#fff;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer}
+.gantt-bar.login{background:#4CAF50}
+.gantt-bar.logout{background:#F44336}
+.ctrl{display:flex;gap:4px;flex-wrap:wrap;align-items:center;margin-bottom:6px}
+.ctrl input,.ctrl select{font-size:11px;padding:3px 6px;border:1px solid #ccc;border-radius:3px}
+.ctrl button{font-size:11px;padding:3px 10px;background:#1976D2;color:#fff;border:none;border-radius:3px;cursor:pointer}
 .loading{text-align:center;padding:20px;color:#999}
-.ctrl{margin-bottom:6px;display:flex;gap:4px;flex-wrap:wrap}
-.ctrl select,.ctrl button{font-size:11px;padding:3px 6px}
-.ctrl button{background:#1976D2;color:#fff;border:none;border-radius:3px;cursor:pointer}
-.badge-login{color:#4CAF50;font-weight:600}
-.badge-logout{color:#F44336;font-weight:600}
 .dbg{font-size:9px;color:#999;margin-top:6px;cursor:pointer}
-#debug{display:none;background:#fff3cd;border:1px solid #ffeeba;padding:4px;margin-top:4px;font-size:8px;font-family:monospace;white-space:pre-wrap;max-height:120px;overflow:auto}
+#debug{display:none;background:#fff3cd;border:1px solid #ffeeba;padding:4px;margin-top:4px;font-size:8px;font-family:monospace;max-height:120px;overflow:auto}
 </style>
 </head>
 <body>
@@ -31,26 +33,29 @@ th{background:#fafafa;font-weight:600}
 <p class="sub">{{nodeName}}</p>
 <div class="tab-bar">
     <button class="active" onclick="switchTab('now')">Agora</button>
-    <button onclick="switchTab('history')">Histórico</button>
+    <button onclick="switchTab('history')">Timeline</button>
 </div>
 <div id="pane-now" class="pane active"><div id="info" class="loading">Carregando...</div></div>
 <div id="pane-history" class="pane">
     <div class="ctrl">
-        <select id="fTipo2" onchange="loadHistory()"><option value="">Todos</option><option value="userLogin">Login</option><option value="userLogout">Logout</option></select>
-        <button onclick="loadHistory()">Atualizar</button>
+        <label style="font-size:10px">De:</label>
+        <input type="date" id="dStart" style="width:110px">
+        <label style="font-size:10px">Até:</label>
+        <input type="date" id="dEnd" style="width:110px">
+        <button onclick="loadHistory()">Buscar</button>
     </div>
-    <div style="overflow-x:auto">
-    <table><thead><tr><th>Data</th><th>Evento</th><th>Usuário</th></tr></thead>
-    <tbody id="tlbody"><tr><td colspan="3" class="loading">Carregando...</td></tr></tbody></table>
-    </div>
+    <div id="gantt" class="loading">Selecione o período.</div>
 </div>
-<div class="dbg" onclick="var d=document.getElementById('debug');d.style.display=d.style.display==='none'?'block':'none'">🔽 Device Debug</div>
+<div class="dbg" onclick="var d=document.getElementById('debug');d.style.display=d.style.display==='none'?'block':'none'">🔽 Debug</div>
 <div id="debug">aguardando...</div>
 
 <script>
 var D=[],nodeid='{{nodeid}}',ms=(typeof parent!=='undefined'&&parent.meshserver)||window.meshserver;
 function dlog(){var a=Array.prototype.slice.call(arguments);D.push(new Date().toLocaleTimeString()+' '+a.join(' '));var e=document.getElementById('debug');if(e)e.innerHTML=D.join('\n');console.log('[UTRACER-DEV]',a.join(' '));}
-dlog('INIT node='+nodeid.substring(0,30)+'...');
+dlog('INIT');
+
+// Set default range (last 7 days)
+(function(){var d=new Date();document.getElementById('dEnd').value=d.toISOString().split('T')[0];d.setDate(d.getDate()-7);document.getElementById('dStart').value=d.toISOString().split('T')[0];})();
 
 function switchTab(n){
     document.querySelectorAll('.tab-bar button').forEach(function(b){b.classList.remove('active');});
@@ -61,22 +66,32 @@ function switchTab(n){
     if(n==='now')loadNow();else loadHistory();
 }
 function loadNow(){if(ms)ms.send({action:'plugin',plugin:'usertracer',pluginaction:'getCurrentUsers'});}
-var _tlData=[];
+
 function loadHistory(){
-    document.getElementById('tlbody').innerHTML='<tr><td colspan="3" class="loading">Carregando...</td></tr>';
-    if(ms)ms.send({action:'plugin',plugin:'usertracer',pluginaction:'getTimeline',nodeid:nodeid,limit:200});
+    var s=document.getElementById('dStart').value,e=document.getElementById('dEnd').value;
+    if(!s||!e){document.getElementById('gantt').innerHTML='<div class="loading">Selecione data início e fim.</div>';return;}
+    e=e+'T23:59:59';s=s+'T00:00:00';
+    document.getElementById('gantt').innerHTML='<div class="loading">Carregando...</div>';
+    if(ms)ms.send({action:'plugin',plugin:'usertracer',pluginaction:'getTimeline',nodeid:nodeid,startDate:s,endDate:e,limit:1000});
 }
-function renderHistory(d){
-    _tlData=d||[];
-    var ft=document.getElementById('fTipo2').value;
-    var filtered=_tlData.filter(function(e){return !ft||e.eventType===ft;});
-    var h='';
-    for(var i=0;i<filtered.length;i++){
-        var e=filtered[i],dt=e.detectedAt?new Date(e.detectedAt):new Date();
-        var lbl=e.eventType==='userLogin'?'<span class="badge-login">Login</span>':'<span class="badge-logout">Logout</span>';
-        h+='<tr><td>'+dt.toLocaleDateString()+' '+dt.toLocaleTimeString()+'</td><td>'+lbl+'</td><td>'+(e.username||'')+'</td></tr>';
-    }
-    document.getElementById('tlbody').innerHTML=h||'<tr><td colspan="3" class="loading">Nenhum evento.</td></tr>';
+
+function renderGantt(d){
+    if(!d||!d.length){document.getElementById('gantt').innerHTML='<div class="loading">Nenhum evento no período.</div>';return;}
+    var minT=Infinity,maxT=-Infinity;
+    d.forEach(function(e){var t=new Date(e.detectedAt).getTime();if(t<minT)minT=t;if(t>maxT)maxT=t;});
+    var rangeMs=maxT-minT||86400000;
+    var pad=rangeMs*0.05;minT-=pad;maxT+=pad;
+    var totalMs=maxT-minT;
+    var h='<div class="gantt"><div class="gantt-row"><div class="gantt-label">'+d[0].nodeName+'</div><div class="gantt-bars">';
+    d.forEach(function(e){
+        var t=new Date(e.detectedAt).getTime();
+        var pct=((t-minT)/totalMs)*100;
+        var cls=e.eventType==='userLogin'?'login':'logout';
+        var lbl=e.eventType==='userLogin'?'✓':'✕';
+        h+='<div class="gantt-bar '+cls+'" style="left:'+pct+'%" title="'+e.detectedAt+' '+e.username+'">'+lbl+' '+e.username+'</div>';
+    });
+    h+='</div></div></div>';
+    document.getElementById('gantt').innerHTML=h;
 }
 
 if(ms&&ms.socket){
@@ -91,12 +106,9 @@ if(ms&&ms.socket){
                     var el=document.getElementById('info');
                     if(!found||!found.users||!found.users.length){el.innerHTML='<div class="loading">Nenhum usuário ativo.</div>';return;}
                     var h='';
-                    found.users.forEach(function(u){
-                        var usr=u.indexOf('\\')>=0?u.split('\\')[1]:u;
-                        h+='<div class="info"><div class="lbl">Usuário ativo</div><div class="val">'+usr+'</div></div>';
-                    });
+                    found.users.forEach(function(u){var usr=u.indexOf('\\')>=0?u.split('\\')[1]:u;h+='<div class="info"><div class="lbl">Usuário ativo</div><div class="val">'+usr+'</div></div>';});
                     el.innerHTML=h;
-                } else if(d.method==='timeline'){renderHistory(d.data||[]);}
+                } else if(d.method==='timeline'){renderGantt(d.data||[]);}
                 return;
             }
         }catch(e){}

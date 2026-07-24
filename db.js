@@ -40,12 +40,24 @@ module.exports.CreateDB = function (meshserver) {
     };
 
     // -----------------------------------------------------------------------
-    // Query events with filters
+    // Query events with filters — supports date range
     // -----------------------------------------------------------------------
-    obj.getEvents = function (query, limit, callback) {
-        limit = limit || 500;
+    obj.getEvents = function (query, opts, callback) {
+        if (typeof opts === 'function') { callback = opts; opts = {}; }
+        var limit = opts.limit || 500;
+        var range = {};
+        if (opts.startDate || opts.endDate) {
+            range.detectedAt = {};
+            if (opts.startDate) range.detectedAt.$gte = opts.startDate;
+            if (opts.endDate) range.detectedAt.$lte = opts.endDate;
+        }
+        var q = query || {};
+        if (range.detectedAt) q.detectedAt = range.detectedAt;
+        if (opts.nodeids && opts.nodeids.length > 0) {
+            q.nodeid = { $in: opts.nodeids };
+        }
         if (obj.events.find) {
-            obj.events.find(query || {}).sort({ detectedAt: -1 }).limit(limit).exec(function (err, docs) {
+            obj.events.find(q).sort({ detectedAt: -1 }).limit(limit).exec(function (err, docs) {
                 callback(docs || []);
             });
         } else {
@@ -53,11 +65,28 @@ module.exports.CreateDB = function (meshserver) {
         }
     };
 
+    obj.getEventsByNode = function (nodeid, opts, callback) {
+        if (typeof opts === 'function') { callback = opts; opts = {}; }
+        opts.nodeids = [nodeid];
+        obj.getEvents({}, opts, callback);
+    };
+
     // -----------------------------------------------------------------------
-    // Query events for a specific node
+    // Get unique device names for filter dropdown
     // -----------------------------------------------------------------------
-    obj.getEventsByNode = function (nodeid, limit, callback) {
-        obj.getEvents({ nodeid: nodeid }, limit, callback);
+    obj.getDeviceNames = function (callback) {
+        if (obj.events.find) {
+            obj.events.find({}).sort({ detectedAt: -1 }).exec(function (err, docs) {
+                var devices = {}, result = [];
+                (docs || []).forEach(function(e) {
+                    if (e.nodeName && !devices[e.nodeName]) {
+                        devices[e.nodeName] = true;
+                        result.push({ nodeid: e.nodeid, name: e.nodeName });
+                    }
+                });
+                callback(result);
+            });
+        } else { callback([]); }
     };
 
     // -----------------------------------------------------------------------
