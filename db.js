@@ -31,7 +31,7 @@ module.exports.CreateDB = function (meshserver) {
             if (Datastore == null) { Datastore = require('nedb'); }
         }
         obj.events = new Datastore({ filename: meshserver.getConfigFilePath('plugin-usertracer-events.db'), autoload: true });
-        obj.events.persistence.setAutocompactionInterval(60000);
+        obj.events.setAutocompactionInterval(60000);
         obj.events.ensureIndex({ fieldName: 'nodeid' });
         obj.events.ensureIndex({ fieldName: 'username' });
         obj.events.ensureIndex({ fieldName: 'detectedAt' });
