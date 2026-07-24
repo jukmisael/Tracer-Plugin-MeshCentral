@@ -492,7 +492,7 @@ module.exports.usertracer = function (parent) {
             }
             console.log('UT DEVICETAB: pluginHandler keys=' + Object.keys(pluginHandler).sort().join(','));
             pluginHandler.registerPluginTab({ tabTitle: 'User Tracer', tabId: 'pluginUserTracer' });
-            QA('pluginUserTracer', '<iframe id="pluginIframeUserTracer" style="width:100%;height:200px;overflow:auto" scrolling="yes" frameBorder=0 src="/pluginadmin.ashx?pin=usertracer&nodeid=' + encodeURIComponent(currentNode._id) + '&user=1" />');
+            QA('pluginUserTracer', '<iframe id="pluginIframeUserTracer" style="width:100%;height:80vh;overflow:auto;border:none" scrolling="yes" frameBorder=0 src="/pluginadmin.ashx?pin=usertracer&nodeid=' + encodeURIComponent(currentNode._id) + '&user=1" />');
             console.log('UT DEVICETAB: tab registered and iframe created');
             console.log('=== UT DEVICETAB END ===');
         } catch (e) {
