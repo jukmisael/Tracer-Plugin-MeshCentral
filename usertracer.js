@@ -12,42 +12,47 @@ module.exports.usertracer = function (parent) {
     obj.exports = ['onDeviceRefreshEnd'];
 
     obj.handleAdminReq = function (req, res, user) {
+        console.log('UT: handleAdminReq, user=' + (user ? user.name : 'null') + ', query=' + JSON.stringify(req.query));
         if (req.query.user == 1) { return res.render('device', { nodeid: req.query.nodeid || '', nodeName: req.query.nodeid ? obj.getNodeName(req.query.nodeid) : 'Unknown' }); }
-        if (!user || (user.siteadmin & 0xFFFFFFFF) == 0) { res.sendStatus(401); return; }
+        if (!user || (user.siteadmin & 0xFFFFFFFF) == 0) { console.log('UT: 401'); res.sendStatus(401); return; }
         res.render('admin', {});
     };
 
     obj.serveraction = function (command, myparent, gp) {
+        console.log('UT: serveraction called, plugin=' + command.plugin + ', action=' + command.pluginaction);
         if (command.plugin !== 'usertracer') return;
         var sid = null;
         try { sid = myparent.ws.sessionId; } catch (e) {}
-        if (!sid) return;
+        console.log('UT: sid=' + sid);
 
         if (command.pluginaction === 'getCurrentUsers') {
             var result = [];
             try {
                 // Source 1: parent.agents
                 var src1 = obj.meshServer.parent.agents || {};
+                console.log('UT: parent.agents count=' + Object.keys(src1).length);
                 for (var nid in src1) {
-                    var u = obj.findUser(src1[nid]);
-                    if (u) { obj.addResult(result, nid, src1[nid].name || nid, u); }
+                    var a = src1[nid];
+                    console.log('UT: agent ' + nid + ' type=' + typeof a + ' keys=' + Object.keys(a).sort().join(','));
+                    var u = obj.findUser(a);
+                    if (u) { obj.addResult(result, nid, a.name || nid, u); }
                 }
                 // Source 2: wsagents
                 var src2 = obj.meshServer.webserver.wsagents || {};
+                console.log('UT: wsagents count=' + Object.keys(src2).length);
                 for (var nid in src2) {
                     if (obj.hasResult(result, nid)) continue;
-                    var u = obj.findUser(src2[nid]);
+                    var a = src2[nid];
+                    console.log('UT: ws ' + nid + ' type=' + typeof a + ' keys=' + Object.keys(a).sort().join(','));
+                    var u = obj.findUser(a);
                     if (u) { obj.addResult(result, nid, obj.getNodeName(nid), u); }
                 }
-                // Debug dump
-                var first = Object.keys(src1)[0];
-                if (first) {
-                    obj.debug('plugin:usertracer', 'parent.agents[' + first + '] keys: ' + Object.keys(src1[first]).sort().join(', '));
-                    obj.debug('plugin:usertracer', 'wsagents[' + first + '] keys: ' + (src2[first] ? Object.keys(src2[first]).sort().join(', ') : 'N/A'));
-                }
-            } catch (e) { obj.debug('plugin:usertracer', 'error: ' + e.message); }
-            obj.debug('plugin:usertracer', 'result: ' + result.length + ' devices with users');
-            obj.send(sid, { action: 'plugin', plugin: 'usertracer', method: 'currentUsers', data: result });
+                // Also try meshServer.parent (the main app)
+                var pa = obj.meshServer.parent;
+                console.log('UT: meshServer.parent keys=' + Object.keys(pa).sort().join(','));
+            } catch (e) { console.log('UT error: ' + e.message + ' ' + e.stack); }
+            console.log('UT result: ' + result.length + ' devices');
+            if (sid) obj.send(sid, { action: 'plugin', plugin: 'usertracer', method: 'currentUsers', data: result });
         }
     };
 
