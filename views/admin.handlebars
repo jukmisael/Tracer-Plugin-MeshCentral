@@ -6,187 +6,69 @@
 *{box-sizing:border-box;margin:0;padding:0}
 body{
   font-family:"Trebuchet MS",Arial,Helvetica,sans-serif;
-  background:#d3d9d6;
-  color:#000;
-  padding:12px;
-  font-size:13px;
-  line-height:1.35;
+  background:#d3d9d6;color:#000;padding:12px;font-size:13px;line-height:1.35;
 }
 .header{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:10px}
 .header h1{font-size:18px;font-weight:700;color:#003366}
 .header .sub{color:#444;font-size:12px;margin-top:2px}
 .stats{display:flex;gap:6px;flex-wrap:wrap}
-.stat{
-  background:#fff;
-  border:1px solid #aaa;
-  border-radius:3px;
-  padding:8px 12px;
-  min-width:88px;
-}
+.stat{background:#fff;border:1px solid #aaa;border-radius:3px;padding:8px 12px;min-width:88px}
 .stat .n{font-size:18px;font-weight:700;color:#003366}
 .stat .l{font-size:10px;color:#666;text-transform:uppercase;margin-top:1px}
-
-/* MeshCentral-like top tabs */
 .tabs{display:flex;gap:0;margin-bottom:10px;border-bottom:2px solid #003366}
 .tabs button{
-  border:1px solid #808080;
-  border-bottom:none;
-  background:#606060;
-  color:#fff;
-  padding:7px 14px;
-  cursor:pointer;
-  font-family:inherit;
-  font-size:12px;
-  margin-right:2px;
-  border-radius:4px 4px 0 0;
+  border:1px solid #808080;border-bottom:none;background:#606060;color:#fff;
+  padding:7px 14px;cursor:pointer;font-family:inherit;font-size:12px;margin-right:2px;border-radius:4px 4px 0 0;
 }
 .tabs button:hover{background:#707070}
 .tabs button.active{background:#003366;border-color:#003366;font-weight:700}
-
 .pane{display:none}.pane.active{display:block}
-.panel{
-  background:#fff;
-  border:1px solid #aaa;
-  border-radius:3px;
-  padding:10px;
-  margin-bottom:10px;
-}
+.panel{background:#fff;border:1px solid #aaa;border-radius:3px;padding:10px;margin-bottom:10px}
 .panel-title{
-  background:#c0c0c0;
-  color:#000;
-  font-size:12px;
-  font-weight:700;
-  padding:5px 8px;
-  margin:-10px -10px 10px -10px;
-  border-bottom:1px solid #aaa;
+  background:#c0c0c0;color:#000;font-size:12px;font-weight:700;
+  padding:5px 8px;margin:-10px -10px 10px -10px;border-bottom:1px solid #aaa;
 }
-
 .toolbar{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:8px}
 .toolbar .group{display:flex;align-items:center;gap:5px;flex-wrap:wrap}
 .toolbar label{font-size:11px;color:#444;font-weight:700}
-.toolbar input[type=date],
-.toolbar input[type=text],
-.toolbar select{
-  font-family:inherit;
-  font-size:12px;
-  border:1px solid #808080;
-  background:#fff;
-  color:#000;
-  padding:4px 6px;
-  border-radius:2px;
+.toolbar input[type=date],.toolbar input[type=text],.toolbar select{
+  font-family:inherit;font-size:12px;border:1px solid #808080;background:#fff;
+  color:#000;padding:4px 6px;border-radius:2px;
 }
 .btn{
-  font-family:inherit;
-  font-size:12px;
-  border:1px solid #808080;
-  background:#f0f0f0;
-  color:#000;
-  padding:5px 12px;
-  border-radius:2px;
-  cursor:pointer;
+  font-family:inherit;font-size:12px;border:1px solid #808080;background:#f0f0f0;
+  color:#000;padding:5px 12px;border-radius:2px;cursor:pointer;
 }
 .btn:hover{background:#e4e4e4}
 .btn-primary{background:#003366;color:#fff;border-color:#002244}
 .btn-primary:hover{background:#004080}
-.btn-chip{
-  background:#ddd;
-  border:1px solid #aaa;
-  color:#333;
-  padding:4px 10px;
-  font-size:11px;
-}
+.btn-chip{background:#ddd;border:1px solid #aaa;color:#333;padding:4px 10px;font-size:11px}
 .btn-chip.active{background:#003366;color:#fff;border-color:#003366;font-weight:700}
-
-.chips{display:flex;flex-wrap:wrap;gap:5px;max-height:90px;overflow:auto;padding:2px}
-.chip{
-  display:inline-flex;align-items:center;gap:5px;
-  background:#eee;border:1px solid #bbb;border-radius:12px;
-  padding:3px 9px;font-size:11px;cursor:pointer;user-select:none;color:#222;
-}
-.chip:hover{background:#e4e9e7}
-.chip.sel{background:#003366;border-color:#003366;color:#fff}
-.chip .dot{width:7px;height:7px;border-radius:50%;background:#999}
-.chip.sel .dot{background:#7ec8ff}
-
-/* Users */
-.ugrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:8px}
-.ucard{
-  background:#f7f8f7;
-  border:1px solid #bbb;
-  border-radius:3px;
-  padding:10px;
-  display:flex;gap:10px;align-items:center;
-}
-.ucard:hover{border-color:#003366;background:#eef3f8}
-.uav{
-  width:38px;height:38px;border-radius:3px;
-  display:flex;align-items:center;justify-content:center;
-  font-weight:700;font-size:13px;color:#fff;flex-shrink:0;background:#003366;
-}
-.uname{font-weight:700;font-size:13px;color:#000;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.udev{font-size:12px;color:#555;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.ubadge{
-  display:inline-block;margin-top:3px;font-size:10px;padding:1px 6px;
-  border-radius:2px;background:#ddd;color:#333;font-weight:700;
-}
-.online{width:8px;height:8px;border-radius:50%;background:#2e7d32;flex-shrink:0;margin-left:auto}
-
-/* Gantt light */
-.tl-wrap{overflow:auto;border:1px solid #aaa;border-radius:2px;background:#fff}
-.tl-axis{display:flex;border-bottom:1px solid #aaa;position:sticky;top:0;background:#e4e9e7;z-index:3;min-width:100%}
-.tl-axis-label{
-  width:130px;flex-shrink:0;padding:7px 8px;font-size:10px;color:#333;font-weight:700;
-  border-right:1px solid #aaa;position:sticky;left:0;background:#e4e9e7;z-index:4;
-}
-.tl-axis-track{flex:1;position:relative;height:32px;min-width:640px}
-.tl-tick{position:absolute;top:0;bottom:0;border-left:1px dashed #ccc;width:0}
-.tl-tick span{position:absolute;top:7px;left:3px;font-size:9px;color:#666;white-space:nowrap}
-
-.tl-row{display:flex;border-bottom:1px solid #e0e0e0;min-height:46px}
-.tl-row:hover{background:#f3f7fb}
-.tl-dev{
-  width:130px;flex-shrink:0;padding:8px;border-right:1px solid #ccc;
-  position:sticky;left:0;background:#fff;z-index:2;
-  display:flex;flex-direction:column;justify-content:center;
-}
-.tl-row:hover .tl-dev{background:#f3f7fb}
-.tl-dev .dn{font-weight:700;font-size:12px;color:#003366;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.tl-dev .dc{font-size:10px;color:#666;margin-top:1px}
-.tl-track{flex:1;position:relative;min-width:640px;min-height:46px}
-
-.sess{
-  position:absolute;top:11px;height:22px;border-radius:2px;min-width:4px;cursor:pointer;
-  overflow:hidden;border:1px solid rgba(0,0,0,.2);
-  display:flex;align-items:center;padding:0 5px;font-size:10px;font-weight:700;color:#fff;
-  white-space:nowrap;text-overflow:ellipsis;
-}
-.sess:hover{outline:2px solid #003366;z-index:5}
-.sess.open{border-style:dashed;border-width:2px}
-.marker{position:absolute;top:9px;width:8px;height:26px;border-radius:1px;cursor:pointer;z-index:1;opacity:.9}
-.marker.login{background:#2e7d32}
-.marker.logout{background:#c62828}
-
-.legend{display:flex;gap:12px;flex-wrap:wrap;margin-top:8px;font-size:11px;color:#444}
-.legend i{display:inline-block;width:12px;height:12px;border-radius:2px;margin-right:4px;vertical-align:middle;border:1px solid #999}
-
-.tip{
-  position:fixed;z-index:9999;background:#003366;border:1px solid #002244;color:#fff;
-  padding:7px 9px;border-radius:3px;font-size:11px;pointer-events:none;
-  box-shadow:0 4px 12px rgba(0,0,0,.25);max-width:280px;display:none;
-}
-.tip b{display:block;margin-bottom:2px}
-.empty{text-align:center;padding:36px 16px;color:#666;background:#fff}
 .loading{text-align:center;padding:28px;color:#666}
 .muted{color:#666;font-size:11px}
-
-table.users{width:100%;border-collapse:collapse;font-size:12px}
-table.users th{
+table.tbl{width:100%;border-collapse:collapse;font-size:12px}
+table.tbl th{
   background:#aaa;color:#000;font-weight:700;text-align:left;
   padding:6px 8px;border:1px solid #999;
 }
-table.users td{padding:6px 8px;border-bottom:1px solid #ddd;background:#fff}
-table.users tr:nth-child(even) td{background:#f4f6f5}
-table.users tr:hover td{background:#e8f0f8}
+table.tbl td{padding:6px 8px;border-bottom:1px solid #ddd}
+table.tbl tr:nth-child(even) td{background:#f4f6f5}
+table.tbl tr:hover td{background:#e8f0f8}
+.empty{text-align:center;padding:36px 16px;color:#666;background:#fff}
+
+/* cross-ref dual layout */
+.xref-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.xref-grid .col{min-width:0}
+@media(max-width:768px){.xref-grid{grid-template-columns:1fr}}
+.stacked{display:flex;gap:8px;flex-direction:column;max-height:280px;overflow-y:auto;padding-right:4px}
+.stacked .scard{
+  display:flex;gap:8px;align-items:center;padding:8px 10px;
+  background:#f7f8f7;border:1px solid #ddd;border-radius:2px;
+}
+.stacked .scard:hover{border-color:#003366;background:#eef3f8}
+.scard .tag{font-weight:700;color:#003366;font-size:12px;flex:1}
+.scard .tagl{color:#555;font-size:11px}
+.scard .badge{font-size:10px;color:#666;background:#eee;padding:2px 6px;border-radius:999px}
 
 #dbgToggle{cursor:pointer;font-size:11px;color:#003366;user-select:none;margin-top:10px;text-decoration:underline}
 #debug{
@@ -212,6 +94,7 @@ table.users tr:hover td{background:#e8f0f8}
 <div class="tabs">
   <button class="active" id="tabUsers" onclick="switchTab('users')">Usuários ativos</button>
   <button id="tabTl" onclick="switchTab('timeline')">Timeline</button>
+  <button id="tabRef" onclick="switchTab('xref')">Cruzamento</button>
 </div>
 
 <div id="pane-users" class="pane active">
@@ -251,48 +134,61 @@ table.users tr:hover td{background:#e8f0f8}
       <span class="muted" id="tlHint"></span>
     </div>
   </div>
-
   <div class="panel">
     <div class="panel-title">Dispositivos</div>
     <div class="toolbar" style="margin-bottom:6px">
       <button class="btn" onclick="selectAllDevs(true)">Todos</button>
       <button class="btn" onclick="selectAllDevs(false)">Nenhum</button>
-      <input type="text" id="devSearch" placeholder="filtrar dispositivos..." style="width:180px" oninput="filterDevChips()">
+      <input type="text" id="devSearch" placeholder="filtrar..." style="width:180px" oninput="filterDevChips()">
     </div>
     <div class="chips" id="devChips"><span class="muted">Carregando...</span></div>
   </div>
-
   <div class="panel" style="padding:0;overflow:hidden">
-    <div class="panel-title" style="margin:0;display:flex;justify-content:space-between;align-items:center">
-      <span>Sessões no período</span>
-      <span class="legend" style="margin:0;font-weight:400">
-        <span><i style="background:#1565c0"></i>Sessão</span>
-        <span><i style="background:#2e7d32"></i>Login</span>
-        <span><i style="background:#c62828"></i>Logout</span>
-        <span class="muted">tracejada = aberta</span>
-      </span>
-    </div>
-    <div id="ganttContainer" style="padding:8px"><div class="loading">Selecione período e clique Aplicar.</div></div>
+    <div id="ganttContainer"><div class="loading">Selecione período e clique Aplicar.</div></div>
   </div>
 </div>
 
-<div id="tip" class="tip"></div>
+<div id="pane-xref" class="pane">
+  <div class="xref-grid">
+    <div class="col">
+      <div class="panel">
+        <div class="panel-title">Usuário → Dispositivos</div>
+        <div class="toolbar">
+          <select id="xrefUser" style="flex:1" onchange="loadXrefUser()">
+            <option value="">— Selecione um usuário —</option>
+          </select>
+          <button class="btn btn-primary" onclick="loadXrefUser()">Buscar</button>
+        </div>
+        <div id="xrefUserResult"><div class="empty">Selecione um usuário para ver em quais dispositivos ele já logou.</div></div>
+      </div>
+    </div>
+    <div class="col">
+      <div class="panel">
+        <div class="panel-title">Dispositivo → Usuários</div>
+        <div class="toolbar">
+          <select id="xrefDev" style="flex:1" onchange="loadXrefDev()">
+            <option value="">— Selecione um dispositivo —</option>
+          </select>
+          <button class="btn btn-primary" onclick="loadXrefDev()">Buscar</button>
+        </div>
+        <div id="xrefDevResult"><div class="empty">Selecione um dispositivo para ver quais usuários já logaram nele.</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div id="dbgToggle" onclick="var e=document.getElementById('debug');e.style.display=e.style.display==='none'?'block':'none'">Debug</div>
 <div id="debug">aguardando...</div>
 
 <script>
 var D=[], ms=(typeof parent!=='undefined'&&parent.meshserver)||window.meshserver;
-var rawUsers=[], deviceList=[], selectedDevs={}, userView='table';
-var USER_COLORS=['#003366','#1565c0','#2e7d32','#6a1b9a','#00838f','#ef6c00','#c62828','#455a64','#5d4037','#283593','#00695c','#ad1457'];
-function dlog(){var a=Array.prototype.slice.call(arguments);D.push(new Date().toLocaleTimeString()+' '+a.join(' '));var e=document.getElementById('debug');if(e)e.innerHTML=D.slice(-80).join('\n');}
+var rawUsers=[], deviceList=[], selectedDevs={}, userView='table', _xrefPending='';
 function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
-function colorFor(key){var h=0,s=String(key||'');for(var i=0;i<s.length;i++)h=((h<<5)-h)+s.charCodeAt(i)|0;return USER_COLORS[Math.abs(h)%USER_COLORS.length];}
+function dlog(){var a=Array.prototype.slice.call(arguments);D.push(new Date().toLocaleTimeString()+' '+a.join(' '));var e=document.getElementById('debug');if(e)e.innerHTML=D.slice(-80).join('\n');}
 function initials(name){var p=String(name||'?').replace(/[._-]/g,' ').split(/\s+/).filter(Boolean);if(!p.length)return'?';if(p.length===1)return p[0].substring(0,2).toUpperCase();return (p[0][0]+p[1][0]).toUpperCase();}
 function splitUser(u){var p=String(u||'').split('\\');return p.length>1?{domain:p[0],user:p[1]}:{domain:'',user:u||''};}
-function fmtDate(d){var x=new Date(d);if(isNaN(x))return'—';return x.toLocaleString();}
-function fmtDur(ms){if(ms<0)ms=0;var m=Math.floor(ms/60000),h=Math.floor(m/60),d=Math.floor(h/24);m%=60;h%=24;if(d>0)return d+'d '+h+'h';if(h>0)return h+'h '+m+'m';return m+'m';}
-function ymd(d){var x=new Date(d);var m=x.getMonth()+1,day=x.getDate();return x.getFullYear()+'-'+(m<10?'0':'')+m+'-'+(day<10?'0':'')+day;}
-
+function fmtDate(d){var x=new Date(d);if(isNaN(x))return'—';var m=x.getMonth()+1,day=x.getDate();return (day<10?'0':'')+day+'/'+(m<10?'0':'')+m+' '+x.getHours()+':'+(x.getMinutes()<10?'0':'')+x.getMinutes();}
+function ymd(d){var x=new Date(d),m=x.getMonth()+1,day=x.getDate();return x.getFullYear()+'-'+(m<10?'0':'')+m+'-'+(day<10?'0':'')+day;}
 function setRange(kind,btn){
   document.querySelectorAll('.btn-chip[data-r]').forEach(function(b){b.classList.remove('active');});
   if(btn)btn.classList.add('active');
@@ -306,12 +202,13 @@ function setRange(kind,btn){
 }
 
 function switchTab(n){
-  document.getElementById('tabUsers').classList.toggle('active',n==='users');
-  document.getElementById('tabTl').classList.toggle('active',n==='timeline');
+  ['tabUsers','tabTl','tabRef'].forEach(function(id){document.getElementById(id).classList.toggle('active',id.slice(-n.length)!==n.toLowerCase());});
   document.getElementById('pane-users').classList.toggle('active',n==='users');
   document.getElementById('pane-timeline').classList.toggle('active',n==='timeline');
+  document.getElementById('pane-xref').classList.toggle('active',n==='xref');
   if(n==='users')loadUsers();
-  else{loadDeviceNames();loadTimeline();}
+  else if(n==='timeline'){loadDeviceNames();loadTimeline();}
+  else{loadUserNames();loadDeviceNames();}
 }
 
 function setUserView(v){
@@ -321,8 +218,9 @@ function setUserView(v){
   filterUsers();
 }
 
+/* ===== ACTIVE USERS ===== */
 function loadUsers(){
-  document.getElementById('userGrid').innerHTML='<div class="loading">Carregando usuários...</div>';
+  document.getElementById('userGrid').innerHTML='<div class="loading">Carregando...</div>';
   if(ms)ms.send({action:'plugin',plugin:'usertracer',pluginaction:'getCurrentUsers'});
 }
 function renderUsers(list){
@@ -345,13 +243,10 @@ function filterUsers(){
     return (r.user+' '+r.domain+' '+r.nodeName).toLowerCase().indexOf(q)>=0;
   });
   document.getElementById('userHint').textContent=rows.length+' de '+rawUsers.length;
-  if(!rows.length){
-    document.getElementById('userGrid').innerHTML='<div class="empty">Nenhum usuário ativo encontrado.</div>';
-    return;
-  }
+  if(!rows.length){document.getElementById('userGrid').innerHTML='<div class="empty">Nenhum usuário ativo encontrado.</div>';return;}
   rows.sort(function(a,b){return a.user.localeCompare(b.user)||a.nodeName.localeCompare(b.nodeName);});
   if(userView==='table'){
-    var h='<table class="users"><thead><tr><th>Usuário</th><th>Domínio</th><th>Dispositivo</th><th>Status</th></tr></thead><tbody>';
+    var h='<table class="tbl"><thead><tr><th>Usuário</th><th>Domínio</th><th>Dispositivo</th><th>Status</th></tr></thead><tbody>';
     rows.forEach(function(r){
       h+='<tr><td><b>'+esc(r.user)+'</b></td><td>'+esc(r.domain||'—')+'</td><td>'+esc(r.nodeName)+'</td><td style="color:#2e7d32;font-weight:700">Online</td></tr>';
     });
@@ -359,195 +254,168 @@ function filterUsers(){
     document.getElementById('userGrid').innerHTML=h;
     return;
   }
-  var h='<div class="ugrid">';
+  var h='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:8px">';
   rows.forEach(function(r){
-    var c=colorFor(r.raw);
-    h+='<div class="ucard">';
-    h+='<div class="uav" style="background:'+c+'">'+esc(initials(r.user))+'</div>';
-    h+='<div style="min-width:0;flex:1"><div class="uname" title="'+esc(r.raw)+'">'+esc(r.user)+'</div>';
-    h+='<div class="udev" title="'+esc(r.nodeName)+'">'+esc(r.nodeName)+'</div>';
-    if(r.domain)h+='<span class="ubadge">'+esc(r.domain)+'</span>';
-    h+='</div><div class="online" title="Online"></div></div>';
+    h+='<div style="display:flex;gap:10px;align-items:center;background:#f7f8f7;border:1px solid #bbb;border-radius:3px;padding:10px">'
+      +'<div style="width:38px;height:38px;border-radius:3px;display:flex;align-items:center;justify-content:center;background:#003366;color:#fff;font-weight:700;flex-shrink:0">'+esc(initials(r.user))+'</div>'
+      +'<div style="flex:1;overflow:hidden"><div style="font-weight:700;color:#000;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="'+esc(r.raw)+'">'+esc(r.user)+'</div>'
+      +'<div style="font-size:12px;color:#555;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(r.nodeName)+'</div>'
+      +(r.domain?'<span style="display:inline-block;margin-top:3px;font-size:10px;padding:1px 6px;background:#ddd;color:#333;font-weight:700">'+esc(r.domain)+'</span>':'')
+      +'</div><div style="width:8px;height:8px;border-radius:50%;background:#2e7d32;flex-shrink:0"></div></div>';
   });
   h+='</div>';
   document.getElementById('userGrid').innerHTML=h;
 }
 
+/* ===== TIMELINE DEVICES ===== */
 function loadDeviceNames(){if(ms)ms.send({action:'plugin',plugin:'usertracer',pluginaction:'getDeviceNames'});}
+var _allDevices=[];
 function renderDeviceNames(list){
-  deviceList=(list||[]).slice().sort(function(a,b){return String(a.name).localeCompare(String(b.name));});
-  if(!Object.keys(selectedDevs).length){deviceList.forEach(function(d){selectedDevs[d.nodeid]=true;});}
+  _allDevices=(list||[]).slice().sort(function(a,b){return String(a.name).localeCompare(String(b.name));});
+  if(!Object.keys(selectedDevs).length){_allDevices.forEach(function(d){selectedDevs[d.nodeid]=true;});}
   renderDevChips();
 }
 function renderDevChips(){
   var q=(document.getElementById('devSearch').value||'').toLowerCase().trim();
-  var h='';
-  deviceList.forEach(function(d){
+  var h='<div style="display:flex;flex-wrap:wrap;gap:5px;max-height:90px;overflow:auto;padding:2px">';
+  _allDevices.forEach(function(d){
     if(q && String(d.name).toLowerCase().indexOf(q)<0) return;
     var on=!!selectedDevs[d.nodeid];
-    h+='<div class="chip'+(on?' sel':'')+'" data-id="'+esc(d.nodeid)+'" onclick="toggleDev(this)"><span class="dot"></span>'+esc(d.name)+'</div>';
+    h+='<div class="chip'+(on?' sel':'')+'" style="display:inline-flex;align-items:center;gap:5px;background:'+(on?'#003366':'#eee')+';border:1px solid '+(on?'#003366':'#bbb')+';color:'+(on?'#fff':'#222')+';border-radius:12px;padding:3px 9px;font-size:11px;cursor:pointer;user-select:none" data-id="'+esc(d.nodeid)+'" onclick="toggleDev(this)"><span style="width:7px;height:7px;border-radius:50%;background:'+(on?'#7ec8ff':'#999')+'"></span>'+esc(d.name)+'</div>';
   });
-  document.getElementById('devChips').innerHTML=h||'<span class="muted">Nenhum dispositivo no histórico.</span>';
+  h+='</div>';
+  document.getElementById('devChips').innerHTML=h||'<span class="muted">Nenhum dispositivo.</span>';
 }
 function filterDevChips(){renderDevChips();}
 function toggleDev(el){
   var id=el.getAttribute('data-id');
   if(selectedDevs[id]) delete selectedDevs[id]; else selectedDevs[id]=true;
-  el.classList.toggle('sel', !!selectedDevs[id]);
+  el.style.background=selectedDevs[id]?'#003366':'#eee';
+  el.style.color=selectedDevs[id]?'#fff':'#222';
+  el.firstChild.style.background=selectedDevs[id]?'#7ec8ff':'#999';
 }
 function selectAllDevs(yes){
   selectedDevs={};
-  if(yes) deviceList.forEach(function(d){selectedDevs[d.nodeid]=true;});
+  if(yes) _allDevices.forEach(function(d){selectedDevs[d.nodeid]=true;});
   renderDevChips();
 }
-
 function loadTimeline(){
   var start=document.getElementById('dStart').value;
   var end=document.getElementById('dEnd').value;
-  if(!start||!end){
-    document.getElementById('ganttContainer').innerHTML='<div class="empty">Selecione data início e fim.</div>';
-    return;
-  }
-  var nodeids=Object.keys(selectedDevs);
+  if(!start||!end){document.getElementById('ganttContainer').innerHTML='<div class="empty">Selecione data início e fim.</div>';return;}
   document.getElementById('ganttContainer').innerHTML='<div class="loading">Montando timeline...</div>';
-  document.getElementById('tlHint').textContent=nodeids.length? (nodeids.length+' dispositivos') : 'todos os dispositivos';
-  if(ms)ms.send({
-    action:'plugin', plugin:'usertracer', pluginaction:'getTimeline',
-    startDate:start+'T00:00:00', endDate:end+'T23:59:59.999',
-    nodeids:nodeids, limit:8000
-  });
+  var nodeids=Object.keys(selectedDevs);
+  document.getElementById('tlHint').textContent=nodeids.length? (nodeids.length+' dispositivos') : 'todos';
+  if(ms)ms.send({action:'plugin',plugin:'usertracer',pluginaction:'getTimeline',startDate:start+'T00:00:00',endDate:end+'T23:59:59.999',nodeids:nodeids,limit:8000});
 }
-
-function buildSessions(events, rangeStart, rangeEnd){
-  var byKey={};
-  events.slice().sort(function(a,b){return new Date(a.detectedAt)-new Date(b.detectedAt);}).forEach(function(e){
-    var k=(e.nodeid||'')+'|'+(e.displayUser||e.username||'');
-    if(!byKey[k]) byKey[k]={nodeid:e.nodeid,nodeName:e.nodeName,user:e.username,display:e.displayUser||e.username,domain:e.domain,events:[]};
-    byKey[k].events.push(e);
-  });
-  var sessions=[];
-  Object.keys(byKey).forEach(function(k){
-    var g=byKey[k], open=null;
-    g.events.forEach(function(e){
-      var t=new Date(e.detectedAt).getTime();
-      if(e.eventType==='userLogin'){
-        if(open!=null) sessions.push({nodeid:g.nodeid,nodeName:g.nodeName,user:g.user,display:g.display,domain:g.domain,start:open,end:t,open:false});
-        open=t;
-      } else if(e.eventType==='userLogout'){
-        if(open!=null){
-          sessions.push({nodeid:g.nodeid,nodeName:g.nodeName,user:g.user,display:g.display,domain:g.domain,start:open,end:t,open:false});
-          open=null;
-        } else {
-          sessions.push({nodeid:g.nodeid,nodeName:g.nodeName,user:g.user,display:g.display,domain:g.domain,start:Math.max(rangeStart,t-30*60000),end:t,open:false});
-        }
-      }
-    });
-    if(open!=null){
-      sessions.push({nodeid:g.nodeid,nodeName:g.nodeName,user:g.user,display:g.display,domain:g.domain,start:open,end:Math.min(rangeEnd, Date.now()),open:true});
-    }
-  });
-  return sessions;
-}
-
 function renderTimeline(events){
   events=events||[];
   document.getElementById('sEvents').textContent=events.length;
-  if(!events.length){
-    document.getElementById('ganttContainer').innerHTML='<div class="empty">Nenhum evento no período selecionado.</div>';
-    return;
-  }
-
-  var startStr=document.getElementById('dStart').value+'T00:00:00';
-  var endStr=document.getElementById('dEnd').value+'T23:59:59.999';
-  var rangeStart=new Date(startStr).getTime();
-  var rangeEnd=new Date(endStr).getTime();
-  if(isNaN(rangeStart)||isNaN(rangeEnd)||rangeEnd<=rangeStart){
-    rangeStart=Infinity; rangeEnd=-Infinity;
-    events.forEach(function(e){var t=new Date(e.detectedAt).getTime(); if(t<rangeStart)rangeStart=t; if(t>rangeEnd)rangeEnd=t;});
-    if(rangeEnd<=rangeStart) rangeEnd=rangeStart+86400000;
-  }
-  var total=rangeEnd-rangeStart;
-  var sessions=buildSessions(events, rangeStart, rangeEnd);
-
+  if(!events.length){document.getElementById('ganttContainer').innerHTML='<div class="empty">Nenhum evento no período.</div>';return;}
   var byDev={};
-  sessions.forEach(function(s){
-    var n=s.nodeName||s.nodeid||'?';
-    if(!byDev[n]) byDev[n]={name:n,nodeid:s.nodeid,sessions:[]};
-    byDev[n].sessions.push(s);
-  });
   events.forEach(function(e){
     var n=e.nodeName||e.nodeid||'?';
-    if(!byDev[n]) byDev[n]={name:n,nodeid:e.nodeid,sessions:[]};
+    if(!byDev[n]){byDev[n]={name:n,events:[]};}
+    byDev[n].events.push(e);
   });
   var names=Object.keys(byDev).sort();
-
-  var dayMs=86400000, hourMs=3600000;
-  var spanDays=total/dayMs;
-  var step= spanDays<=2 ? hourMs*3 : (spanDays<=14 ? dayMs : (spanDays<=60 ? dayMs*2 : dayMs*7));
-  var ticks=[];
-  var t0=Math.ceil(rangeStart/step)*step;
-  for(var t=t0;t<=rangeEnd;t+=step){
-    var d=new Date(t);
-    var label= step<dayMs
-      ? (d.getHours()<10?'0':'')+d.getHours()+':00'
-      : (d.getDate()<10?'0':'')+d.getDate()+'/'+(d.getMonth()+1<10?'0':'')+(d.getMonth()+1);
-    ticks.push({pct:((t-rangeStart)/total)*100, label:label});
-  }
-
-  var trackMin=Math.max(720, Math.min(2400, Math.floor(spanDays*90)));
-  var h='<div class="tl-wrap"><div class="tl-axis">';
-  h+='<div class="tl-axis-label">DISPOSITIVO</div>';
-  h+='<div class="tl-axis-track" style="min-width:'+trackMin+'px">';
-  ticks.forEach(function(tk){h+='<div class="tl-tick" style="left:'+tk.pct+'%"><span>'+esc(tk.label)+'</span></div>';});
-  h+='</div></div>';
-
+  var h='<table class="tbl"><thead><tr><th>Dispositivo</th><th>Eventos</th><th>Último</th><th>Usuários</th></tr></thead><tbody>';
   names.forEach(function(name){
-    var dev=byDev[name];
-    var cnt=dev.sessions.length;
-    h+='<div class="tl-row">';
-    h+='<div class="tl-dev"><div class="dn" title="'+esc(name)+'">'+esc(name)+'</div><div class="dc">'+cnt+' sessão'+(cnt===1?'':'ões')+'</div></div>';
-    h+='<div class="tl-track" style="min-width:'+trackMin+'px">';
-    ticks.forEach(function(tk){h+='<div class="tl-tick" style="left:'+tk.pct+'%"></div>';});
+    var evs=byDev[name].events.sort(function(a,b){return new Date(b.detectedAt)-new Date(a.detectedAt);});
+    var users={}; evs.forEach(function(e){users[e.displayUser||e.username]=true;});
+    var last=evs[0];
+    h+='<tr><td><b>'+esc(name)+'</b></td><td>'+evs.length+'</td><td style="font-size:11px;color:#555">'+fmtDate(last.detectedAt)+'</td>'
+      +'<td>'+Object.keys(users).sort().map(function(u){return esc(u.split('\\')[1]||u);}).join(', ')+'</td></tr>';
+  });
+  h+='</tbody></table>';
+  document.getElementById('ganttContainer').innerHTML=h;
+  document.getElementById('tlHint').textContent=events.length+' eventos · '+names.length+' máquinas';
+}
 
-    dev.sessions.forEach(function(s){
-      var left=Math.max(0, ((s.start-rangeStart)/total)*100);
-      var right=Math.min(100, ((s.end-rangeStart)/total)*100);
-      if(right<=left) right=left+0.15;
-      var w=Math.max(0.2, right-left);
-      var c=colorFor(s.display||s.user);
-      var title=esc(s.display||s.user)+' · '+fmtDate(s.start)+(s.open?' → agora':' → '+fmtDate(s.end))+' · '+fmtDur(s.end-s.start);
-      h+='<div class="sess'+(s.open?' open':'')+'" style="left:'+left+'%;width:'+w+'%;background:'+c+'" '
-        +'data-tip="'+title+'" onmouseenter="showTip(event,this)" onmouseleave="hideTip()">'
-        +esc(s.user||'')+'</div>';
-    });
-
-    events.filter(function(e){return (e.nodeName||e.nodeid)===name;}).forEach(function(e){
-      var tt=new Date(e.detectedAt).getTime();
-      if(tt<rangeStart||tt>rangeEnd)return;
-      var pct=((tt-rangeStart)/total)*100;
-      var cls=e.eventType==='userLogin'?'login':'logout';
-      var tip=esc(e.eventType)+' · '+esc(e.displayUser||e.username)+' · '+fmtDate(tt);
-      h+='<div class="marker '+cls+'" style="left:calc('+pct+'% - 4px)" data-tip="'+tip+'" onmouseenter="showTip(event,this)" onmouseleave="hideTip()"></div>';
-    });
-
-    h+='</div></div>';
+/* ===== CROSS-REFERENCE ===== */
+function loadUserNames(){if(ms)ms.send({action:'plugin',plugin:'usertracer',pluginaction:'getUserNames'});}
+function renderUserNames(list){
+  var sel=document.getElementById('xrefUser');
+  sel.innerHTML='<option value="">— Selecione um usuário —</option>';
+  (list||[]).sort(function(a,b){return String(a.displayUser||a.username).localeCompare(String(b.displayUser||b.username));}).forEach(function(u){
+    var opt=document.createElement('option');
+    opt.value=(u.displayUser||u.username);
+    opt.textContent=(u.displayUser||u.username);
+    sel.appendChild(opt);
+  });
+  // also populate xref device dropdown
+  var devSel=document.getElementById('xrefDev');
+  devSel.innerHTML='<option value="">— Selecione um dispositivo —</option>';
+  _allDevices.forEach(function(d){
+    var opt=document.createElement('option');
+    opt.value=d.nodeid;
+    opt.textContent=d.name;
+    devSel.appendChild(opt);
+  });
+}
+function loadXrefUser(){
+  var uname=document.getElementById('xrefUser').value;
+  if(!uname){document.getElementById('xrefUserResult').innerHTML='<div class="empty">Selecione um usuário.</div>';return;}
+  document.getElementById('xrefUserResult').innerHTML='<div class="loading">Buscando...</div>';
+  _xrefPending='user'; if(ms)ms.send({action:'plugin',plugin:'usertracer',pluginaction:'getTimeline',username:uname,limit:5000});
+}
+function loadXrefDev(){
+  var nid=document.getElementById('xrefDev').value;
+  if(!nid){document.getElementById('xrefDevResult').innerHTML='<div class="empty">Selecione um dispositivo.</div>';return;}
+  document.getElementById('xrefDevResult').innerHTML='<div class="loading">Buscando...</div>';
+  _xrefPending='dev'; if(ms)ms.send({action:'plugin',plugin:'usertracer',pluginaction:'getTimeline',nodeid:nid,limit:5000});
+}
+function renderXrefUser(events){
+  events=events||[];
+  if(!events.length){document.getElementById('xrefUserResult').innerHTML='<div class="empty">Nenhum evento encontrado para este usuário.</div>';return;}
+  var byDev={};
+  events.forEach(function(e){
+    var n=e.nodeName||e.nodeid||'?';
+    if(!byDev[n]){byDev[n]={name:n,events:[]};}
+    byDev[n].events.push(e);
+  });
+  var names=Object.keys(byDev).sort();
+  var h='<div style="margin-bottom:6px;font-size:11px;color:#555">'+events.length+' eventos em '+names.length+' dispositivos</div>';
+  h+='<div class="stacked">';
+  names.forEach(function(name){
+    var evs=byDev[name].events.sort(function(a,b){return new Date(b.detectedAt)-new Date(a.detectedAt);});
+    var last=evs[0], first=evs[evs.length-1];
+    h+='<div class="scard">'
+      +'<div style="flex:1"><div class="tag">'+esc(name)+'</div>'
+      +'<div class="tagl">'+evs.length+' eventos · '+fmtDate(first.detectedAt)+' → '+fmtDate(last.detectedAt)+'</div></div>'
+      +'<span class="badge">'+(last.eventType==='userLogin'?'Online':'Offline')+'</span>'
+      +'</div>';
   });
   h+='</div>';
-  document.getElementById('ganttContainer').innerHTML=h;
-  document.getElementById('tlHint').textContent=events.length+' eventos · '+sessions.length+' sessões · '+names.length+' máquinas';
+  document.getElementById('xrefUserResult').innerHTML=h;
+}
+function renderXrefDev(events){
+  events=events||[];
+  if(!events.length){document.getElementById('xrefDevResult').innerHTML='<div class="empty">Nenhum evento encontrado para este dispositivo.</div>';return;}
+  var byUser={};
+  events.forEach(function(e){
+    var u=e.displayUser||e.username||'?';
+    if(!byUser[u]){byUser[u]={user:u,domain:e.domain,events:[]};}
+    byUser[u].events.push(e);
+  });
+  var usernames=Object.keys(byUser).sort();
+  var h='<div style="margin-bottom:6px;font-size:11px;color:#555">'+events.length+' eventos de '+usernames.length+' usuários</div>';
+  h+='<div class="stacked">';
+  usernames.forEach(function(u){
+    var g=byUser[u], evs=g.events.sort(function(a,b){return new Date(b.detectedAt)-new Date(a.detectedAt);});
+    var last=evs[0], first=evs[evs.length-1];
+    var un=splitUser(g.user);
+    h+='<div class="scard">'
+      +'<div style="flex:1"><div class="tag">'+esc(un.user||g.user)+'</div>'
+      +'<div class="tagl">'+(g.domain?esc(g.domain)+' · ':'')+evs.length+' eventos · '+fmtDate(first.detectedAt)+' → '+fmtDate(last.detectedAt)+'</div></div>'
+      +'<span class="badge">'+(last.eventType==='userLogin'?'Online':'Offline')+'</span>'
+      +'</div>';
+  });
+  h+='</div>';
+  document.getElementById('xrefDevResult').innerHTML=h;
 }
 
-function showTip(ev,el){
-  var tip=document.getElementById('tip');
-  tip.innerHTML='<b>'+ (el.getAttribute('data-tip')||'') +'</b>';
-  tip.style.display='block';
-  var x=ev.clientX+12, y=ev.clientY+12;
-  if(x+220>window.innerWidth)x=ev.clientX-220;
-  if(y+80>window.innerHeight)y=ev.clientY-80;
-  tip.style.left=x+'px'; tip.style.top=y+'px';
-}
-function hideTip(){document.getElementById('tip').style.display='none';}
-
+/* ===== WS ===== */
 if(ms&&ms.socket){
   var orig=ms.socket.onmessage;
   ms.socket.onmessage=function(event){
@@ -556,8 +424,13 @@ if(ms&&ms.socket){
       if(d.action==='plugin'&&d.plugin==='usertracer'){
         dlog('WS', d.method, Array.isArray(d.data)?('n='+d.data.length):typeof d.data);
         if(d.method==='currentUsers')renderUsers(d.data||[]);
-        else if(d.method==='timeline')renderTimeline(d.data||[]);
-        else if(d.method==='deviceNames')renderDeviceNames(d.data||[]);
+        else if(d.method==='timeline'){
+          if(_xrefPending==='user'){renderXrefUser(d.data||[]);_xrefPending='';}
+          else if(_xrefPending==='dev'){renderXrefDev(d.data||[]);_xrefPending='';}
+          else renderTimeline(d.data||[]);
+        }
+        else if(d.method==='deviceNames'){renderDeviceNames(d.data||[]);_populateXrefDevs(d.data||[]);}
+        else if(d.method==='userNames')renderUserNames(d.data||[]);
         return;
       }
     }catch(e){}
@@ -565,9 +438,17 @@ if(ms&&ms.socket){
   };
   dlog('socket hooked');
 }
+function _populateXrefDevs(list){
+  var devSel=document.getElementById('xrefDev');
+  devSel.innerHTML='<option value="">— Selecione um dispositivo —</option>';
+  list.sort(function(a,b){return String(a.name).localeCompare(String(b.name));}).forEach(function(d){
+    var opt=document.createElement('option');
+    opt.value=d.nodeid; opt.textContent=d.name; devSel.appendChild(opt);
+  });
+}
 
 setRange('7d', document.querySelector('.btn-chip[data-r="7d"]'));
-document.addEventListener('DOMContentLoaded', function(){ loadUsers(); });
+document.addEventListener('DOMContentLoaded',function(){loadUsers();});
 </script>
 </body>
 </html>

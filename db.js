@@ -100,6 +100,24 @@ module.exports.CreateDB = function (meshserver) {
     };
 
     // -----------------------------------------------------------------------
+    // Get unique usernames from event history
+    // -----------------------------------------------------------------------
+    obj.getUserNames = function (callback) {
+        if (obj.events.find) {
+            obj.events.find({}).sort({ detectedAt: -1 }).exec(function (err, docs) {
+                var users = {}, result = [];
+                (docs || []).forEach(function(e) {
+                    if (e.displayUser && !users[e.displayUser]) {
+                        users[e.displayUser] = true;
+                        result.push({ username: e.username, displayUser: e.displayUser, domain: e.domain });
+                    }
+                });
+                callback(result);
+            });
+        } else { callback([]); }
+    };
+
+    // -----------------------------------------------------------------------
     // Aggregate: get all unique users per node (current state)
     // -----------------------------------------------------------------------
     obj.getCurrentUsers = function (callback) {

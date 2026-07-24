@@ -2,7 +2,7 @@
 
 > **Documento técnico completo** — baseado na análise de 12 plugins da comunidade,
 > código-fonte do `pluginHandler.js`, e debug ao vivo do plugin User-Device Tracer v3.2
-> rodando em MeshCentral v1.2.4 com 10 agentes Windows conectados.
+> rodando em MeshCentral v1.2.4 com 12 agentes (11 Windows + 1 Linux).
 
 ---
 
@@ -32,10 +32,10 @@ plugin (this)                   = module.exports.nome(parent)
   .parent                       = pluginHandler (pluginHandler.js)
   .parent.parent                = meshServer (meshcentral.js / meshserver.js)
   .parent.parent.webserver      = webserver.js (Express + WebSocket)
-    .wsagents                   = { nodeId → WebSocket } — agentes (10 keys no debug)
+    .wsagents                   = { nodeId → WebSocket } — agentes (12 keys no debug)
     .wssessions2               = { sessionId → WebSocket } — frontends (1 key no debug)
   .parent.parent.db             = banco de dados (NeDB / MongoDB)
-    .Get(key, fn)               = busca documento por ID (~26ms no debug)
+    .Get(key, fn)               = busca documento por ID (~22ms primeira, ~1ms subsequente)
   .parent.parent.pluginHandler = pluginHandler (referência circular)
   .parent.parent.args           = argumentos de linha de comando
   .parent.parent.config         = configuração do MeshCentral
@@ -53,9 +53,9 @@ plugin (this)                   = module.exports.nome(parent)
 ### Propriedades do meshServer (confirmadas via debug)
 
 ```javascript
-obj.meshServer.webserver.wsagents      // 10 keys (agentes conectados)
+obj.meshServer.webserver.wsagents      // 12 keys (agentes conectados)
 obj.meshServer.webserver.wssessions2   // 1 key (sessão admin logada)
-obj.meshServer.db.Get                  // function — callback ~26ms
+obj.meshServer.db.Get                  // function — callback ~22ms / ~1ms (cache)
 obj.meshServer.getConfigFilePath       // function — path do arquivo DB
 obj.meshServer.pluginHandler           // referência ao pluginHandler
 obj.meshServer.args                    // argumentos do servidor
@@ -201,7 +201,7 @@ obj.serveraction = function (command, myparent, gp) {
             ids.forEach(function (nid) {
                 obj.mdb.Get(nid, function (err, docs) {
                     // docs[0] = documento do nó
-                    // callback ~26ms (medido via debug)
+                    // callback ~22ms / ~1ms (NeDB page cache)
                     pending--;
                     if (pending <= 0) {
                         obj.send(sessionid, { action:'plugin', plugin:'shortName', method:'callback', data: result });
@@ -273,7 +273,7 @@ obj.onDeviceRefreshEnd = function (nodeid, panel, refresh, event) {
 
 ### Estrutura do Documento de Nó (meshServer.db.Get)
 
-**Tempo de resposta:** ~26ms por consulta (medido via debug com 10 agentes).
+**Tempo de resposta:** ~22ms na primeira consulta, ~1ms nas subsequentes (NeDB page cache). Medido via debug com 12 agentes.
 
 ```javascript
 obj.meshServer.db.Get(nodeid, function(err, docs) {
@@ -301,7 +301,11 @@ obj.meshServer.db.Get(nodeid, function(err, docs) {
     // d.rname           = nome real (opcional)
     // d.type            = "node"
 });
-```
+
+**Observações:** `doc.mtype` = 2 é Windows, 1 é Linux/Mac. Agentes Linux podem ter conjunto de propriedades diferente (ex: sem `sessions`, sem `idletime`). BR-24013 registrado com `doc.users = []` (sem usuário logado), o que é normal para servidores/sem sessão ativa.
+
+**Timing de cache:** NeDB mantém page cache em memória. Primeira consulta (~22ms) faz I/O de disco; consultas subsequentes ao mesmo documento retornam em ~1ms.
+
 
 ### Event Store (plugin DB próprio — db.js)
 
@@ -345,6 +349,7 @@ obj.addEvent(evt)                              // Insert
 obj.getEvents(query, opts, callback)            // Query com suporte a date range e device filter
 obj.getEventsByNode(nodeid, opts, callback)     // Filtro por nodeid
 obj.getEventsByUser(username, opts, callback)   // Filtro por username
+obj.getUserNames(callback)                    // Lista de usuários únicos no histórico
 obj.getDeviceNames(callback)                    // Lista de dispositivos no histórico
 ```
 
@@ -369,8 +374,8 @@ FRONTEND                               SERVER
   │                                       │   myparent.ws.sessionId → sid
   │                                       │   command.pluginaction = "getCurrentUsers"
   │                                       │
-  │                                       │ db.Get(nodeId) para CADA agente (10×)
-  │                                       │   cada callback ~26ms
+  │                                       │ db.Get(nodeId) para CADA agente (12×)
+  │                                       │   cada callback ~22ms (1ª) / ~1ms (cache)
   │                                       │   extrai doc.users
   │                                       │
   │                                       │ wssessions2[sid].send({
@@ -585,7 +590,7 @@ if (typeof setInterval !== 'undefined') {
 
 ```javascript
 var ws = obj.meshServer.webserver.wsagents || {};
-// keys = 10 (confirmado via debug com 10 agentes)
+// keys = 12 (11 Windows + 1 Linux; confirmado via debug)
 for (var nid in ws) {
     var a = ws[nid];
     a.nodeid;               // "node//xxx"
@@ -734,6 +739,8 @@ if (ms && ms.socket) {
 | Handler chamado com meshserver object | MeshCentral chama `pluginHandler[method]()` com meshserver | Hook em `ms.socket.onmessage` |
 | `getTimeline` chamado 4× mesmo carregando uma vez | Aba timeline dispara múltiplos requests | Verificar loop de renderização |
 | Resposta chega no `ms.onMessage` sem `action`/`plugin` | Framework já processou a mensagem | Use `ms.socket.onmessage` (RAW) |
+| `TypeError: nodeid.substring is not a function` | `hook_processAgentData` recebe nodeid que não é string (objeto, array, número). MeshCentral `callHook` captura erro ANTES do try/catch do plugin | Nossa fix: `typeof nodeid === 'string' ? nodeid : (nodeid.nodeid \|\| nodeid._id)` + guard em `checkNode` |
+| `UT CHECKNODE: no docs for nodeid=` | `mdb.Get` retornou 0 docs para o nodeid. Pode ser nodeid incompleto ou agente recém-conectado | Loga o `docs` raw; aguardar próximo scan (30s). Após `hook_agentCoreIsStable` o nodeid está completo |
 | `pending` nunca zera | Callback não retorna | Adicionar timeout |
 | `EPERM: operation not permitted` | Permissão de arquivo | Deletar manualmente como Admin |
 | `SyntaxError: Unexpected token '}'` | Bloco duplicado | Lint: `new Function(readFile('file.js'))` |
@@ -833,5 +840,5 @@ module.exports.CreateDB = function (meshserver) {
 > **Documento gerado em 24/07/2026.** Baseado em:
 > - 12 plugins da comunidade (ScriptTask, EventLog, RegEdit, RoutePlus, FileDistribution, WorkFromHome, DevTools, Sample, PluginHookScheduler, Agentname2Servername, PrinterControl, PluginHookExample)
 > - Código-fonte do `pluginHandler.js` (MeshCentral v1.2.4)
-> - Debug ao vivo do User-Device Tracer v3.2 com 10 agentes Windows
-> - Tempos de resposta: db.Get ~26ms, scanner 30s, WS response <100ms
+> - Debug ao vivo do User-Device Tracer v3.3 com 12 agentes (11 Windows + 1 Linux)
+> - Tempos de resposta: db.Get ~22ms (primeira) / ~1ms (cache), scanner 30s, WS response <100ms

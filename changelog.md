@@ -1,6 +1,17 @@
 # Changelog
 
 
+## 3.4.0 (2026-07-24)
+
+### Cross-reference tab
+- Nova aba "Cruzamento": dois painéis lado a lado
+- "Usuário → Dispositivos": seleciona um usuário → mostra timeline de dispositivos que ele usou
+- "Dispositivo → Usuários": seleciona um dispositivo → mostra timeline de usuários que logaram nele
+- `db.js`: `getUserNames()` — lista usuários únicos do histórico
+- `usertracer.js`: `getUserNames` handler + `username` filter no `getTimeline`
+- `checkNode`: guard rigoroso para `typeof nodeid !== 'string'`
+- Guide atualizado: 12 agentes, Linux (mtype=1), cache timing, novos erros
+
 ## 3.3.1 (2026-07-24)
 
 ### UI alinhada ao MeshCentral

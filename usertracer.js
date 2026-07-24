@@ -95,6 +95,10 @@ module.exports.usertracer = function (parent) {
             return;
         }
         console.log('UT CHECKNODE: entry nodeid=' + (typeof nodeid === 'string' ? nodeid.substring(0, 40) : 'type=' + typeof nodeid + ' raw=' + JSON.stringify(nodeid)));
+        if (typeof nodeid !== 'string') {
+            console.log('UT CHECKNODE: nodeid not string, skipping — typeof=' + typeof nodeid);
+            return;
+        }
         if (!obj.mdb || typeof obj.mdb.Get !== 'function') {
             console.log('UT CHECKNODE: FATAL — mdb.Get not available. mdb=' + typeof obj.mdb + ' typeof Get=' + (obj.mdb ? typeof obj.mdb.Get : 'N/A'));
             return;
@@ -383,7 +387,9 @@ module.exports.usertracer = function (parent) {
                 if (command.endDate) opts.endDate = command.endDate;
                 if (command.nodeids && command.nodeids.length > 0) opts.nodeids = command.nodeids;
                 else if (command.nodeid) opts.nodeids = [command.nodeid];
-                obj.db.getEvents({}, opts, function (docs) {
+                var query = {};
+                if (command.username) query.username = command.username;
+                obj.db.getEvents(query, opts, function (docs) {
                     if (!docs) { console.log('UT CMD: getEvents returned null docs. opts=' + JSON.stringify(opts)); }
                     obj.send(sid, { action:'plugin', plugin:'usertracer', method:'timeline', data: docs || [] });
                 });
@@ -402,6 +408,20 @@ module.exports.usertracer = function (parent) {
                 }
                 return;
             }
+
+            // --- getUserNames ---
+            if (command.pluginaction === 'getUserNames') {
+                if (obj.db && obj.db.getUserNames) {
+                    obj.db.getUserNames(function(d) {
+                        obj.send(sid, { action:'plugin', plugin:'usertracer', method:'userNames', data: d || [] });
+                    });
+                } else {
+                    console.log('UT CMD: getUserNames not available');
+                    obj.send(sid, { action:'plugin', plugin:'usertracer', method:'userNames', data: [] });
+                }
+                return;
+            }
+
 
             console.log('UT CMD: unknown action=' + command.pluginaction);
         } catch (e) {
