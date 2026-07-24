@@ -228,8 +228,8 @@ function renderGantt(events){
   names.forEach(function(k){
     var g=byName[k], evs=g.events.sort(function(a,b){return new Date(b.detectedAt)-new Date(a.detectedAt);});
     var last=evs[0], first=evs[evs.length-1];
-    ul+='<tr><td><b>'+esc(g.username||g.user)+'</b></td><td class="tt">'+esc(g.domain||'—')+'</td><td>'+evs.length+'</td><td class="tt">'+fmtShort(first.detectedAt)+'</td><td class="tt">'+fmtShort(last.detectedAt)+'</td>'
-      +'<td style="font-weight:700;color:'+(last.eventType==='userLogin'?'#2e7d32':'#888')+'">'+(last.eventType==='userLogin'?'Online':'Offline')+'</td></tr>';
+    var lastTs = (last.eventType==='userLogin') ? '<b>Agora</b>' : fmtShort(last.detectedAt);
+    ul+='<tr><td><b>'+esc(g.username||g.user)+'</b></td><td class="tt">'+esc(g.domain||'—')+'</td><td>'+evs.length+'</td><td class="tt">'+fmtShort(first.detectedAt)+'</td><td class="tt">'+lastTs+'</td><td style="font-weight:700;color:'+(last.eventType==='userLogin'?'#2e7d32':'#888')+'">'+(last.eventType==='userLogin'?'Online':'Offline')+'</td></tr>'
   });
   ul+='</tbody></table>';
   document.getElementById('userList').innerHTML=ul;
