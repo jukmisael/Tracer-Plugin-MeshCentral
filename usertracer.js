@@ -26,14 +26,19 @@ module.exports.usertracer = function (parent) {
 
     /** Agent connected — tell it to start monitoring user sessions */
     obj.hook_agentCoreIsStable = function (myparent, gp) {
+        obj.debug('plugin:usertracer', 'hook_agentCoreIsStable called');
         try {
             var nodeid = myparent ? myparent.nodeid : null;
+            obj.debug('plugin:usertracer', 'hook_agentCoreIsStable: nodeid=' + nodeid);
             if (nodeid && obj.meshServer.webserver.wsagents[nodeid]) {
                 obj.meshServer.webserver.wsagents[nodeid].send(JSON.stringify({
                     action: 'plugin',
                     plugin: 'usertracer',
                     pluginaction: 'startPolling'
                 }));
+                obj.debug('plugin:usertracer', 'hook_agentCoreIsStable: startPolling sent to ' + nodeid);
+            } else {
+                obj.debug('plugin:usertracer', 'hook_agentCoreIsStable: no wsagent for nodeid=' + nodeid);
             }
         } catch (e) {
             obj.debug('plugin:usertracer', 'hook_agentCoreIsStable error: ' + e.message);
@@ -49,24 +54,28 @@ module.exports.usertracer = function (parent) {
         try { sessionid = myparent.ws.sessionId; } catch (e) {}
         var nodeid = command.nodeid || (myparent ? myparent.nodeid : null);
 
+        obj.debug('plugin:usertracer', 'serveraction: pluginaction=' + command.pluginaction + ', nodeid=' + nodeid + ', sessionid=' + sessionid);
+
         switch (command.pluginaction) {
 
             // --- Agent → Server: session events ---
             case 'sessionEvents':
                 if (!nodeid) { obj.debug('plugin:usertracer', 'sessionEvents: no nodeid'); return; }
                 var events = [];
-                try { events = JSON.parse(command.events); } catch (e) { return; }
+                try { events = JSON.parse(command.events); } catch (e) { obj.debug('plugin:usertracer', 'sessionEvents: parse error'); return; }
+                obj.debug('plugin:usertracer', 'sessionEvents: received ' + events.length + ' events from ' + nodeid);
                 for (var i = 0; i < events.length; i++) {
                     events[i].nodeid = nodeid;
                     events[i].nodeName = obj.getNodeName(nodeid);
                 }
                 obj.db.addEvents(events);
-                obj.debug('plugin:usertracer', 'Stored ' + events.length + ' events for node ' + nodeid);
+                obj.debug('plugin:usertracer', 'sessionEvents: stored ' + events.length + ' events for ' + nodeid);
                 break;
 
             // --- Frontend → Server: get events for a device ---
             case 'getDeviceEvents':
-                if (!sessionid) return;
+                if (!sessionid) { obj.debug('plugin:usertracer', 'getDeviceEvents: no session'); return; }
+                obj.debug('plugin:usertracer', 'getDeviceEvents: nodeid=' + command.nodeid);
                 obj.db.getEventsByNode(command.nodeid, command.limit || 200, function (docs) {
                     obj.sendToSession(sessionid, {
                         action: 'plugin',
@@ -79,7 +88,8 @@ module.exports.usertracer = function (parent) {
 
             // --- Frontend → Server: get all events (admin panel) ---
             case 'getAllEvents':
-                if (!sessionid) return;
+                if (!sessionid) { obj.debug('plugin:usertracer', 'getAllEvents: no session'); return; }
+                obj.debug('plugin:usertracer', 'getAllEvents: limit=' + command.limit);
                 obj.db.getEvents({}, command.limit || 500, function (docs) {
                     obj.sendToSession(sessionid, {
                         action: 'plugin',
@@ -91,6 +101,7 @@ module.exports.usertracer = function (parent) {
                 break;
 
             default:
+                obj.debug('plugin:usertracer', 'serveraction: unknown pluginaction=' + command.pluginaction);
                 break;
         }
     };
@@ -103,21 +114,27 @@ module.exports.usertracer = function (parent) {
         } catch (e) {}
         return nodeid;
     };
-
     /** Send response to frontend session */
     obj.sendToSession = function (sessionid, data) {
-        if (!sessionid) return;
+        if (!sessionid) { obj.debug('plugin:usertracer', 'sendToSession: no sessionid'); return; }
         try {
             if (obj.meshServer.webserver.wssessions2 && obj.meshServer.webserver.wssessions2[sessionid]) {
                 obj.meshServer.webserver.wssessions2[sessionid].send(JSON.stringify(data));
+                obj.debug('plugin:usertracer', 'sendToSession: sent method=' + data.method + ' to session ' + sessionid);
+            } else {
+                obj.debug('plugin:usertracer', 'sendToSession: session ' + sessionid + ' not found');
             }
-        } catch (e) {}
+        } catch (e) {
+            obj.debug('plugin:usertracer', 'sendToSession error: ' + e.message);
+        }
     };
 
     /** HTTP handler: admin panel & device tab */
     obj.handleAdminReq = function (req, res, user) {
+        obj.debug('plugin:usertracer', 'handleAdminReq: query=' + JSON.stringify(req.query) + ', user=' + (user ? user.name : 'null') + ', siteadmin=' + (user ? user.siteadmin : 'null'));
         // Device tab (loaded as iframe on device page)
         if (req.query.user == 1) {
+            obj.debug('plugin:usertracer', 'handleAdminReq: rendering device tab for nodeid=' + req.query.nodeid);
             res.render('device', {
                 nodeid: req.query.nodeid || '',
                 nodeName: req.query.nodeid ? obj.getNodeName(req.query.nodeid) : 'Unknown'
@@ -125,7 +142,12 @@ module.exports.usertracer = function (parent) {
             return;
         }
         // Admin panel — requires site admin
-        if (!user || (user.siteadmin & 0xFFFFFFFF) == 0) { res.sendStatus(401); return; }
+        if (!user || (user.siteadmin & 0xFFFFFFFF) == 0) {
+            obj.debug('plugin:usertracer', 'handleAdminReq: 401, siteadmin=' + (user ? user.siteadmin : 'null'));
+            res.sendStatus(401);
+            return;
+        }
+        obj.debug('plugin:usertracer', 'handleAdminReq: rendering admin panel');
         res.render('admin', {});
     };
 
