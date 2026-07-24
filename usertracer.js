@@ -33,23 +33,53 @@ module.exports.usertracer = function (parent) {
         if (command.pluginaction === 'getCurrentUsers') {
             var result = [];
             try {
-                var agents = obj.meshServer.parent.agents || {};
-                for (var nid in agents) {
-                    var a = agents[nid];
-                    var users = obj.getAgentUsers(a);
-                    if (users && users.length > 0) {
-                        result.push({ nodeid: nid, nodeName: a.name || nid, users: users });
+                // Try EVERY possible data source for agent users
+                var sources = [
+                    obj.meshServer.parent.agents,
+                    obj.meshServer.webserver.wsagents
+                ];
+                for (var si = 0; si < sources.length; si++) {
+                    var src = sources[si];
+                    if (!src) continue;
+                    for (var nid in src) {
+                        var a = src[nid];
+                        // Dump full structure of first agent
+                        if (si === 0 && result.length === 0) {
+                            obj.debug('plugin:usertracer', '=== DUMP agent ' + nid + ' (from source ' + si + ') ===');
+                            var keys = Object.keys(a).sort();
+                            for (var ki = 0; ki < keys.length; ki++) {
+                                try {
+                                    var val = a[keys[ki]];
+                                    var valStr = (typeof val === 'object') ? JSON.stringify(val).substring(0, 200) : String(val);
+                                    obj.debug('plugin:usertracer', '  ' + keys[ki] + ' = ' + valStr);
+                                } catch (e) { obj.debug('plugin:usertracer', '  ' + keys[ki] + ' = (error reading)'); }
+                            }
+                        }
+                        // Try all possible user properties
+                        var userProps = ['users', 'lusers', 'upnusers', 'user', 'username', '_agent', 'info'];
+                        for (var pi = 0; pi < userProps.length; pi++) {
+                            var prop = userProps[pi];
+                            try {
+                                if (a[prop]) {
+                                    if (prop === '_agent' && a[prop].username) {
+                                        result.push({ nodeid: nid, nodeName: a.name || nid, users: [a[prop].username] });
+                                        obj.debug('plugin:usertracer', 'FOUND user via _agent.username: ' + a[prop].username);
+                                    } else if (Array.isArray(a[prop]) && a[prop].length > 0) {
+                                        result.push({ nodeid: nid, nodeName: a.name || nid, users: a[prop] });
+                                        obj.debug('plugin:usertracer', 'FOUND users via ' + prop + ': ' + JSON.stringify(a[prop]));
+                                        break;
+                                    }
+                                }
+                            } catch (e) {}
+                        }
                     }
                 }
-            } catch (e) {}
+            } catch (e) {
+                obj.debug('plugin:usertracer', 'getCurrentUsers error: ' + e.message);
+            }
+            obj.debug('plugin:usertracer', 'getCurrentUsers: returning ' + result.length + ' devices with users');
             obj.send(sid, { action: 'plugin', plugin: 'usertracer', method: 'currentUsers', data: result });
         }
-    };
-
-    obj.getAgentUsers = function (a) {
-        if (a.users && Array.isArray(a.users) && a.users.length > 0) return a.users;
-        if (a.lusers && Array.isArray(a.lusers) && a.lusers.length > 0) return a.lusers;
-        return [];
     };
 
     obj.getNodeName = function (nid) { try { return obj.meshServer.parent.agents[nid].name || nid; } catch (e) { return nid; } };
