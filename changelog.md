@@ -1,5 +1,25 @@
 # Changelog
 
+## 2.0.0 (2026-07-23)
+
+### Rewrite completo
+- Código reescrito do zero seguindo padrões validados dos 12 plugins analisados (ScriptTask, EventLog, RegEdit, RoutePlus, FileDistribution, WorkFromHome, DevTools, Sample, PluginHookScheduler, Agentname2Servername, PrinterControl, PluginHookExample)
+- Database module (db.js) isolado seguindo padrão EventLog/ScriptTask com suporte NeDB + MongoDB
+- Server-side simplificado: sem `registerPermissions`, sem debug file, sem try-catch aninhados
+- Agent-side seguindo padrão ScriptTask: `consoleaction()` + `mesh.SendCommand()` com `nodeid` incluso
+- Views sem CDN, sem vis.js, sem dependências externas — CSP-compliant
+- Frontend usa `parent.meshserver.send()` (padrão DevTools/PrinterControl/EventLog)
+- Handlers registrados em `pluginHandler.usertracer[method]` (padrão MeshCentral)
+
+### Remoções
+- `registerPermissions()` removido — compatível com versões antigas do MeshCentral (como DevTools e EventLog)
+- Todo código de debug (`dbgLog`, `console.log('PLUGIN:')`, arquivo `C:\usertracer-debug.log`) removido
+- Vis.js e CDN removidos
+- `pnetMsg` removido (só `meshserver.send()`)
+
+### Compatibilidade
+- `>=1.0.0` — testado nos mesmos padrões dos plugins da comunidade
+
 ## 1.0.8 (2026-07-23)
 
 ### Debug

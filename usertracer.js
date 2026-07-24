@@ -1,125 +1,30 @@
 /**
- * @description User-Device Tracer — server-side plugin for MeshCentral.
- * Tracks which Windows AD users log into which devices via agent-side
- * `query user` polling. Provides admin panel (list, graph, timeline, audit)
- * and per-device tab.
+ * @description User-Device Tracer — MeshCentral plugin server-side
+ * Rastreia usuários Windows logados nos dispositivos via agente MeshCentral.
  * @author Misael Filho
  * @license MIT
  */
-
 "use strict";
 
-// File-based debug log (writes to C:\usertracer-debug.log)
-var fs_dbg = require('fs');
-var dbgLog = function(msg) {
-    try {
-        fs_dbg.appendFileSync('C:\\usertracer-debug.log', new Date().toISOString() + ' ' + msg + '\n');
-    } catch(e) {}
-    console.log(msg);
-};
-dbgLog('PLUGIN: usertracer.js evaluated, starting module.exports...');
-
 module.exports.usertracer = function (parent) {
-    dbgLog('PLUGIN: usertracer() constructor called');
-
     var obj = {};
     obj.parent = parent;
-
-    // Check parent availability
-    dbgLog('PLUGIN: parent type=' + (typeof parent) + ', parent keys=' + (parent ? Object.keys(parent).join(',') : 'null'));
-
-    obj.meshServer = (parent && parent.parent) ? parent.parent : null;
-    dbgLog('PLUGIN: meshServer available: ' + (obj.meshServer != null));
-
-    if (obj.meshServer) {
-        obj.debug = (typeof obj.meshServer.debug === 'function') ? obj.meshServer.debug : function() {};
-        dbgLog('PLUGIN: debug function available: ' + (typeof obj.debug === 'function'));
-    } else {
-        obj.debug = function() {};
-    }
-
+    obj.meshServer = parent.parent;
+    obj.debug = obj.meshServer.debug;
     obj.db = null;
 
-    // Exports to frontend (web UI functions)
     obj.exports = [
         'onDeviceRefreshEnd'
     ];
-    // -----------------------------------------------------------------------
-    // Database (NeDB)
-    // -----------------------------------------------------------------------
-    obj.initDB = function () {
-        try {
-            var Datastore = require('nedb');
-            if (obj.eventsDb == null) {
-                obj.eventsDb = new Datastore({
-                    filename: obj.meshServer.getConfigFilePath('plugin-usertracer-events.db'),
-                    autoload: true
-                });
-                obj.eventsDb.persistence.setAutocompactionInterval(60000);
-                obj.eventsDb.ensureIndex({ fieldName: 'nodeid' });
-                obj.eventsDb.ensureIndex({ fieldName: 'detectedAt' });
-                obj.eventsDb.ensureIndex({ fieldName: 'username' });
-            }
-            if (obj.snapshotsDb == null) {
-                obj.snapshotsDb = new Datastore({
-                    filename: obj.meshServer.getConfigFilePath('plugin-usertracer-snapshots.db'),
-                    autoload: true
-                });
-                obj.snapshotsDb.persistence.setAutocompactionInterval(60000);
-                obj.snapshotsDb.ensureIndex({ fieldName: 'nodeid' });
-                obj.snapshotsDb.ensureIndex({ fieldName: 'timestamp' });
-            }
-            dbgLog('PLUGIN: DB initialized successfully');
-        } catch (e) {
-            dbgLog('PLUGIN: DB init ERROR: ' + e.message);
-        }
-    };
 
-    // -----------------------------------------------------------------------
-    // Permissions
-    // -----------------------------------------------------------------------
-    obj.registerPermissions = function () {
-        try {
-            if (typeof parent.registerPermissions === 'function') {
-                parent.registerPermissions('usertracer', {
-                    'view_audit': {
-                        title: 'View Audit Log',
-                        desc: 'Can view the user-device audit trail',
-                        default: 'allowed'
-                    },
-                    'view_admin': {
-                        title: 'View Admin Panel',
-                        desc: 'Can access the global admin panel',
-                        default: 'allowed'
-                    }
-                });
-                dbgLog('PLUGIN: Permissions registered');
-            } else {
-                dbgLog('PLUGIN: registerPermissions not available, skipping');
-            }
-        } catch (e) {
-            dbgLog('PLUGIN: registerPermissions ERROR: ' + e.message);
-        }
-    };
-
-    // -----------------------------------------------------------------------
-    // Server startup
-    // -----------------------------------------------------------------------
+    /** Initialize database on startup */
     obj.server_startup = function () {
-        dbgLog('PLUGIN: server_startup called');
-        obj.initDB();
-        obj.registerPermissions();
-        obj.debug('plugin:usertracer', 'Server startup complete');
+        obj.meshServer.pluginHandler.usertracer_db = require(__dirname + '/db.js').CreateDB(obj.meshServer);
+        obj.db = obj.meshServer.pluginHandler.usertracer_db;
+        obj.debug('plugin:usertracer', 'Server started');
     };
 
-    // -----------------------------------------------------------------------
-    // Server hooks
-    // -----------------------------------------------------------------------
-
-    /**
-     * Called when an agent first establishes a stable connection.
-     * Tells the agent to start polling user sessions.
-     */
+    /** Agent connected — tell it to start monitoring user sessions */
     obj.hook_agentCoreIsStable = function (myparent, gp) {
         try {
             var nodeid = myparent ? myparent.nodeid : null;
@@ -129,419 +34,109 @@ module.exports.usertracer = function (parent) {
                     plugin: 'usertracer',
                     pluginaction: 'startPolling'
                 }));
-                obj.debug('plugin:usertracer', 'Sent startPolling to node ' + nodeid);
             }
         } catch (e) {
             obj.debug('plugin:usertracer', 'hook_agentCoreIsStable error: ' + e.message);
         }
     };
 
-    /**
-     * Handle messages from agents AND from the web UI (serveraction).
-     * Agent messages arrive with action='plugin', plugin='usertracer'.
-     * Web UI messages arrive via serveraction with command.plugin='usertracer'.
-     */
+    /** Handle agent data and frontend commands */
     obj.serveraction = function (command, myparent, grandparent) {
         if (command.plugin !== 'usertracer') return;
 
+        // Derive sessionid (frontend) or nodeid (agent)
         var sessionid = null;
-        try { sessionid = myparent.ws.sessionId; } catch (e) { /* from agent, no ws session */ }
-
-        // Derive nodeid: command may include it (frontend) or we get it from
-        // the agent connection context (myparent.nodeid for agent messages).
-        var nodeid = command.nodeid || (myparent ? myparent.nodeid : null) || (myparent && myparent.user ? null : null);
+        try { sessionid = myparent.ws.sessionId; } catch (e) {}
+        var nodeid = command.nodeid || (myparent ? myparent.nodeid : null);
 
         switch (command.pluginaction) {
 
-            // --- Agent → Server: session events (login/logout/disconnect/reconnect) ---
+            // --- Agent → Server: session events ---
             case 'sessionEvents':
-                obj.handleSessionEvents(command, nodeid);
+                if (!nodeid) { obj.debug('plugin:usertracer', 'sessionEvents: no nodeid'); return; }
+                var events = [];
+                try { events = JSON.parse(command.events); } catch (e) { return; }
+                for (var i = 0; i < events.length; i++) {
+                    events[i].nodeid = nodeid;
+                    events[i].nodeName = obj.getNodeName(nodeid);
+                }
+                obj.db.addEvents(events);
+                obj.debug('plugin:usertracer', 'Stored ' + events.length + ' events for node ' + nodeid);
                 break;
 
-            // --- Agent → Server: full session snapshot ---
-            case 'sessionSnapshot':
-                obj.handleSessionSnapshot(command, nodeid);
-                break;
-
-            // --- Frontend → Server: query events for a node ---
+            // --- Frontend → Server: get events for a device ---
             case 'getDeviceEvents':
-                obj.getDeviceEvents(command, sessionid);
+                if (!sessionid) return;
+                obj.db.getEventsByNode(command.nodeid, command.limit || 200, function (docs) {
+                    obj.sendToSession(sessionid, {
+                        action: 'plugin',
+                        plugin: 'usertracer',
+                        method: 'deviceEvents',
+                        data: docs
+                    });
+                });
                 break;
 
-            // --- Frontend → Server: query all events (admin panel) ---
+            // --- Frontend → Server: get all events (admin panel) ---
             case 'getAllEvents':
-                obj.getAllEvents(command, sessionid);
-                break;
-
-            // --- Frontend → Server: per-user aggregation ---
-            case 'getEventsByUser':
-                obj.getEventsByUser(command, sessionid);
-                break;
-
-            // --- Frontend → Server: per-device aggregation ---
-            case 'getEventsByDevice':
-                obj.getEventsByDevice(command, sessionid);
-                break;
-
-            // --- Frontend → Server: timeline data (grouped by device+user pair) ---
-            case 'getTimeline':
-                obj.getTimeline(command, sessionid);
-                break;
-
-            // --- Frontend → Server: graph data (user-device relationships) ---
-            case 'getGraphData':
-                obj.getGraphData(command, sessionid);
+                if (!sessionid) return;
+                obj.db.getEvents({}, command.limit || 500, function (docs) {
+                    obj.sendToSession(sessionid, {
+                        action: 'plugin',
+                        plugin: 'usertracer',
+                        method: 'allEvents',
+                        data: docs
+                    });
+                });
                 break;
 
             default:
-                obj.debug('plugin:usertracer', 'Unknown pluginaction: ' + command.pluginaction);
                 break;
         }
     };
 
-    obj.handleSessionEvents = function (command, nodeid) {
-        if (!nodeid) {
-            obj.debug('plugin:usertracer', 'sessionEvents missing nodeid — agent message without connection context?');
-            return;
-        }
-
-        var events = [];
-        try { events = JSON.parse(command.events); } catch (e) {
-            obj.debug('plugin:usertracer', 'sessionEvents parse error: ' + e.message);
-            return;
-        }
-
-        var nodeName = obj.getNodeName(nodeid);
-
-        for (var i = 0; i < events.length; i++) {
-            var ev = events[i];
-            ev.nodeid = nodeid;
-            ev.nodeName = nodeName;
-            ev.receivedAt = new Date().toISOString();
-            obj.eventsDb.insert(ev);
-        }
-
-        obj.debug('plugin:usertracer', 'Stored ' + events.length + ' event(s) for node ' + nodeName);
-    };
-
-    obj.handleSessionSnapshot = function (command, nodeid) {
-        if (!nodeid) return;
-
-        var sessions = [];
-        try { sessions = JSON.parse(command.sessions); } catch (e) { return; }
-
-        obj.snapshotsDb.insert({
-            nodeid: nodeid,
-            nodeName: obj.getNodeName(nodeid),
-            sessions: sessions,
-            timestamp: command.timestamp || new Date().toISOString()
-        });
-    };
-        }
-
-        obj.debug('plugin:usertracer', 'Stored ' + events.length + ' event(s) for node ' + nodeName);
-    };
-
-    // -----------------------------------------------------------------------
-    // Frontend query handlers
-    // -----------------------------------------------------------------------
-
-    /** Send result back to a specific web UI session. */
-    obj.sendToSession = function (sessionid, data) {
-        if (!sessionid) return;
-        try {
-            if (obj.meshServer.webserver.wssessions2 &&
-                obj.meshServer.webserver.wssessions2[sessionid]) {
-                obj.meshServer.webserver.wssessions2[sessionid].send(JSON.stringify(data));
-            }
-        } catch (e) {
-            obj.debug('plugin:usertracer', 'sendToSession error: ' + e.message);
-        }
-    };
-
-    /** Resolve a node's display name. */
+    /** Resolve node display name */
     obj.getNodeName = function (nodeid) {
         try {
-            if (obj.meshServer.parent.agents &&
-                obj.meshServer.parent.agents[nodeid]) {
-                return obj.meshServer.parent.agents[nodeid].name || nodeid;
-            }
-        } catch (e) { /* fall through */ }
+            var agents = obj.meshServer.parent.agents;
+            if (agents && agents[nodeid]) return agents[nodeid].name || nodeid;
+        } catch (e) {}
         return nodeid;
     };
 
-    obj.getDeviceEvents = function (command, sessionid) {
-        var nodeid = command.nodeid;
-        var limit = command.limit || 200;
-
-        obj.eventsDb.find({ nodeid: nodeid })
-            .sort({ detectedAt: -1 })
-            .limit(limit)
-            .exec(function (err, docs) {
-                obj.sendToSession(sessionid, {
-                    action: 'plugin',
-                    plugin: 'usertracer',
-                    method: 'deviceEvents',
-                    nodeid: nodeid,
-                    nodeName: obj.getNodeName(nodeid),
-                    data: docs || []
-                });
-            });
+    /** Send response to frontend session */
+    obj.sendToSession = function (sessionid, data) {
+        if (!sessionid) return;
+        try {
+            if (obj.meshServer.webserver.wssessions2 && obj.meshServer.webserver.wssessions2[sessionid]) {
+                obj.meshServer.webserver.wssessions2[sessionid].send(JSON.stringify(data));
+            }
+        } catch (e) {}
     };
 
-    obj.getAllEvents = function (command, sessionid) {
-        var limit = command.limit || 500;
-        var query = {};
-        if (command.username) query.username = command.username;
-        if (command.nodeid) query.nodeid = command.nodeid;
-        if (command.eventType) query.eventType = command.eventType;
-
-        obj.eventsDb.find(query)
-            .sort({ detectedAt: -1 })
-            .limit(limit)
-            .exec(function (err, docs) {
-                obj.sendToSession(sessionid, {
-                    action: 'plugin',
-                    plugin: 'usertracer',
-                    method: 'allEvents',
-                    data: docs || []
-                });
-            });
-    };
-
-    obj.getEventsByUser = function (command, sessionid) {
-        obj.eventsDb.find({})
-            .sort({ detectedAt: -1 })
-            .exec(function (err, docs) {
-                // Aggregate by username
-                var byUser = {};
-                var docsArr = docs || [];
-                for (var i = 0; i < docsArr.length; i++) {
-                    var e = docsArr[i];
-                    var key = e.domain ? e.domain + '\\' + e.username : e.username;
-                    if (!byUser[key]) {
-                        byUser[key] = {
-                            username: e.username,
-                            domain: e.domain || '',
-                            totalEvents: 0,
-                            devices: {},
-                            lastSeen: null,
-                            firstSeen: null
-                        };
-                    }
-                    byUser[key].totalEvents++;
-                    if (!byUser[key].devices[e.nodeName]) {
-                        byUser[key].devices[e.nodeName] = {
-                            nodeid: e.nodeid,
-                            count: 0
-                        };
-                    }
-                    byUser[key].devices[e.nodeName].count++;
-                    if (!byUser[key].firstSeen || e.detectedAt < byUser[key].firstSeen) {
-                        byUser[key].firstSeen = e.detectedAt;
-                    }
-                    if (!byUser[key].lastSeen || e.detectedAt > byUser[key].lastSeen) {
-                        byUser[key].lastSeen = e.detectedAt;
-                    }
-                }
-
-                obj.sendToSession(sessionid, {
-                    action: 'plugin',
-                    plugin: 'usertracer',
-                    method: 'eventsByUser',
-                    data: byUser
-                });
-            });
-    };
-
-    obj.getEventsByDevice = function (command, sessionid) {
-        obj.eventsDb.find({})
-            .sort({ detectedAt: -1 })
-            .exec(function (err, docs) {
-                var byDevice = {};
-                var docsArr = docs || [];
-                for (var i = 0; i < docsArr.length; i++) {
-                    var e = docsArr[i];
-                    var nodeName = e.nodeName || e.nodeid;
-                    if (!byDevice[nodeName]) {
-                        byDevice[nodeName] = {
-                            nodeid: e.nodeid,
-                            nodeName: nodeName,
-                            totalEvents: 0,
-                            users: {},
-                            lastSeen: null
-                        };
-                    }
-                    byDevice[nodeName].totalEvents++;
-                    var userName = e.domain ? e.domain + '\\' + e.username : e.username;
-                    if (!byDevice[nodeName].users[userName]) {
-                        byDevice[nodeName].users[userName] = {
-                            username: e.username,
-                            domain: e.domain || '',
-                            count: 0
-                        };
-                    }
-                    byDevice[nodeName].users[userName].count++;
-                    if (!byDevice[nodeName].lastSeen || e.detectedAt > byDevice[nodeName].lastSeen) {
-                        byDevice[nodeName].lastSeen = e.detectedAt;
-                    }
-                }
-
-                obj.sendToSession(sessionid, {
-                    action: 'plugin',
-                    plugin: 'usertracer',
-                    method: 'eventsByDevice',
-                    data: byDevice
-                });
-            });
-    };
-
-    obj.getTimeline = function (command, sessionid) {
-        obj.eventsDb.find({})
-            .sort({ detectedAt: -1 })
-            .limit(command.limit || 300)
-            .exec(function (err, docs) {
-                var timeline = [];
-                var docsArr = docs || [];
-                for (var i = docsArr.length - 1; i >= 0; i--) {
-                    var e = docsArr[i];
-                    timeline.push({
-                        date: e.detectedAt,
-                        type: e.eventType,
-                        user: e.domain ? e.domain + '\\' + e.username : e.username,
-                        device: e.nodeName || e.nodeid,
-                        session: e.sessionName || '',
-                        detail: e.eventType === 'sessionDisconnected'
-                            ? 'Disconnected'
-                            : e.eventType === 'sessionReconnected'
-                                ? 'Reconnected'
-                                : e.eventType === 'userLogin'
-                                    ? 'Logged in' + (e.state ? ' (' + e.state + ')' : '')
-                                    : 'Logged out'
-                    });
-                }
-
-                obj.sendToSession(sessionid, {
-                    action: 'plugin',
-                    plugin: 'usertracer',
-                    method: 'timeline',
-                    data: timeline
-                });
-            });
-    };
-
-    obj.getGraphData = function (command, sessionid) {
-        // Returns nodes (users + devices) and edges (connections) for a graph visualization
-        obj.eventsDb.find({})
-            .sort({ detectedAt: -1 })
-            .exec(function (err, docs) {
-                var nodes = [];
-                var edges = [];
-                var userIds = {};
-                var deviceIds = {};
-                var edgeKeys = {};
-                var nodeIdx = {};
-
-                var docsArr = docs || [];
-                for (var i = 0; i < docsArr.length; i++) {
-                    var e = docsArr[i];
-                    var userName = e.domain ? e.domain + '\\' + e.username : e.username;
-                    var deviceName = e.nodeName || e.nodeid;
-                    var eventWeight = (e.eventType === 'userLogin' || e.eventType === 'sessionReconnected') ? 1 : 0.5;
-
-                    // User node
-                    if (!userIds[userName]) {
-                        var uid = 'user_' + userName;
-                        userIds[userName] = uid;
-                        nodeIdx[uid] = nodes.length;
-                        nodes.push({
-                            id: uid,
-                            label: userName,
-                            type: 'user',
-                            group: 'user',
-                            title: 'User: ' + userName
-                        });
-                    }
-
-                    // Device node
-                    if (!deviceIds[deviceName]) {
-                        var did = 'device_' + deviceName;
-                        deviceIds[deviceName] = did;
-                        nodeIdx[did] = nodes.length;
-                        nodes.push({
-                            id: did,
-                            label: deviceName,
-                            type: 'device',
-                            group: 'device',
-                            title: 'Device: ' + deviceName
-                        });
-                    }
-
-                    // Edge between user and device
-                    var ekey = userIds[userName] + '|' + deviceIds[deviceName];
-                    if (!edgeKeys[ekey]) {
-                        edgeKeys[ekey] = true;
-                        edges.push({
-                            from: userIds[userName],
-                            to: deviceIds[deviceName],
-                            value: 1,
-                            title: '1 connection',
-                            color: '#4CAF50'
-                        });
-                    } else {
-                        // Increment weight
-                            }
-                        }
-                    }
-                }
-
-                obj.sendToSession(sessionid, {
-                    action: 'plugin',
-                    plugin: 'usertracer',
-                    method: 'graphData',
-                    data: { nodes: nodes, edges: edges }
-                });
-            });
-    };
-
-    // -----------------------------------------------------------------------
-    // Web UI: Admin panel + Device tab handler
-    // -----------------------------------------------------------------------
-
+    /** HTTP handler: admin panel & device tab */
     obj.handleAdminReq = function (req, res, user) {
-        var userInfo = user ? JSON.stringify({ id: user._id, name: user.name, siteadmin: user.siteadmin }) : 'null';
-        dbgLog('PLUGIN: handleAdminReq called, user=' + userInfo + ', query.user=' + req.query.user);
+        // Device tab (loaded as iframe on device page)
         if (req.query.user == 1) {
-            dbgLog('PLUGIN: handleAdminReq rendering device tab');
             res.render('device', {
                 nodeid: req.query.nodeid || '',
                 nodeName: req.query.nodeid ? obj.getNodeName(req.query.nodeid) : 'Unknown'
             });
             return;
         }
-        if (!user || (user.siteadmin & 0xFFFFFFFF) == 0) {
-            dbgLog('PLUGIN: handleAdminReq UNAUTHORIZED - siteadmin check failed');
-            res.sendStatus(401);
-            return;
-        }
-        dbgLog('PLUGIN: handleAdminReq rendering admin template');
+        // Admin panel — requires site admin
+        if (!user || (user.siteadmin & 0xFFFFFFFF) == 0) { res.sendStatus(401); return; }
         res.render('admin', {});
     };
 
-    // -----------------------------------------------------------------------
-    // Web UI: Device tab registration
-    // -----------------------------------------------------------------------
-
+    /** Register device tab */
     obj.onDeviceRefreshEnd = function (nodeid, panel, refresh, event) {
         if (typeof currentNode === 'undefined' || currentNode == null) return;
-        // Only show for Windows devices
         if (currentNode.osdesc && currentNode.osdesc.toLowerCase().indexOf('windows') === -1) return;
-
         pluginHandler.registerPluginTab({
             tabTitle: 'User Tracer',
             tabId: 'pluginUserTracer'
         });
-
         QA('pluginUserTracer',
             '<iframe id="pluginIframeUserTracer" style="width:100%;height:600px;overflow:auto" '
             + 'scrolling="yes" frameBorder=0 '

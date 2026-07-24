@@ -1,157 +1,83 @@
-<!DOCTYPE html>
 <html>
 <head>
 <meta charset="utf-8">
 <title>User-Device Tracer — {{nodeName}}</title>
 <style>
-* { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: 'Segoe UI', Tahoma, sans-serif; background: transparent; color: #333; padding: 12px; font-size: 13px; }
-h2 { font-size: 16px; margin-bottom: 4px; }
-.subtitle { color: #666; font-size: 12px; margin-bottom: 12px; }
-.controls { margin-bottom: 10px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-.controls select, .controls input { padding: 4px 8px; border: 1px solid #ccc; border-radius: 3px; font-size: 12px; }
-.controls button { padding: 4px 12px; background: #1976D2; color: #fff; border: none; border-radius: 3px; cursor: pointer; font-size: 12px; }
-.controls button:hover { background: #1565C0; }
-.summary { display: flex; gap: 16px; margin-bottom: 12px; flex-wrap: wrap; }
-.summary-item { background: #fff; border: 1px solid #e0e0e0; border-radius: 6px; padding: 8px 14px; text-align: center; min-width: 100px; }
-.summary-item .num { font-size: 22px; font-weight: 600; color: #1976D2; }
-.summary-item .label { font-size: 11px; color: #666; }
-table { width: 100%; border-collapse: collapse; font-size: 12px; }
-th, td { padding: 5px 8px; text-align: left; border-bottom: 1px solid #eee; }
-th { background: #fafafa; font-weight: 600; position: sticky; top: 0; }
-tr:hover { background: #f0f7ff; }
-.event-userLogin td:first-child { border-left: 3px solid #4CAF50; }
-.event-userLogout td:first-child { border-left: 3px solid #F44336; }
-.event-sessionDisconnected td:first-child { border-left: 3px solid #FF9800; }
-.event-sessionReconnected td:first-child { border-left: 3px solid #2196F3; }
-.badge { display: inline-block; padding: 1px 6px; border-radius: 3px; font-size: 11px; font-weight: 600; }
-.badge-login { background: #E8F5E9; color: #2E7D32; }
-.badge-logout { background: #FFEBEE; color: #C62828; }
-.badge-disconnect { background: #FFF3E0; color: #E65100; }
-.badge-reconnect { background: #E3F2FD; color: #1565C0; }
-.loading { text-align: center; padding: 30px; color: #999; }
+* { box-sizing:border-box; margin:0; padding:0; }
+body { font-family:'Segoe UI',sans-serif; background:transparent; color:#333; padding:12px; font-size:13px; }
+h2 { font-size:16px; margin-bottom:4px; }
+.sub { color:#666; font-size:12px; margin-bottom:12px; }
+.sums { display:flex; gap:12px; margin-bottom:12px; flex-wrap:wrap; }
+.si { background:#fff; border:1px solid #e0e0e0; border-radius:6px; padding:8px 14px; text-align:center; min-width:80px; }
+.si .n { font-size:20px; font-weight:600; color:#1976D2; }
+.si .l { font-size:11px; color:#666; }
+.ctrl { margin-bottom:8px; }
+.ctrl select,.ctrl input { padding:4px 8px; border:1px solid #ccc; border-radius:3px; font-size:12px; }
+.ctrl button { padding:4px 12px; background:#1976D2; color:#fff; border:none; border-radius:3px; cursor:pointer; font-size:12px; }
+table { width:100%; border-collapse:collapse; font-size:12px; }
+th,td { padding:5px 8px; text-align:left; border-bottom:1px solid #eee; }
+th { background:#fafafa; font-weight:600; }
+.lk { color:#4CAF50; } .lo { color:#F44336; } .dc { color:#FF9800; } .rc { color:#2196F3; }
+.loading { text-align:center; padding:30px; color:#999; }
 </style>
 </head>
 <body>
-
 <h2>User-Device Tracer</h2>
-<p class="subtitle">Dispositivo: {{nodeName}} — <span id="eventCount">0</span> eventos</p>
-
-<div class="summary">
-    <div class="summary-item"><div class="num" id="sumLogin">0</div><div class="label">Logins</div></div>
-    <div class="summary-item"><div class="num" id="sumLogout">0</div><div class="label">Logouts</div></div>
-    <div class="summary-item"><div class="num" id="sumUsers">0</div><div class="label">Usuários</div></div>
-    <div class="summary-item"><div class="num" id="sumDisc">0</div><div class="label">Desconexões</div></div>
+<p class="sub">Dispositivo: {{nodeName}} — <span id="ec">0</span> eventos</p>
+<div class="sums">
+    <div class="si"><div class="n" id="sLogin">0</div><div class="l">Logins</div></div>
+    <div class="si"><div class="n" id="sLogout">0</div><div class="l">Logouts</div></div>
+    <div class="si"><div class="n" id="sUsers">0</div><div class="l">Usuários</div></div>
+    <div class="si"><div class="n" id="sDisc">0</div><div class="l">Desconexões</div></div>
 </div>
-
-<div class="controls">
-    <select id="filterType" onchange="render()">
+<div class="ctrl">
+    <select id="ftype" onchange="render()">
         <option value="">Todos</option>
         <option value="userLogin">Login</option>
         <option value="userLogout">Logout</option>
         <option value="sessionDisconnected">Desconectou</option>
         <option value="sessionReconnected">Reconectou</option>
     </select>
-    <input type="text" id="filterUser" placeholder="Filtrar usuário..." onkeyup="render()">
+    <input type="text" id="fuser" placeholder="Filtrar..." onkeyup="render()">
     <button onclick="loadData()">Atualizar</button>
 </div>
-
-<div style="overflow-x:auto;">
-    <table>
-        <thead><tr>
-            <th>Data/Hora</th><th>Evento</th><th>Usuário</th><th>Domínio</th><th>Sessão</th><th>Estado</th>
-        </tr></thead>
-        <tbody id="eventsBody">
-            <tr><td colspan="6" class="loading">Carregando eventos...</td></tr>
-        </tbody>
-    </table>
+<div style="overflow-x:auto">
+    <table><thead><tr>
+        <th>Data</th><th>Evento</th><th>Usuário</th><th>Domínio</th><th>Sessão</th>
+    </tr></thead>
+    <tbody id="eb"><tr><td colspan="5" class="loading">Carregando...</td></tr></tbody></table>
 </div>
-
 <script>
 var nodeid = '{{nodeid}}';
 var allData = [];
-
-// -----------------------------------------------------------------------
-// Communication via parent.meshserver (MeshCentral standard)
-// -----------------------------------------------------------------------
 var meshserver = (typeof parent !== 'undefined' && parent.meshserver) ? parent.meshserver : (window.meshserver || null);
-
-function sendCmd(pluginaction, extra) {
-    if (!meshserver) return;
-    extra = extra || {};
-    meshserver.send(Object.assign({
-        action: 'plugin',
-        plugin: 'usertracer',
-        pluginaction: pluginaction,
-        nodeid: nodeid
-    }, extra));
-}
-
-function loadData() {
-    document.getElementById('eventsBody').innerHTML = '<tr><td colspan="6" class="loading">Carregando...</td></tr>';
-    sendCmd('getDeviceEvents', { limit: 200 });
-}
-
-// -----------------------------------------------------------------------
-// Render
-// -----------------------------------------------------------------------
+function sendCmd(a, x) { if(!meshserver)return; meshserver.send(Object.assign({action:'plugin',plugin:'usertracer',pluginaction:a,nodeid:nodeid},x||{})); }
+function loadData() { document.getElementById('eb').innerHTML='<tr><td colspan="5" class="loading">Carregando...</td></tr>'; sendCmd('getDeviceEvents',{limit:200}); }
 function render() {
-    var filterType = document.getElementById('filterType').value;
-    var filterUser = document.getElementById('filterUser').value.trim().toLowerCase();
-    var tbody = document.getElementById('eventsBody');
-    var eventCount = 0, logins = 0, logouts = 0, discs = 0;
-    var users = {};
-    var html = '';
-    var labels = { userLogin: '<span class="badge badge-login">Login</span>', userLogout: '<span class="badge badge-logout">Logout</span>', sessionDisconnected: '<span class="badge badge-disconnect">Desconectou</span>', sessionReconnected: '<span class="badge badge-reconnect">Reconectou</span>' };
-
-    for (var i = 0; i < allData.length; i++) {
-        var e = allData[i];
-        if (filterType && e.eventType !== filterType) continue;
-        if (filterUser && (e.username||'').toLowerCase().indexOf(filterUser)===-1) continue;
-        eventCount++;
-        if (e.eventType === 'userLogin') logins++;
-        else if (e.eventType === 'userLogout') logouts++;
-        else if (e.eventType === 'sessionDisconnected') discs++;
-        if (e.username) users[e.domain ? e.domain+'\\'+e.username : e.username] = true;
-        var d = new Date(e.detectedAt);
-        html += '<tr class="event-'+e.eventType+'">'
-            + '<td>'+d.toLocaleDateString()+' '+d.toLocaleTimeString()+'</td>'
-            + '<td>'+(labels[e.eventType]||e.eventType)+'</td>'
-            + '<td>'+(e.username||'')+'</td>'
-            + '<td>'+(e.domain||'')+'</td>'
-            + '<td>'+(e.sessionName||'')+'</td>'
-            + '<td>'+(e.state||e.currentState||e.previousState||'')+'</td>'
-            + '</tr>';
+    var ft=document.getElementById('ftype').value, fu=document.getElementById('fuser').value.toLowerCase();
+    var tbody=document.getElementById('eb'), ec=0, li=0, lo=0, di=0, us={}, h='';
+    var lb={userLogin:'<b class="lk">Login</b>',userLogout:'<b class="lo">Logout</b>',sessionDisconnected:'<b class="dc">Desconectou</b>',sessionReconnected:'<b class="rc">Reconectou</b>'};
+    for(var i=0;i<allData.length;i++){
+        var e=allData[i];
+        if(ft&&e.eventType!==ft) continue;
+        if(fu&&(e.username||'').toLowerCase().indexOf(fu)===-1) continue;
+        ec++; if(e.eventType==='userLogin') li++; else if(e.eventType==='userLogout') lo++; else if(e.eventType==='sessionDisconnected') di++;
+        if(e.username) us[e.domain?e.domain+'\\'+e.username:e.username]=true;
+        var d=new Date(e.detectedAt);
+        h+='<tr><td>'+d.toLocaleDateString()+' '+d.toLocaleTimeString()+'</td><td>'+(lb[e.eventType]||e.eventType)+'</td><td>'+(e.username||'')+'</td><td>'+(e.domain||'')+'</td><td>'+(e.sessionName||'')+'</td></tr>';
     }
-    document.getElementById('eventCount').textContent = eventCount;
-    document.getElementById('sumLogin').textContent = logins;
-    document.getElementById('sumLogout').textContent = logouts;
-    document.getElementById('sumUsers').textContent = Object.keys(users).length;
-    document.getElementById('sumDisc').textContent = discs;
-    tbody.innerHTML = html || '<tr><td colspan="6" class="loading">Nenhum evento encontrado.</td></tr>';
+    document.getElementById('ec').textContent=ec; document.getElementById('sLogin').textContent=li;
+    document.getElementById('sLogout').textContent=lo; document.getElementById('sUsers').textContent=Object.keys(us).length;
+    document.getElementById('sDisc').textContent=di;
+    tbody.innerHTML=h||'<tr><td colspan="5" class="loading">Nenhum evento.</td></tr>';
 }
-
-// -----------------------------------------------------------------------
-// Handle responses via pluginHandler registration
-// -----------------------------------------------------------------------
-(function registerHandlers() {
-    var target = null;
-    try {
-        if (typeof pluginHandler !== 'undefined' && pluginHandler.usertracer) {
-            target = pluginHandler.usertracer;
-        } else if (typeof parent !== 'undefined' && parent.pluginHandler && parent.pluginHandler.usertracer) {
-            target = parent.pluginHandler.usertracer;
-        }
-    } catch(e) {}
-    if (!target) { setTimeout(registerHandlers, 500); return; }
-    target.deviceEvents = function(msg) {
-        allData = (msg && msg.data) ? msg.data : [];
-        render();
-    };
+(function(){
+    var t=null;
+    try{t=(typeof pluginHandler!=='undefined'&&pluginHandler.usertracer)||(parent&&parent.pluginHandler&&parent.pluginHandler.usertracer);}catch(e){}
+    if(!t){setTimeout(arguments.callee,500);return;}
+    t.deviceEvents=function(msg){allData=(msg&&msg.data)?msg.data:[];render();};
 })();
-
-document.addEventListener('DOMContentLoaded', loadData);
+document.addEventListener('DOMContentLoaded',loadData);
 </script>
-
 </body>
 </html>
