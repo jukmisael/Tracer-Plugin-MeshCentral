@@ -1,5 +1,26 @@
 # Changelog
 
+## 3.0.0 (2026-07-23)
+
+### Mudança fundamental de abordagem
+- **Removido** `query user` polling no agente (lento, complexo, falho)
+- **Agora** usa dados de usuário que o próprio MeshCentral já coleta dos agentes (`device.users`, `device.lusers`)
+- Server-side periodic scan (30s) detecta login/logout comparando estados anteriores
+- `hook_agentCoreIsStable` + `hook_processAgentData` disparam verificação imediata quando agente conecta ou envia dados
+- Agent-side module reduzido a placeholder mínimo
+- Dados históricos armazenados em NeDB com nodeid, username, domain, displayUser, eventType
+
+### Por que essa mudança
+O MeshCentral já exibe o usuário atual de cada máquina na lista de dispositivos (ex: `BKSSERVICES\Fabiana.Gomes`).
+Esse dado é enviado pelo agente e armazenado em `device.users`/`device.lusers` automaticamente.
+Não precisamos rodar `query user` no agente — o MeshCentral já faz isso por nós.
+
+### Benefits
+- Imediato: dados disponíveis assim que o agente conecta
+- Confiável: usa a mesma fonte de dados que a própria UI do MeshCentral
+- Zero overhead no agente
+- Histórico preciso de login/logout por comparação de estados
+
 ## 2.0.3 (2026-07-23)
 
 ### Fixes
