@@ -15,37 +15,94 @@ tr:hover{background:#f0f7ff}
 <body>
 <h1>User Tracer</h1>
 <p class="sub">Usuários ativos nos dispositivos neste momento</p>
+<div id="debug" style="display:none;background:#fff3cd;border:1px solid #ffeeba;padding:8px;margin-bottom:12px;font-size:11px;font-family:monospace;white-space:pre-wrap;max-height:200px;overflow:auto"></div>
 <div style="overflow-x:auto">
 <table><thead><tr><th>Dispositivo</th><th>Usuário</th><th>Domínio</th></tr></thead>
 <tbody id="tbody"><tr><td colspan="3" class="loading">Carregando...</td></tr></tbody></table>
 </div>
 <script>
-var ms=(typeof parent!=='undefined'&&parent.meshserver)||window.meshserver;
-function load(){
-    document.getElementById('tbody').innerHTML='<tr><td colspan="3" class="loading">Carregando...</td></tr>';
-    if(ms) ms.send({action:'plugin',plugin:'usertracer',pluginaction:'getCurrentUsers'});
+// === DEBUG ===
+var D = [];
+function dlog() {
+    var args = Array.prototype.slice.call(arguments);
+    var msg = new Date().toLocaleTimeString() + ' ' + args.join(' ');
+    D.push(msg);
+    console.log('[USERTRACER]', args.join(' '));
+    var el = document.getElementById('debug');
+    if (el) { el.innerHTML = D.join('\n'); el.style.display = 'block'; }
 }
+
+dlog('INIT: admin.handlebars loaded, DOM readyState=' + document.readyState);
+
+var ms = (typeof parent !== 'undefined' && parent.meshserver) ? parent.meshserver : (window.meshserver || null);
+dlog('INIT: meshserver=' + (ms ? 'available' : 'NULL') + ', parent=' + (typeof parent));
+
+function load() {
+    dlog('LOAD: function called, sending getCurrentUsers');
+    document.getElementById('tbody').innerHTML = '<tr><td colspan="3" class="loading">Carregando...</td></tr>';
+    if (ms) {
+        ms.send({action:'plugin', plugin:'usertracer', pluginaction:'getCurrentUsers'});
+        dlog('LOAD: send() called');
+    } else {
+        dlog('LOAD: ERROR - meshserver not available, cannot send');
+    }
+}
+
+// Register handler on pluginHandler
+dlog('REG: starting handler registration...');
 (function register(){
-    var t=null;
-    try{t=(typeof pluginHandler!=='undefined'&&pluginHandler.usertracer)||(parent&&parent.pluginHandler&&parent.pluginHandler.usertracer);}catch(e){}
-    if(!t){setTimeout(register,500);return;}
-    t.currentUsers=function(msg){
-        // msg can be the full {action,plugin,method,data:[...]} or just the data array
+    var t = null;
+    dlog('REG: attempt, typeof pluginHandler=' + typeof pluginHandler + ', typeof parent.pluginHandler=' + (parent ? typeof parent.pluginHandler : 'no parent'));
+    try {
+        if (typeof pluginHandler !== 'undefined' && pluginHandler.usertracer) {
+            t = pluginHandler.usertracer;
+            dlog('REG: found via pluginHandler.usertracer');
+        } else if (parent && parent.pluginHandler && parent.pluginHandler.usertracer) {
+            t = parent.pluginHandler.usertracer;
+            dlog('REG: found via parent.pluginHandler.usertracer');
+        }
+    } catch(e) {
+        dlog('REG: error accessing pluginHandler: ' + e.message);
+    }
+    if (!t) {
+        dlog('REG: pluginHandler.usertracer NOT FOUND, retrying in 500ms');
+        setTimeout(register, 500);
+        return;
+    }
+    dlog('REG: pluginHandler.usertracer FOUND, keys=' + Object.keys(t).join(','));
+    t.currentUsers = function(msg) {
+        dlog('RESPONSE: handler called, msg type=' + typeof msg + ' isArray=' + Array.isArray(msg));
+        if (msg && typeof msg === 'object') {
+            dlog('RESPONSE: msg keys=' + Object.keys(msg).join(','));
+            dlog('RESPONSE: msg.data type=' + typeof msg.data + ' isArray=' + Array.isArray(msg.data));
+        }
         var d = (msg && msg.data) ? msg.data : (Array.isArray(msg) ? msg : []);
-        var h='';
-        for(var i=0;i<d.length;i++){
-            var users=d[i].users||[];
-            for(var j=0;j<users.length;j++){
-                var u=users[j],dom='',usr=u;
-                if(u.indexOf('\\')>=0){dom=u.split('\\')[0];usr=u.split('\\')[1];}
-                else if(u.indexOf('@')>=0){dom=u.split('@')[1];usr=u.split('@')[0];}
-                h+='<tr><td>'+d[i].nodeName+'</td><td>'+usr+'</td><td>'+dom+'</td></tr>';
+        dlog('RESPONSE: parsed data length=' + d.length + ', d[0]=' + (d[0] ? JSON.stringify(d[0]).substring(0,200) : 'N/A'));
+        
+        var h = '';
+        for (var i = 0; i < d.length; i++) {
+            var users = d[i].users || [];
+            dlog('RESPONSE: device[' + i + ']=' + d[i].nodeName + ' users=' + JSON.stringify(users));
+            for (var j = 0; j < users.length; j++) {
+                var u = users[j], dom = '', usr = u;
+                if (u.indexOf('\\') >= 0) { dom = u.split('\\')[0]; usr = u.split('\\')[1]; }
+                else if (u.indexOf('@') >= 0) { dom = u.split('@')[1]; usr = u.split('@')[0]; }
+                h += '<tr><td>' + d[i].nodeName + '</td><td>' + usr + '</td><td>' + dom + '</td></tr>';
             }
         }
-        document.getElementById('tbody').innerHTML=h||'<tr><td colspan="3" class="loading">Nenhum usuário ativo.</td></tr>';
+        dlog('RESPONSE: html built, length=' + h.length + ', hasContent=' + (h.length > 0));
+        document.getElementById('tbody').innerHTML = h || '<tr><td colspan="3" class="loading">Nenhum usuário ativo.</td></tr>';
+        dlog('RESPONSE: DOM updated');
     };
+    dlog('REG: currentUsers handler registered successfully');
 })();
-document.addEventListener('DOMContentLoaded',load);
+
+dlog('INIT: adding DOMContentLoaded listener');
+document.addEventListener('DOMContentLoaded', function() {
+    dlog('DOMCONTENTLOADED: fired, calling load()');
+    load();
+});
+dlog('INIT: script done');
 </script>
 </body>
 </html>
