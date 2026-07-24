@@ -12,6 +12,20 @@ var mesh = null;
 var pollTimer = null;
 var POLL_INTERVAL_MS = 30000;
 var knownSessions = {};
+var debug_flag = false;
+
+// Debug function (EventLog/ScriptTask pattern)
+// Writes to usertracer.txt in agent working directory
+// Enable by sending pluginaction 'setDebug' with value 'true'
+var dbg = function(str) {
+    if (debug_flag !== true) return;
+    try {
+        var fs = require('fs');
+        var logStream = fs.createWriteStream('usertracer.txt', { flags: 'a' });
+        logStream.write('\n' + new Date().toLocaleString() + ': ' + str);
+        logStream.end('\n');
+    } catch (e) {}
+};
 
 // ---------------------------------------------------------------------------
 // Session tracking
@@ -73,11 +87,15 @@ function computeDeltas(current) {
 }
 
 function pollNow() {
-    if (process.platform !== 'win32') return;
+    if (process.platform !== 'win32') { dbg('pollNow: non-Windows, skipping'); return; }
+    dbg('pollNow: starting');
     try {
         require('child_process').exec('query user', { timeout: 10000 }, function (err, stdout) {
+            if (err) dbg('pollNow: query user error: ' + (err.message || err));
+            dbg('pollNow: stdout length=' + (stdout ? stdout.length : 0));
             if (!stdout || stdout.trim().length === 0) {
                 if (Object.keys(knownSessions).length > 0) {
+                    dbg('pollNow: no sessions, clearing ' + Object.keys(knownSessions).length + ' known');
                     var events = [];
                     for (var key in knownSessions) {
                         var prev = knownSessions[key];
@@ -85,17 +103,23 @@ function pollNow() {
                     }
                     knownSessions = {};
                     sendEvents(events);
+                } else {
+                    dbg('pollNow: no sessions, knownSessions already empty');
                 }
                 return;
             }
-            var events = computeDeltas(parseQueryUserOutput(stdout));
-            if (events.length > 0) sendEvents(events);
+            var sessions = parseQueryUserOutput(stdout);
+            dbg('pollNow: parsed ' + sessions.length + ' sessions');
+            var events = computeDeltas(sessions);
+            if (events.length > 0) { dbg('pollNow: ' + events.length + ' events detected'); sendEvents(events); }
+            else { dbg('pollNow: no changes'); }
         });
-    } catch (e) {}
+    } catch (e) { dbg('pollNow: exception: ' + (e.message || e)); }
 }
 
 function sendEvents(events) {
-    if (!mesh) return;
+    if (!mesh) { dbg('sendEvents: no mesh object'); return; }
+    dbg('sendEvents: sending ' + events.length + ' events, nodeid=' + (mesh.info ? (mesh.info._id || mesh.info.nodeid) : 'unknown'));
     try {
         var cmd = {
             action: 'plugin', plugin: 'usertracer',
@@ -106,8 +130,10 @@ function sendEvents(events) {
             cmd.nodeid = mesh.info._id || mesh.info.nodeid;
         }
         mesh.SendCommand(cmd);
-    } catch (e) {}
+        dbg('sendEvents: OK');
+    } catch (e) { dbg('sendEvents: error: ' + (e.message || e)); }
 }
+
 
 function startPolling() {
     if (pollTimer) return;
@@ -125,11 +151,13 @@ function stopPolling() {
 
 function consoleaction(args, rights, sessionid, parent) {
     mesh = parent;
+    dbg('consoleaction: pluginaction=' + args.pluginaction);
     switch (args.pluginaction) {
         case 'startPolling': startPolling(); break;
         case 'stopPolling': stopPolling(); break;
         case 'pollNow': pollNow(); break;
         case 'getStatus': return JSON.stringify(knownSessions);
+        case 'setDebug': debug_flag = (args.value === 'true' || args.value === true); dbg('Debug set to ' + debug_flag); return 'Debug: ' + debug_flag;
     }
     return 'OK';
 }
