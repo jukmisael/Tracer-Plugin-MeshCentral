@@ -339,7 +339,7 @@ function renderUserNames(list){
   sel.innerHTML='<option value="">— Selecione um usuário —</option>';
   (list||[]).sort(function(a,b){return String(a.displayUser||a.username).localeCompare(String(b.displayUser||b.username));}).forEach(function(u){
     var opt=document.createElement('option');
-    opt.value=(u.displayUser||u.username);
+    opt.value=(u.username||u.displayUser);
     opt.textContent=(u.displayUser||u.username);
     sel.appendChild(opt);
   });

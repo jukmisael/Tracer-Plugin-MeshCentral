@@ -388,7 +388,7 @@ module.exports.usertracer = function (parent) {
                 if (command.nodeids && command.nodeids.length > 0) opts.nodeids = command.nodeids;
                 else if (command.nodeid) opts.nodeids = [command.nodeid];
                 var query = {};
-                if (command.username) query.username = command.username;
+                if (command.username) query.$or = [{ username: command.username }, { displayUser: command.username }];
                 obj.db.getEvents(query, opts, function (docs) {
                     if (!docs) { console.log('UT CMD: getEvents returned null docs. opts=' + JSON.stringify(opts)); }
                     obj.send(sid, { action:'plugin', plugin:'usertracer', method:'timeline', data: docs || [] });
