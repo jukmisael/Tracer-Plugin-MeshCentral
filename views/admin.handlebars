@@ -3,163 +3,122 @@
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'Segoe UI',sans-serif;background:#f5f5f5;color:#333;padding:20px;font-size:13px}
-h1{font-size:20px;margin-bottom:4px}
-.sub{color:#666;font-size:12px;margin-bottom:16px}
+h1{font-size:20px;margin-bottom:2px}
+.sub{color:#666;font-size:12px;margin-bottom:12px}
+.tab-bar{border-bottom:2px solid #ddd;margin-bottom:12px}
+.tab-bar button{padding:8px 14px;border:none;background:#eee;cursor:pointer;font-size:12px;margin-bottom:-2px;border-bottom:2px solid transparent}
+.tab-bar button:hover{background:#e0e0e0}
+.tab-bar button.active{background:#fff;border-bottom-color:#1976D2;font-weight:600;color:#1976D2}
+.pane{display:none}.pane.active{display:block}
 table{width:100%;border-collapse:collapse;font-size:12px}
-th,td{padding:6px 10px;text-align:left;border-bottom:1px solid #eee}
+th,td{padding:5px 8px;text-align:left;border-bottom:1px solid #eee}
 th{background:#fafafa;font-weight:600}
 tr:hover{background:#f0f7ff}
-.loading{text-align:center;padding:40px;color:#999}
+.loading{text-align:center;padding:30px;color:#999}
+.lk{color:#4CAF50}.lo{color:#F44336}
 #dbgToggle{cursor:pointer;font-size:11px;color:#1976D2;margin-bottom:4px;user-select:none}
 #dbgToggle:hover{text-decoration:underline}
-#debug{display:none;background:#fff3cd;border:1px solid #ffeeba;padding:8px;margin-bottom:12px;font-size:10px;font-family:monospace;white-space:pre-wrap;max-height:300px;overflow:auto}
+#debug{display:none;background:#fff3cd;border:1px solid #ffeeba;padding:6px;margin-bottom:10px;font-size:9px;font-family:monospace;white-space:pre-wrap;max-height:200px;overflow:auto}
 #dbgCount{color:#999;font-size:10px;margin-left:8px}
 </style>
 </head>
 <body>
 <h1>User Tracer</h1>
-<p class="sub">Usuários ativos nos dispositivos neste momento</p>
-<div id="dbgToggle" onclick="toggleDebug()">🔽 Debug <span id="dbgCount">0</span></div>
-<div id="debug">aguardando eventos...</div>
-<div style="overflow-x:auto">
-<table><thead><tr><th>Dispositivo</th><th>Usuário</th><th>Domínio</th></tr></thead>
-<tbody id="tbody"><tr><td colspan="3" class="loading">Carregando...</td></tr></tbody></table>
+<p class="sub">Rastreio de usuários nos dispositivos</p>
+<div id="dbgToggle" onclick="var e=document.getElementById('debug');e.style.display=e.style.display==='none'?'block':'none'">🔽 Debug <span id="dbgCount">0</span></div>
+<div id="debug">aguardando...</div>
+<div class="tab-bar">
+    <button class="active" onclick="switchTab('users')">Usuários Ativos</button>
+    <button onclick="switchTab('timeline')">Timeline</button>
 </div>
+
+<div id="pane-users" class="pane active">
+    <div style="overflow-x:auto">
+    <table><thead><tr><th>Dispositivo</th><th>Usuário</th><th>Domínio</th></tr></thead>
+    <tbody id="tbody"><tr><td colspan="3" class="loading">Carregando...</td></tr></tbody></table>
+    </div>
+</div>
+
+<div id="pane-timeline" class="pane">
+    <div style="margin-bottom:8px;font-size:12px;color:#666">Últimos eventos de login/logout detectados pelo scanner.</div>
+    <div style="overflow-x:auto">
+    <table><thead><tr><th>Data</th><th>Evento</th><th>Usuário</th><th>Domínio</th><th>Dispositivo</th></tr></thead>
+    <tbody id="tlbody"><tr><td colspan="5" class="loading">Carregando...</td></tr></tbody></table>
+    </div>
+</div>
+
 <script>
-// === FULL WS DEBUG — COLLAPSIBLE ===
-var D = [];
-var dbgVisible = false;
+var D=[],dbgVisible=false,ms=(typeof parent!=='undefined'&&parent.meshserver)||window.meshserver;
+function dlog(){var a=Array.prototype.slice.call(arguments);D.push(new Date().toLocaleTimeString()+' '+a.join(' '));var e=document.getElementById('debug');if(e)e.innerHTML=D.join('\n');document.getElementById('dbgCount').textContent=D.length;console.log('[UTRACER]',a.join(' '));}
+dlog('INIT loaded ms='+(ms?'OK':'NULL'));
 
-function dlog() {
-    var args = Array.prototype.slice.call(arguments);
-    var msg = new Date().toLocaleTimeString() + ' ' + args.join(' ');
-    D.push(msg);
-    console.log('[UTRACER]', args.join(' '));
-    var el = document.getElementById('debug');
-    var ct = document.getElementById('dbgCount');
-    if (el) { el.innerHTML = D.join('\n'); el.scrollTop = el.scrollHeight; }
-    if (ct) ct.textContent = D.length;
-}
-function toggleDebug() {
-    var el = document.getElementById('debug');
-    var tg = document.getElementById('dbgToggle');
-    dbgVisible = !dbgVisible;
-    if (el) el.style.display = dbgVisible ? 'block' : 'none';
-    if (tg) tg.innerHTML = (dbgVisible ? '🔼' : '🔽') + ' Debug <span id="dbgCount">' + D.length + '</span>';
+function switchTab(n){
+    document.querySelectorAll('.tab-bar button').forEach(function(b){b.classList.remove('active');});
+    document.querySelectorAll('.pane').forEach(function(p){p.classList.remove('active');});
+    var btns=document.querySelectorAll('.tab-bar button');
+    for(var i=0;i<btns.length;i++){if(btns[i].textContent.toLowerCase().includes(n))btns[i].classList.add('active');}
+    document.getElementById('pane-'+n).classList.add('active');
+    if(n==='users')loadUsers();else loadTimeline();
 }
 
-dlog('=== INIT START ===');
-dlog('INIT: url=' + location.href);
-dlog('INIT: parent=' + (typeof parent));
-dlog('INIT: window.meshserver=' + (typeof window.meshserver));
-
-var ms = (typeof parent !== 'undefined' && parent.meshserver) ? parent.meshserver : (window.meshserver || null);
-dlog('INIT: ms=' + (ms ? 'OBJ' : 'NULL'));
-if (ms) {
-    dlog('INIT: ms.type=' + typeof ms);
-    dlog('INIT: ms.keys=' + Object.keys(ms).sort().join(','));
-    dlog('INIT: ms.socket=' + (ms.socket ? 'OBJ' : 'NULL'));
-    dlog('INIT: ms.socket.readyState=' + (ms.socket ? ms.socket.readyState : 'N/A'));
-    dlog('INIT: ms.socket.url=' + (ms.socket ? ms.socket.url : 'N/A'));
-    dlog('INIT: ms.socket.onmessage=' + (ms.socket && ms.socket.onmessage ? 'DEFINED' : 'NULL'));
-    dlog('INIT: ms.State=' + ms.State);
-    dlog('INIT: ms.connectstate=' + ms.connectstate);
+function loadUsers(){
+    dlog('loading users...');
+    document.getElementById('tbody').innerHTML='<tr><td colspan="3" class="loading">Carregando...</td></tr>';
+    if(ms)ms.send({action:'plugin',plugin:'usertracer',pluginaction:'getCurrentUsers'});
 }
-
-function renderTable(d) {
-    dlog('RENDER: rendering ' + d.length + ' devices');
-    var h = '';
-    for (var i = 0; i < d.length; i++) {
-        var users = d[i].users || [];
-        for (var j = 0; j < users.length; j++) {
-            var u = users[j], dom = '', usr = u;
-            if (u.indexOf('\\') >= 0) { dom = u.split('\\')[0]; usr = u.split('\\')[1]; }
-            else if (u.indexOf('@') >= 0) { dom = u.split('@')[1]; usr = u.split('@')[0]; }
-            h += '<tr><td>' + d[i].nodeName + '</td><td>' + usr + '</td><td>' + dom + '</td></tr>';
-        }
-    }
-    document.getElementById('tbody').innerHTML = h || '<tr><td colspan="3" class="loading">Nenhum usuário ativo.</td></tr>';
-    dlog('RENDER: done, html=' + (h.length > 0 ? h.substring(0,100) : 'empty'));
-}
-
-// === INTERCEPT ALL WS ACTIVITY ===
-if (ms) {
-    // 1. Intercept ms.send() — every outgoing message
-    dlog('WS: wrapping ms.send...');
-    var _origSend = ms.send;
-    if (typeof _origSend === 'function') {
-        ms.send = function(pkt) {
-            dlog('SEND: action=' + pkt.action + ' plugin=' + pkt.plugin + ' pluginaction=' + pkt.pluginaction + ' full=' + JSON.stringify(pkt).substring(0,300));
-            return _origSend.call(ms, pkt);
-        };
-        dlog('WS: ms.send wrapped');
-    } else {
-        dlog('WS: ms.send is NOT a function, type=' + typeof _origSend);
-    }
-
-    // 2. Intercept ALL raw WebSocket activity
-    if (ms.socket) {
-        var ws = ms.socket;
-        dlog('WS: socket.readyState=' + ws.readyState + ' buffered=' + ws.bufferedAmount);
-        
-        var events = ['open', 'close', 'error', 'message'];
-        events.forEach(function(evtName) {
-            var origHandler = ws['on' + evtName];
-            ws['on' + evtName] = function(event) {
-                if (evtName === 'message') {
-                    try {
-                        var raw = (typeof event.data === 'string') ? event.data : '[non-string]';
-                        dlog('WS MSG: len=' + raw.length + ' raw=' + raw.substring(0,600));
-                        try {
-                            var parsed = JSON.parse(raw);
-                            dlog('WS PARSE: action=' + parsed.action + ' plugin=' + parsed.plugin + ' method=' + parsed.method);
-                            if (parsed.action === 'plugin' && parsed.plugin === 'usertracer') {
-                                dlog('WS >>> USERTRACER MATCH <<<');
-                                if (parsed.method === 'currentUsers') {
-                                    renderTable(parsed.data || []);
-                                    return;
-                                }
-                            }
-                        } catch(ep) {
-                            dlog('WS PARSE FAIL: ' + ep.message.substring(0,100));
-                        }
-                    } catch(e) {
-                        dlog('WS RAW FAIL: ' + e.message);
-                    }
-                } else {
-                    dlog('WS EVT: ' + evtName + (event.code !== undefined ? ' code=' + event.code : '') + (event.reason ? ' reason=' + event.reason : ''));
-                }
-                if (typeof origHandler === 'function') origHandler.call(ws, event);
-            };
+function renderUsers(d){
+    dlog('render users: '+d.length);
+    var h='';
+    for(var i=0;i<d.length;i++){
+        (d[i].users||[]).forEach(function(u){
+            var p=u.split('\\'),dom=p.length>1?p[0]:'',usr=p.length>1?p[1]:u;
+            h+='<tr><td>'+d[i].nodeName+'</td><td>'+usr+'</td><td>'+dom+'</td></tr>';
         });
-        dlog('WS: all events hooked');
-    } else {
-        dlog('WS: NO SOCKET, fallback to ms.onMessage');
-        var _origOnMsg = ms.onMessage;
-        ms.onMessage = function(e) {
-            try {
-                var d = (typeof e === 'string') ? JSON.parse(e) : (e.data ? JSON.parse(e.data) : e);
-                dlog('MS.ONMSG: action=' + d.action + ' plugin=' + d.plugin);
-                if (d.action === 'plugin' && d.plugin === 'usertracer' && d.method === 'currentUsers') {
-                    renderTable(d.data || []); return;
-                }
-            } catch(ex) { dlog('MS.ONMSG error: ' + ex.message); }
-            if (typeof _origOnMsg === 'function') _origOnMsg(e);
-        };
-        dlog('WS: ms.onMessage installed');
     }
-} else {
-    dlog('FATAL: no meshserver');
+    document.getElementById('tbody').innerHTML=h||'<tr><td colspan="3" class="loading">Nenhum usuário ativo.</td></tr>';
 }
 
-function load() {
-    dlog('LOAD: sending getCurrentUsers');
-    document.getElementById('tbody').innerHTML = '<tr><td colspan="3" class="loading">Carregando...</td></tr>';
-    if (ms) { ms.send({action:'plugin', plugin:'usertracer', pluginaction:'getCurrentUsers'}); dlog('LOAD: sent'); }
+function loadTimeline(){
+    dlog('loading timeline...');
+    document.getElementById('tlbody').innerHTML='<tr><td colspan="5" class="loading">Carregando...</td></tr>';
+    if(ms)ms.send({action:'plugin',plugin:'usertracer',pluginaction:'getTimeline',limit:200});
+}
+function renderTimeline(d){
+    dlog('render timeline: '+d.length);
+    var h='';
+    for(var i=0;i<d.length;i++){
+        var e=d[i],dt=e.detectedAt?new Date(e.detectedAt):new Date();
+        var cls=e.eventType==='userLogin'?'lk':'lo';
+        var lbl=e.eventType==='userLogin'?'Login':'Logout';
+        h+='<tr><td>'+dt.toLocaleDateString()+' '+dt.toLocaleTimeString()+'</td>'
+          +'<td class="'+cls+'">'+lbl+'</td>'
+          +'<td>'+(e.username||'')+'</td>'
+          +'<td>'+(e.domain||'')+'</td>'
+          +'<td>'+(e.nodeName||'')+'</td></tr>';
+    }
+    document.getElementById('tlbody').innerHTML=h||'<tr><td colspan="5" class="loading">Nenhum evento registrado.</td></tr>';
 }
 
-document.addEventListener('DOMContentLoaded', function() { dlog('DOM: ready'); load(); });
-dlog('=== INIT END ===');
+// WebSocket hook
+if(ms&&ms.socket){
+    var orig=ms.socket.onmessage;
+    ms.socket.onmessage=function(event){
+        try{
+            var d=JSON.parse(event.data);
+            if(d.action==='plugin'&&d.plugin==='usertracer'){
+                dlog('WS match: method='+d.method+' data='+(Array.isArray(d.data)?d.data.length:typeof d.data));
+                if(d.method==='currentUsers')renderUsers(d.data||[]);
+                else if(d.method==='timeline')renderTimeline(d.data||[]);
+                else if(d.method==='scanDone'){dlog('scan done, reloading...');loadUsers();}
+                return;
+            }
+        }catch(e){}
+        if(typeof orig==='function')orig.call(ms.socket,event);
+    };
+    dlog('socket hooked');
+}
+
+document.addEventListener('DOMContentLoaded',function(){dlog('DOM ready');loadUsers();});
 </script>
 </body>
 </html>

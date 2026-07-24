@@ -3,60 +3,100 @@
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'Segoe UI',sans-serif;background:transparent;color:#333;padding:12px;font-size:13px}
-h2{font-size:16px;margin-bottom:4px}
+h2{font-size:16px;margin-bottom:2px}
 .sub{color:#666;font-size:12px;margin-bottom:8px}
-.info{background:#e3f2fd;border:1px solid #90caf9;border-radius:6px;padding:12px;margin-bottom:8px}
+.tab-bar{border-bottom:2px solid #ddd;margin-bottom:8px}
+.tab-bar button{padding:6px 12px;border:none;background:#eee;cursor:pointer;font-size:11px;margin-bottom:-2px;border-bottom:2px solid transparent}
+.tab-bar button:hover{background:#e0e0e0}
+.tab-bar button.active{background:#fff;border-bottom-color:#1976D2;font-weight:600;color:#1976D2}
+.pane{display:none}.pane.active{display:block}
+.info{background:#e3f2fd;border:1px solid #90caf9;border-radius:6px;padding:10px;margin-bottom:8px}
 .info .lbl{font-size:11px;color:#666}
 .info .val{font-size:18px;font-weight:600;color:#1976D2}
-.loading{text-align:center;padding:30px;color:#999}
-.dbg{font-size:10px;color:#999;margin-top:8px;cursor:pointer}
-#debug{display:none;background:#fff3cd;border:1px solid #ffeeba;padding:6px;margin-top:4px;font-size:9px;font-family:monospace;white-space:pre-wrap;max-height:150px;overflow:auto}
+table{width:100%;border-collapse:collapse;font-size:11px}
+th,td{padding:4px 6px;text-align:left;border-bottom:1px solid #eee}
+th{background:#fafafa;font-weight:600}
+.loading{text-align:center;padding:20px;color:#999}
+.lk{color:#4CAF50}.lo{color:#F44336}
+.dbg{font-size:9px;color:#999;margin-top:6px;cursor:pointer}
+#debug{display:none;background:#fff3cd;border:1px solid #ffeeba;padding:4px;margin-top:4px;font-size:8px;font-family:monospace;white-space:pre-wrap;max-height:120px;overflow:auto}
 </style>
 </head>
 <body>
 <h2>User Tracer</h2>
 <p class="sub">{{nodeName}}</p>
-<div id="info" class="loading">Carregando...</div>
+<div class="tab-bar">
+    <button class="active" onclick="switchTab('now')">Agora</button>
+    <button onclick="switchTab('history')">Histórico</button>
+</div>
+<div id="pane-now" class="pane active"><div id="info" class="loading">Carregando...</div></div>
+<div id="pane-history" class="pane">
+    <div style="overflow-x:auto">
+    <table><thead><tr><th>Data</th><th>Evento</th><th>Usuário</th></tr></thead>
+    <tbody id="tlbody"><tr><td colspan="3" class="loading">Carregando...</td></tr></tbody></table>
+    </div>
+</div>
 <div class="dbg" onclick="var d=document.getElementById('debug');d.style.display=d.style.display==='none'?'block':'none'">🔽 Device Debug</div>
 <div id="debug">aguardando...</div>
+
 <script>
-var D=[],nodeid='{{nodeid}}';
-var ms=(typeof parent!=='undefined'&&parent.meshserver)||window.meshserver;
-function dlog(){var a=Array.prototype.slice.call(arguments);var m=new Date().toLocaleTimeString()+' '+a.join(' ');D.push(m);var el=document.getElementById('debug');if(el)el.innerHTML=D.join('\n');console.log('[UTRACER-DEV]',a.join(' '));}
-dlog('INIT node='+nodeid+' ms='+(ms?'OK':'NULL'));
-function load(){
-    dlog('LOAD: sending');
-    document.getElementById('info').innerHTML='<div class="loading">Carregando...</div>';
-    if(ms) ms.send({action:'plugin',plugin:'usertracer',pluginaction:'getCurrentUsers'});
+var D=[],nodeid='{{nodeid}}',ms=(typeof parent!=='undefined'&&parent.meshserver)||window.meshserver;
+function dlog(){var a=Array.prototype.slice.call(arguments);D.push(new Date().toLocaleTimeString()+' '+a.join(' '));var e=document.getElementById('debug');if(e)e.innerHTML=D.join('\n');console.log('[UTRACER-DEV]',a.join(' '));}
+dlog('INIT node='+nodeid.substring(0,30)+'... ms='+(ms?'OK':'NULL'));
+
+function switchTab(n){
+    document.querySelectorAll('.tab-bar button').forEach(function(b){b.classList.remove('active');});
+    var btns=document.querySelectorAll('.tab-bar button');
+    for(var i=0;i<btns.length;i++){if(btns[i].textContent.toLowerCase()===n)btns[i].classList.add('active');}
+    document.querySelectorAll('.pane').forEach(function(p){p.classList.remove('active');});
+    document.getElementById('pane-'+n).classList.add('active');
+    if(n==='now')loadNow();else loadHistory();
 }
-// Hook socket directly
+
+function loadNow(){
+    if(ms)ms.send({action:'plugin',plugin:'usertracer',pluginaction:'getCurrentUsers'});
+}
+function loadHistory(){
+    document.getElementById('tlbody').innerHTML='<tr><td colspan="3" class="loading">Carregando...</td></tr>';
+    if(ms)ms.send({action:'plugin',plugin:'usertracer',pluginaction:'getTimeline',nodeid:nodeid,limit:100});
+}
+
 if(ms&&ms.socket){
-    var ws=ms.socket,orig=ws.onmessage;
-    ws.onmessage=function(e){
+    var orig=ms.socket.onmessage;
+    ms.socket.onmessage=function(event){
         try{
-            var d=JSON.parse(e.data);
-            dlog('WS: action='+d.action+' plugin='+d.plugin+' method='+d.method);
-            if(d&&d.action==='plugin'&&d.plugin==='usertracer'&&d.method==='currentUsers'){
-                dlog('MATCH! data='+(d.data?d.data.length:0));
-                var found=null;
-                for(var i=0;i<(d.data||[]).length;i++){if(d.data[i].nodeid===nodeid){found=d.data[i];break;}}
-                var el=document.getElementById('info');
-                if(!found||!found.users||!found.users.length){el.innerHTML='<div class="loading">Nenhum usuário ativo.</div>';dlog('no user for this device');return;}
-                var h='';
-                for(var j=0;j<found.users.length;j++){
-                    var u=found.users[j],usr=u;
-                    if(u.indexOf('\\')>=0)usr=u.split('\\')[1];else if(u.indexOf('@')>=0)usr=u.split('@')[0];
-                    h+='<div class="info"><div class="lbl">Usuário ativo</div><div class="val">'+usr+'</div></div>';
+            var d=JSON.parse(event.data);
+            if(d.action==='plugin'&&d.plugin==='usertracer'){
+                dlog('WS: method='+d.method);
+                if(d.method==='currentUsers'){
+                    var found=null;
+                    for(var i=0;i<(d.data||[]).length;i++){if(d.data[i].nodeid===nodeid){found=d.data[i];break;}}
+                    var el=document.getElementById('info');
+                    if(!found||!found.users||!found.users.length){el.innerHTML='<div class="loading">Nenhum usuário ativo.</div>';return;}
+                    var h='';
+                    found.users.forEach(function(u){
+                        var usr=u.indexOf('\\')>=0?u.split('\\')[1]:u;
+                        h+='<div class="info"><div class="lbl">Usuário ativo</div><div class="val">'+usr+'</div></div>';
+                    });
+                    el.innerHTML=h;
+                } else if(d.method==='timeline'){
+                    var h='';
+                    for(var i=0;i<(d.data||[]).length;i++){
+                        var e=d.data[i],dt=e.detectedAt?new Date(e.detectedAt):new Date();
+                        var cls=e.eventType==='userLogin'?'lk':'lo',lbl=e.eventType==='userLogin'?'Login':'Logout';
+                        h+='<tr><td>'+dt.toLocaleDateString()+' '+dt.toLocaleTimeString()+'</td><td class="'+cls+'">'+lbl+'</td><td>'+(e.username||'')+'</td></tr>';
+                    }
+                    document.getElementById('tlbody').innerHTML=h||'<tr><td colspan="3" class="loading">Nenhum evento.</td></tr>';
                 }
-                el.innerHTML=h;dlog('rendered: '+found.users.join(','));
                 return;
             }
-        }catch(ex){dlog('WS err: '+ex.message);}
-        if(typeof orig==='function')orig.call(ws,e);
+        }catch(e){}
+        if(typeof orig==='function')orig.call(ms.socket,event);
     };
     dlog('socket hooked');
 }
-document.addEventListener('DOMContentLoaded',function(){dlog('DOM ready');load();});
+
+document.addEventListener('DOMContentLoaded',function(){dlog('DOM ready');loadNow();});
 </script>
 </body>
 </html>

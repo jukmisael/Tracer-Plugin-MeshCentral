@@ -1,5 +1,16 @@
 # Changelog
 
+## 3.2.0 (2026-07-23)
+
+### Timeline persistente
+- `db.js` — novo módulo de banco NeDB com fallback chain (`@seald-io/nedb` → `@yetzt/nedb` → `nedb`)
+- Scanner periódico (30s) varre todos os agentes e detecta login/logout por diff de `doc.users`
+- `hook_agentCoreIsStable` + `hook_processAgentData` disparam verificação imediata
+- Eventos armazenados em `plugin-usertracer-events.db` (persiste restart)
+- Admin panel: abas "Usuários Ativos" + "Timeline"
+- Device tab: abas "Agora" + "Histórico"
+- Server-side usa `db.js` (plugin DB) + `meshServer.db` (MeshCentral DB)
+
 ## 3.1.0 (2026-07-23)
 
 ### Melhorias

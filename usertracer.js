@@ -1,5 +1,6 @@
 /**
- * User-Device Tracer — full debug version
+ * User-Device Tracer — v3.2
+ * Rastreia usuários ativos + timeline de login/logout persistente.
  */
 "use strict";
 
@@ -9,108 +10,222 @@ module.exports.usertracer = function (parent) {
     obj.meshServer = parent.parent;
     obj.debug = obj.meshServer.debug;
     obj.exports = ['onDeviceRefreshEnd'];
-    obj.db = obj.meshServer.db;
+    obj.db = null;           // db.js (plugin events)
+    obj.mdb = obj.meshServer.db;  // MeshCentral DB
+    obj.scanTimer = null;
+    obj.SCAN_INTERVAL = 30000; // 30s
+    obj.userCache = {}; // { nodeid: JSON.stringify([users]) }
 
-    console.log('UT INIT: module loaded, parent keys=' + Object.keys(parent).sort().join(','));
-    console.log('UT INIT: meshServer type=' + typeof obj.meshServer);
-    console.log('UT INIT: db type=' + typeof obj.db + ' Get=' + (obj.db && typeof obj.db.Get));
+    console.log('UT INIT: usertracer v3.2 loaded');
 
+    // -----------------------------------------------------------------------
+    // Server startup — init DB + start scanner
+    // -----------------------------------------------------------------------
+    obj.server_startup = function () {
+        console.log('UT STARTUP: initializing DB...');
+        obj.meshServer.pluginHandler.usertracer_db = require(__dirname + '/db.js').CreateDB(obj.meshServer);
+        obj.db = obj.meshServer.pluginHandler.usertracer_db;
+        console.log('UT STARTUP: DB ready, starting scanner');
+        obj.startScanner();
+    };
+
+    // -----------------------------------------------------------------------
+    // Periodic scanner — detect user changes across all agents
+    // -----------------------------------------------------------------------
+    obj.startScanner = function () {
+        obj.scanNow();
+        obj.scanTimer = setInterval(obj.scanNow, obj.SCAN_INTERVAL);
+        console.log('UT SCANNER: started (interval=' + obj.SCAN_INTERVAL + 'ms)');
+    };
+
+    obj.scanNow = function () {
+        try {
+            var ws = obj.meshServer.webserver.wsagents || {};
+            for (var nid in ws) {
+                obj.checkNode(nid);
+            }
+        } catch (e) {
+            console.log('UT SCAN: error: ' + e.message);
+        }
+    };
+
+    obj.checkNode = function (nodeid) {
+        obj.mdb.Get(nodeid, function (err, docs) {
+            try {
+                if (err || !docs || docs.length === 0) return;
+                var doc = docs[0];
+                var currentUsers = (Array.isArray(doc.users) ? doc.users : []).sort();
+                var key = JSON.stringify(currentUsers);
+                var prev = obj.userCache[nodeid];
+
+                if (prev === key) return; // no change
+
+                obj.userCache[nodeid] = key;
+                var nodeName = doc.name || nodeid;
+
+                if (!prev) {
+                    // First time: log all current users
+                    console.log('UT SCAN: initial users for ' + nodeName + ': ' + JSON.stringify(currentUsers));
+                    currentUsers.forEach(function (u) { obj.storeEvent(nodeid, nodeName, u, 'userLogin'); });
+                } else {
+                    var prevUsers = JSON.parse(prev);
+                    // Logins: in current but not in prev
+                    currentUsers.forEach(function (u) {
+                        if (prevUsers.indexOf(u) === -1) {
+                            console.log('UT SCAN: LOGIN ' + u + ' on ' + nodeName);
+                            obj.storeEvent(nodeid, nodeName, u, 'userLogin');
+                        }
+                    });
+                    // Logouts: in prev but not in current
+                    prevUsers.forEach(function (u) {
+                        if (currentUsers.indexOf(u) === -1) {
+                            console.log('UT SCAN: LOGOUT ' + u + ' from ' + nodeName);
+                            obj.storeEvent(nodeid, nodeName, u, 'userLogout');
+                        }
+                    });
+                }
+            } catch (e) {
+                console.log('UT SCAN: checkNode error: ' + e.message);
+            }
+        });
+    };
+
+    obj.storeEvent = function (nodeid, nodeName, userStr, eventType) {
+        if (!obj.db || !obj.db.addEvent) return;
+        var username = userStr;
+        var domain = '';
+        if (userStr.indexOf('\\') >= 0) { domain = userStr.split('\\')[0]; username = userStr.split('\\')[1]; }
+        else if (userStr.indexOf('@') >= 0) { domain = userStr.split('@')[1]; username = userStr.split('@')[0]; }
+        obj.db.addEvent({
+            nodeid: nodeid,
+            nodeName: nodeName,
+            username: username,
+            domain: domain,
+            displayUser: userStr,
+            eventType: eventType,
+            detectedAt: new Date().toISOString()
+        });
+    };
+
+    // -----------------------------------------------------------------------
+    // Hook: agent connected — check immediately
+    // -----------------------------------------------------------------------
+    obj.hook_agentCoreIsStable = function (myparent, gp) {
+        var nodeid = myparent ? myparent.nodeid : null;
+        if (nodeid) {
+            console.log('UT HOOK: agentCoreIsStable ' + nodeid.substring(0, 40) + '...');
+            setTimeout(function () { obj.checkNode(nodeid); }, 2000);
+        }
+    };
+
+    // -----------------------------------------------------------------------
+    // Hook: agent data received — check for user changes
+    // -----------------------------------------------------------------------
+    obj.hook_processAgentData = function (data, nodeid) {
+        if (!nodeid) return;
+        // Debounce: schedule check after 2s
+        if (obj._pendingCheck && obj._pendingCheck[nodeid]) clearTimeout(obj._pendingCheck[nodeid]);
+        if (!obj._pendingCheck) obj._pendingCheck = {};
+        obj._pendingCheck[nodeid] = setTimeout(function () {
+            obj.checkNode(nodeid);
+            delete obj._pendingCheck[nodeid];
+        }, 2000);
+    };
+
+    // -----------------------------------------------------------------------
+    // HTTP: admin panel & device tab
+    // -----------------------------------------------------------------------
     obj.handleAdminReq = function (req, res, user) {
-        console.log('UT HANDLEADMIN: called, user=' + (user ? user.name : 'null') + ' query=' + JSON.stringify(req.query));
+        console.log('UT HTTP: user=' + (user ? user.name : 'null'));
         if (req.query.user == 1) {
-            console.log('UT HANDLEADMIN: rendering device tab for ' + req.query.nodeid);
             return res.render('device', { nodeid: req.query.nodeid || '', nodeName: req.query.nodeid ? obj.getNodeName(req.query.nodeid) : 'Unknown' });
         }
-        if (!user || (user.siteadmin & 0xFFFFFFFF) == 0) {
-            console.log('UT HANDLEADMIN: 401 Unauthorized, user.siteadmin=' + (user ? user.siteadmin : 'null'));
-            res.sendStatus(401);
-            return;
-        }
-        console.log('UT HANDLEADMIN: rendering admin panel');
+        if (!user || (user.siteadmin & 0xFFFFFFFF) == 0) { res.sendStatus(401); return; }
         res.render('admin', {});
     };
 
+    // -----------------------------------------------------------------------
+    // WebSocket commands
+    // -----------------------------------------------------------------------
     obj.serveraction = function (command, myparent, gp) {
-        console.log('UT SERVERACTION: called, plugin=' + command.plugin + ' action=' + command.pluginaction);
         if (command.plugin !== 'usertracer') return;
         var sid = null;
         try { sid = myparent.ws.sessionId; } catch (e) {}
-        console.log('UT SERVERACTION: sid=' + sid);
-        if (!sid || !obj.db || typeof obj.db.Get !== 'function') {
-            console.log('UT SERVERACTION: missing sid or db, sid=' + sid + ' db=' + (!!obj.db));
-            return;
-        }
+        if (!sid) return;
+        console.log('UT CMD: ' + command.pluginaction + ' sid=' + sid.substring(0, 30) + '...');
 
         if (command.pluginaction === 'getCurrentUsers') {
+            // Current users from MeshCentral DB (same as before)
             var result = [];
             var ws = obj.meshServer.webserver.wsagents || {};
-            var agentIds = Object.keys(ws);
-            console.log('UT GETUSERS: agents count=' + agentIds.length + ' ids=' + agentIds.map(function(s){return s.substring(0,20);}).join(','));
+            var ids = Object.keys(ws);
+            if (ids.length === 0) { obj.send(sid, { action:'plugin', plugin:'usertracer', method:'currentUsers', data: result }); return; }
 
-            if (agentIds.length === 0) {
-                console.log('UT GETUSERS: no agents, sending empty result');
-                obj.send(sid, { action: 'plugin', plugin: 'usertracer', method: 'currentUsers', data: result });
-                return;
-            }
-
-            var pending = agentIds.length;
-            agentIds.forEach(function (nid) {
-                console.log('UT DB: calling Get(' + nid.substring(0, 40) + '...)');
-                obj.db.Get(nid, function (err, docs) {
-                    console.log('UT DB: callback for ' + nid.substring(0, 40) + '... err=' + (err ? err.message : 'null') + ' docs=' + (docs ? docs.length : 'null'));
-                    try {
-                        if (!err && docs && docs.length > 0) {
-                            var d = docs[0];
-                            console.log('UT DB: doc name=' + d.name + ' users=' + JSON.stringify(d.users) + ' lusers=' + JSON.stringify(d.lusers) + ' keys=' + Object.keys(d).sort().join(','));
-                            if (Array.isArray(d.users) && d.users.length > 0) {
-                                result.push({ nodeid: nid, nodeName: d.name || nid, users: d.users });
-                                console.log('UT DB: added user ' + JSON.stringify(d.users) + ' for ' + d.name);
-                            } else {
-                                console.log('UT DB: no users array for ' + d.name);
-                            }
-                        } else {
-                            console.log('UT DB: no docs found for ' + nid.substring(0, 40) + '...');
+            var pending = ids.length;
+            ids.forEach(function (nid) {
+                obj.mdb.Get(nid, function (err, docs) {
+                    if (!err && docs && docs.length > 0) {
+                        var d = docs[0];
+                        if (Array.isArray(d.users) && d.users.length > 0) {
+                            result.push({ nodeid: nid, nodeName: d.name || nid, users: d.users });
                         }
-                    } catch (e) {
-                        console.log('UT DB: ERROR in callback: ' + e.message);
                     }
                     pending--;
-                    console.log('UT DB: pending=' + pending + ' result.length=' + result.length);
                     if (pending <= 0) {
-                        console.log('UT DB: ALL DONE, sending ' + result.length + ' devices');
-                        console.log('UT DB: result JSON=' + JSON.stringify(result).substring(0, 500));
-                        obj.send(sid, { action: 'plugin', plugin: 'usertracer', method: 'currentUsers', data: result });
+                        obj.send(sid, { action:'plugin', plugin:'usertracer', method:'currentUsers', data: result });
                     }
                 });
             });
+            return;
+        }
+
+        if (command.pluginaction === 'getTimeline') {
+            // Timeline from plugin DB
+            if (!obj.db || !obj.db.getEventsByNode) { obj.send(sid, { action:'plugin', plugin:'usertracer', method:'timeline', data: [] }); return; }
+
+            if (command.nodeid) {
+                // Timeline for specific device
+                obj.db.getEventsByNode(command.nodeid, command.limit || 200, function (docs) {
+                    obj.send(sid, { action:'plugin', plugin:'usertracer', method:'timeline', data: docs || [] });
+                });
+            } else {
+                // Timeline all devices
+                obj.db.getEvents({}, command.limit || 500, function (docs) {
+                    obj.send(sid, { action:'plugin', plugin:'usertracer', method:'timeline', data: docs || [] });
+                });
+            }
+            return;
+        }
+
+        if (command.pluginaction === 'scanNow') {
+            obj.scanNow();
+            obj.send(sid, { action:'plugin', plugin:'usertracer', method:'scanDone', data: { status: 'ok' } });
+            return;
         }
     };
 
+    // -----------------------------------------------------------------------
+    // Helpers
+    // -----------------------------------------------------------------------
     obj.getNodeName = function (nid) {
         try { return obj.meshServer.webserver.wsagents[nid].name || nid; } catch (e) { return nid; }
     };
 
     obj.send = function (sid, data) {
-        console.log('UT SEND: sid=' + sid.substring(0, 30) + '... method=' + data.method + ' data.length=' + (data.data ? data.data.length : 'N/A'));
         try {
-            if (obj.meshServer.webserver.wssessions2 && obj.meshServer.webserver.wssessions2[sid]) {
+            if (obj.meshServer.webserver.wssessions2 && obj.meshServer.webserver.wssessions2[sid])
                 obj.meshServer.webserver.wssessions2[sid].send(JSON.stringify(data));
-                console.log('UT SEND: OK');
-            } else {
-                console.log('UT SEND: session ' + sid.substring(0, 30) + '... not found in wssessions2');
-            }
-        } catch (e) {
-            console.log('UT SEND: ERROR: ' + e.message);
-        }
+        } catch (e) {}
     };
 
+    // -----------------------------------------------------------------------
+    // Device tab
+    // -----------------------------------------------------------------------
     obj.onDeviceRefreshEnd = function () {
-        console.log('UT DEVICETAB: onDeviceRefreshEnd called');
-        if (typeof currentNode === 'undefined' || !currentNode) { console.log('UT DEVICETAB: no currentNode'); return; }
-        if (currentNode.osdesc && currentNode.osdesc.toLowerCase().indexOf('windows') === -1) { console.log('UT DEVICETAB: not Windows, skipping'); return; }
+        if (typeof currentNode === 'undefined' || !currentNode) return;
+        if (currentNode.osdesc && currentNode.osdesc.toLowerCase().indexOf('windows') === -1) return;
         pluginHandler.registerPluginTab({ tabTitle: 'User Tracer', tabId: 'pluginUserTracer' });
         QA('pluginUserTracer', '<iframe id="pluginIframeUserTracer" style="width:100%;height:200px;overflow:auto" scrolling="yes" frameBorder=0 src="/pluginadmin.ashx?pin=usertracer&nodeid=' + encodeURIComponent(currentNode._id) + '&user=1" />');
-        console.log('UT DEVICETAB: tab registered for ' + currentNode._id.substring(0, 30));
     };
 
     return obj;
