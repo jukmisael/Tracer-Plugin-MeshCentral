@@ -1,6 +1,6 @@
 /**
- * User-Device Tracer — v3.0 minimal
- * Só lê o usuário ativo que o MeshCentral já tem de cada agente.
+ * User-Device Tracer — minimal
+ * Lê o usuário ativo que o MeshCentral já tem de cada agente.
  */
 "use strict";
 
@@ -9,21 +9,14 @@ module.exports.usertracer = function (parent) {
     obj.parent = parent;
     obj.meshServer = parent.parent;
     obj.debug = obj.meshServer.debug;
-
     obj.exports = ['onDeviceRefreshEnd'];
 
-    // -----------------------------------------------------------------------
-    // HTTP: admin panel
-    // -----------------------------------------------------------------------
     obj.handleAdminReq = function (req, res, user) {
         if (req.query.user == 1) { return res.render('device', { nodeid: req.query.nodeid || '', nodeName: req.query.nodeid ? obj.getNodeName(req.query.nodeid) : 'Unknown' }); }
         if (!user || (user.siteadmin & 0xFFFFFFFF) == 0) { res.sendStatus(401); return; }
         res.render('admin', {});
     };
 
-    // -----------------------------------------------------------------------
-    // Frontend query: get current users for all connected agents
-    // -----------------------------------------------------------------------
     obj.serveraction = function (command, myparent, gp) {
         if (command.plugin !== 'usertracer') return;
         var sid = null;
@@ -33,62 +26,60 @@ module.exports.usertracer = function (parent) {
         if (command.pluginaction === 'getCurrentUsers') {
             var result = [];
             try {
-                // Try EVERY possible data source for agent users
-                var sources = [
-                    obj.meshServer.parent.agents,
-                    obj.meshServer.webserver.wsagents
-                ];
-                for (var si = 0; si < sources.length; si++) {
-                    var src = sources[si];
-                    if (!src) continue;
-                    for (var nid in src) {
-                        var a = src[nid];
-                        // Dump full structure of first agent
-                        if (si === 0 && result.length === 0) {
-                            obj.debug('plugin:usertracer', '=== DUMP agent ' + nid + ' (from source ' + si + ') ===');
-                            var keys = Object.keys(a).sort();
-                            for (var ki = 0; ki < keys.length; ki++) {
-                                try {
-                                    var val = a[keys[ki]];
-                                    var valStr = (typeof val === 'object') ? JSON.stringify(val).substring(0, 200) : String(val);
-                                    obj.debug('plugin:usertracer', '  ' + keys[ki] + ' = ' + valStr);
-                                } catch (e) { obj.debug('plugin:usertracer', '  ' + keys[ki] + ' = (error reading)'); }
-                            }
-                        }
-                        // Try all possible user properties
-                        var userProps = ['users', 'lusers', 'upnusers', 'user', 'username', '_agent', 'info'];
-                        for (var pi = 0; pi < userProps.length; pi++) {
-                            var prop = userProps[pi];
-                            try {
-                                if (a[prop]) {
-                                    if (prop === '_agent' && a[prop].username) {
-                                        result.push({ nodeid: nid, nodeName: a.name || nid, users: [a[prop].username] });
-                                        obj.debug('plugin:usertracer', 'FOUND user via _agent.username: ' + a[prop].username);
-                                    } else if (Array.isArray(a[prop]) && a[prop].length > 0) {
-                                        result.push({ nodeid: nid, nodeName: a.name || nid, users: a[prop] });
-                                        obj.debug('plugin:usertracer', 'FOUND users via ' + prop + ': ' + JSON.stringify(a[prop]));
-                                        break;
-                                    }
-                                }
-                            } catch (e) {}
-                        }
-                    }
+                // Source 1: parent.agents
+                var src1 = obj.meshServer.parent.agents || {};
+                for (var nid in src1) {
+                    var u = obj.findUser(src1[nid]);
+                    if (u) { obj.addResult(result, nid, src1[nid].name || nid, u); }
                 }
-            } catch (e) {
-                obj.debug('plugin:usertracer', 'getCurrentUsers error: ' + e.message);
-            }
-            obj.debug('plugin:usertracer', 'getCurrentUsers: returning ' + result.length + ' devices with users');
+                // Source 2: wsagents
+                var src2 = obj.meshServer.webserver.wsagents || {};
+                for (var nid in src2) {
+                    if (obj.hasResult(result, nid)) continue;
+                    var u = obj.findUser(src2[nid]);
+                    if (u) { obj.addResult(result, nid, obj.getNodeName(nid), u); }
+                }
+                // Debug dump
+                var first = Object.keys(src1)[0];
+                if (first) {
+                    obj.debug('plugin:usertracer', 'parent.agents[' + first + '] keys: ' + Object.keys(src1[first]).sort().join(', '));
+                    obj.debug('plugin:usertracer', 'wsagents[' + first + '] keys: ' + (src2[first] ? Object.keys(src2[first]).sort().join(', ') : 'N/A'));
+                }
+            } catch (e) { obj.debug('plugin:usertracer', 'error: ' + e.message); }
+            obj.debug('plugin:usertracer', 'result: ' + result.length + ' devices with users');
             obj.send(sid, { action: 'plugin', plugin: 'usertracer', method: 'currentUsers', data: result });
         }
     };
 
-    obj.getNodeName = function (nid) { try { return obj.meshServer.parent.agents[nid].name || nid; } catch (e) { return nid; } };
+    obj.findUser = function (o) {
+        if (!o || typeof o !== 'object') return null;
+        var props = ['users', 'lusers', 'upnusers'];
+        for (var i = 0; i < props.length; i++) {
+            if (Array.isArray(o[props[i]]) && o[props[i]].length > 0) return o[props[i]];
+        }
+        if (o._agent && o._agent.username) return [o._agent.username];
+        if (o.info && o.info.username) return [o.info.username];
+        return null;
+    };
 
-    obj.send = function (sid, data) { try { if (obj.meshServer.webserver.wssessions2 && obj.meshServer.webserver.wssessions2[sid]) obj.meshServer.webserver.wssessions2[sid].send(JSON.stringify(data)); } catch (e) {} };
+    obj.addResult = function (arr, nid, name, users) {
+        for (var i = 0; i < arr.length; i++) { if (arr[i].nodeid === nid) return; }
+        arr.push({ nodeid: nid, nodeName: name, users: users });
+    };
 
-    // -----------------------------------------------------------------------
-    // Device tab
-    // -----------------------------------------------------------------------
+    obj.hasResult = function (arr, nid) {
+        for (var i = 0; i < arr.length; i++) { if (arr[i].nodeid === nid) return true; }
+        return false;
+    };
+
+    obj.getNodeName = function (nid) {
+        try { return obj.meshServer.parent.agents[nid].name || nid; } catch (e) { return nid; }
+    };
+
+    obj.send = function (sid, data) {
+        try { if (obj.meshServer.webserver.wssessions2 && obj.meshServer.webserver.wssessions2[sid]) obj.meshServer.webserver.wssessions2[sid].send(JSON.stringify(data)); } catch (e) {}
+    };
+
     obj.onDeviceRefreshEnd = function () {
         if (typeof currentNode === 'undefined' || !currentNode) return;
         if (currentNode.osdesc && currentNode.osdesc.toLowerCase().indexOf('windows') === -1) return;
