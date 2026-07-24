@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.0.3 (2026-07-23)
+
+### Fixes
+- `db.js`: `setAutocompactionInterval` agora chamado diretamente no Datastore (não em `persistence.`) — elimina deprecation warning do `@seald-io/nedb`
+
+### Notes
+- Servidor inicia sem erros, agentes conectam, plugin funcional
+
 ## 2.0.2 (2026-07-23)
 
 ### Fixes
