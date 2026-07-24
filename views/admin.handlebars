@@ -15,17 +15,21 @@ th,td{padding:5px 8px;text-align:left;border-bottom:1px solid #eee}
 th{background:#fafafa;font-weight:600}
 tr:hover{background:#f0f7ff}
 .loading{text-align:center;padding:30px;color:#999}
-.lk{color:#4CAF50}.lo{color:#F44336}
-#dbgToggle{cursor:pointer;font-size:11px;color:#1976D2;margin-bottom:4px;user-select:none}
-#dbgToggle:hover{text-decoration:underline}
+.ctrl{margin-bottom:8px;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.ctrl input,.ctrl select{padding:4px 8px;border:1px solid #ccc;border-radius:3px;font-size:12px}
+.ctrl button{padding:4px 12px;background:#1976D2;color:#fff;border:none;border-radius:3px;cursor:pointer;font-size:12px}
+.lk{color:#4CAF50;font-weight:600}.lo{color:#F44336;font-weight:600}
+.badge{display:inline-block;padding:1px 6px;border-radius:3px;font-size:11px}
+.badge-login{background:#E8F5E9;color:#2E7D32}
+.badge-logout{background:#FFEBEE;color:#C62828}
+#dbgToggle{cursor:pointer;font-size:11px;color:#1976D2;user-select:none}
 #debug{display:none;background:#fff3cd;border:1px solid #ffeeba;padding:6px;margin-bottom:10px;font-size:9px;font-family:monospace;white-space:pre-wrap;max-height:200px;overflow:auto}
-#dbgCount{color:#999;font-size:10px;margin-left:8px}
 </style>
 </head>
 <body>
 <h1>User Tracer</h1>
 <p class="sub">Rastreio de usuários nos dispositivos</p>
-<div id="dbgToggle" onclick="var e=document.getElementById('debug');e.style.display=e.style.display==='none'?'block':'none'">🔽 Debug <span id="dbgCount">0</span></div>
+<div id="dbgToggle" onclick="var e=document.getElementById('debug');e.style.display=e.style.display==='none'?'block':'none'">🔽 Debug</div>
 <div id="debug">aguardando...</div>
 <div class="tab-bar">
     <button class="active" onclick="switchTab('users')">Usuários Ativos</button>
@@ -40,7 +44,12 @@ tr:hover{background:#f0f7ff}
 </div>
 
 <div id="pane-timeline" class="pane">
-    <div style="margin-bottom:8px;font-size:12px;color:#666">Últimos eventos de login/logout detectados pelo scanner.</div>
+    <div class="ctrl">
+        <select id="fTipo"><option value="">Todos eventos</option><option value="userLogin">Login</option><option value="userLogout">Logout</option></select>
+        <input type="text" id="fUser" placeholder="Filtrar usuário..." style="width:160px">
+        <input type="text" id="fDevice" placeholder="Filtrar dispositivo..." style="width:160px">
+        <button onclick="loadTimeline()">Atualizar</button>
+    </div>
     <div style="overflow-x:auto">
     <table><thead><tr><th>Data</th><th>Evento</th><th>Usuário</th><th>Domínio</th><th>Dispositivo</th></tr></thead>
     <tbody id="tlbody"><tr><td colspan="5" class="loading">Carregando...</td></tr></tbody></table>
@@ -48,9 +57,9 @@ tr:hover{background:#f0f7ff}
 </div>
 
 <script>
-var D=[],dbgVisible=false,ms=(typeof parent!=='undefined'&&parent.meshserver)||window.meshserver;
-function dlog(){var a=Array.prototype.slice.call(arguments);D.push(new Date().toLocaleTimeString()+' '+a.join(' '));var e=document.getElementById('debug');if(e)e.innerHTML=D.join('\n');document.getElementById('dbgCount').textContent=D.length;console.log('[UTRACER]',a.join(' '));}
-dlog('INIT loaded ms='+(ms?'OK':'NULL'));
+var D=[],ms=(typeof parent!=='undefined'&&parent.meshserver)||window.meshserver;
+function dlog(){var a=Array.prototype.slice.call(arguments);D.push(new Date().toLocaleTimeString()+' '+a.join(' '));var e=document.getElementById('debug');if(e)e.innerHTML=D.join('\n');console.log('[UTRACER]',a.join(' '));}
+dlog('INIT ms='+(ms?'OK':'NULL'));
 
 function switchTab(n){
     document.querySelectorAll('.tab-bar button').forEach(function(b){b.classList.remove('active');});
@@ -62,41 +71,54 @@ function switchTab(n){
 }
 
 function loadUsers(){
-    dlog('loading users...');
     document.getElementById('tbody').innerHTML='<tr><td colspan="3" class="loading">Carregando...</td></tr>';
     if(ms)ms.send({action:'plugin',plugin:'usertracer',pluginaction:'getCurrentUsers'});
 }
 function renderUsers(d){
-    dlog('render users: '+d.length);
+    dlog('users: '+d.length);
     var h='';
     for(var i=0;i<d.length;i++){
         (d[i].users||[]).forEach(function(u){
             var p=u.split('\\'),dom=p.length>1?p[0]:'',usr=p.length>1?p[1]:u;
-            h+='<tr><td>'+d[i].nodeName+'</td><td>'+usr+'</td><td>'+dom+'</td></tr>';
+            h+='<tr><td>'+d[i].nodeName+'</td><td>'+usr+'</td><td>'+(dom||'-')+'</td></tr>';
         });
     }
     document.getElementById('tbody').innerHTML=h||'<tr><td colspan="3" class="loading">Nenhum usuário ativo.</td></tr>';
 }
 
+// ===== TIMELINE COM FILTROS =====
+var _tlData=[];
 function loadTimeline(){
-    dlog('loading timeline...');
     document.getElementById('tlbody').innerHTML='<tr><td colspan="5" class="loading">Carregando...</td></tr>';
-    if(ms)ms.send({action:'plugin',plugin:'usertracer',pluginaction:'getTimeline',limit:200});
+    if(ms)ms.send({action:'plugin',plugin:'usertracer',pluginaction:'getTimeline',limit:500});
 }
 function renderTimeline(d){
-    dlog('render timeline: '+d.length);
+    _tlData=d||[];
+    dlog('timeline raw: '+_tlData.length+' events');
+    applyFilters();
+}
+function applyFilters(){
+    var ft=document.getElementById('fTipo').value;
+    var fu=document.getElementById('fUser').value.toLowerCase().trim();
+    var fd=document.getElementById('fDevice').value.toLowerCase().trim();
+    var filtered=_tlData.filter(function(e){
+        if(ft&&e.eventType!==ft)return false;
+        if(fu&&(!e.username||e.username.toLowerCase().indexOf(fu)===-1))return false;
+        if(fd&&(!e.nodeName||e.nodeName.toLowerCase().indexOf(fd)===-1))return false;
+        return true;
+    });
+    dlog('timeline filtered: '+filtered.length);
     var h='';
-    for(var i=0;i<d.length;i++){
-        var e=d[i],dt=e.detectedAt?new Date(e.detectedAt):new Date();
-        var cls=e.eventType==='userLogin'?'lk':'lo';
-        var lbl=e.eventType==='userLogin'?'Login':'Logout';
+    for(var i=0;i<filtered.length;i++){
+        var e=filtered[i],dt=e.detectedAt?new Date(e.detectedAt):new Date();
+        var lbl=e.eventType==='userLogin'?'<span class="badge badge-login">Login</span>':'<span class="badge badge-logout">Logout</span>';
         h+='<tr><td>'+dt.toLocaleDateString()+' '+dt.toLocaleTimeString()+'</td>'
-          +'<td class="'+cls+'">'+lbl+'</td>'
+          +'<td>'+lbl+'</td>'
           +'<td>'+(e.username||'')+'</td>'
-          +'<td>'+(e.domain||'')+'</td>'
+          +'<td>'+(e.domain||'-')+'</td>'
           +'<td>'+(e.nodeName||'')+'</td></tr>';
     }
-    document.getElementById('tlbody').innerHTML=h||'<tr><td colspan="5" class="loading">Nenhum evento registrado.</td></tr>';
+    document.getElementById('tlbody').innerHTML=h||'<tr><td colspan="5" class="loading">Nenhum evento encontrado.</td></tr>';
 }
 
 // WebSocket hook
@@ -106,10 +128,8 @@ if(ms&&ms.socket){
         try{
             var d=JSON.parse(event.data);
             if(d.action==='plugin'&&d.plugin==='usertracer'){
-                dlog('WS match: method='+d.method+' data='+(Array.isArray(d.data)?d.data.length:typeof d.data));
                 if(d.method==='currentUsers')renderUsers(d.data||[]);
                 else if(d.method==='timeline')renderTimeline(d.data||[]);
-                else if(d.method==='scanDone'){dlog('scan done, reloading...');loadUsers();}
                 return;
             }
         }catch(e){}
@@ -118,7 +138,7 @@ if(ms&&ms.socket){
     dlog('socket hooked');
 }
 
-document.addEventListener('DOMContentLoaded',function(){dlog('DOM ready');loadUsers();});
+document.addEventListener('DOMContentLoaded',function(){loadUsers();});
 </script>
 </body>
 </html>

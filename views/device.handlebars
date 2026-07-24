@@ -17,7 +17,11 @@ table{width:100%;border-collapse:collapse;font-size:11px}
 th,td{padding:4px 6px;text-align:left;border-bottom:1px solid #eee}
 th{background:#fafafa;font-weight:600}
 .loading{text-align:center;padding:20px;color:#999}
-.lk{color:#4CAF50}.lo{color:#F44336}
+.ctrl{margin-bottom:6px;display:flex;gap:4px;flex-wrap:wrap}
+.ctrl select,.ctrl button{font-size:11px;padding:3px 6px}
+.ctrl button{background:#1976D2;color:#fff;border:none;border-radius:3px;cursor:pointer}
+.badge-login{color:#4CAF50;font-weight:600}
+.badge-logout{color:#F44336;font-weight:600}
 .dbg{font-size:9px;color:#999;margin-top:6px;cursor:pointer}
 #debug{display:none;background:#fff3cd;border:1px solid #ffeeba;padding:4px;margin-top:4px;font-size:8px;font-family:monospace;white-space:pre-wrap;max-height:120px;overflow:auto}
 </style>
@@ -31,6 +35,10 @@ th{background:#fafafa;font-weight:600}
 </div>
 <div id="pane-now" class="pane active"><div id="info" class="loading">Carregando...</div></div>
 <div id="pane-history" class="pane">
+    <div class="ctrl">
+        <select id="fTipo2" onchange="loadHistory()"><option value="">Todos</option><option value="userLogin">Login</option><option value="userLogout">Logout</option></select>
+        <button onclick="loadHistory()">Atualizar</button>
+    </div>
     <div style="overflow-x:auto">
     <table><thead><tr><th>Data</th><th>Evento</th><th>Usuário</th></tr></thead>
     <tbody id="tlbody"><tr><td colspan="3" class="loading">Carregando...</td></tr></tbody></table>
@@ -42,7 +50,7 @@ th{background:#fafafa;font-weight:600}
 <script>
 var D=[],nodeid='{{nodeid}}',ms=(typeof parent!=='undefined'&&parent.meshserver)||window.meshserver;
 function dlog(){var a=Array.prototype.slice.call(arguments);D.push(new Date().toLocaleTimeString()+' '+a.join(' '));var e=document.getElementById('debug');if(e)e.innerHTML=D.join('\n');console.log('[UTRACER-DEV]',a.join(' '));}
-dlog('INIT node='+nodeid.substring(0,30)+'... ms='+(ms?'OK':'NULL'));
+dlog('INIT node='+nodeid.substring(0,30)+'...');
 
 function switchTab(n){
     document.querySelectorAll('.tab-bar button').forEach(function(b){b.classList.remove('active');});
@@ -52,13 +60,23 @@ function switchTab(n){
     document.getElementById('pane-'+n).classList.add('active');
     if(n==='now')loadNow();else loadHistory();
 }
-
-function loadNow(){
-    if(ms)ms.send({action:'plugin',plugin:'usertracer',pluginaction:'getCurrentUsers'});
-}
+function loadNow(){if(ms)ms.send({action:'plugin',plugin:'usertracer',pluginaction:'getCurrentUsers'});}
+var _tlData=[];
 function loadHistory(){
     document.getElementById('tlbody').innerHTML='<tr><td colspan="3" class="loading">Carregando...</td></tr>';
-    if(ms)ms.send({action:'plugin',plugin:'usertracer',pluginaction:'getTimeline',nodeid:nodeid,limit:100});
+    if(ms)ms.send({action:'plugin',plugin:'usertracer',pluginaction:'getTimeline',nodeid:nodeid,limit:200});
+}
+function renderHistory(d){
+    _tlData=d||[];
+    var ft=document.getElementById('fTipo2').value;
+    var filtered=_tlData.filter(function(e){return !ft||e.eventType===ft;});
+    var h='';
+    for(var i=0;i<filtered.length;i++){
+        var e=filtered[i],dt=e.detectedAt?new Date(e.detectedAt):new Date();
+        var lbl=e.eventType==='userLogin'?'<span class="badge-login">Login</span>':'<span class="badge-logout">Logout</span>';
+        h+='<tr><td>'+dt.toLocaleDateString()+' '+dt.toLocaleTimeString()+'</td><td>'+lbl+'</td><td>'+(e.username||'')+'</td></tr>';
+    }
+    document.getElementById('tlbody').innerHTML=h||'<tr><td colspan="3" class="loading">Nenhum evento.</td></tr>';
 }
 
 if(ms&&ms.socket){
@@ -67,7 +85,6 @@ if(ms&&ms.socket){
         try{
             var d=JSON.parse(event.data);
             if(d.action==='plugin'&&d.plugin==='usertracer'){
-                dlog('WS: method='+d.method);
                 if(d.method==='currentUsers'){
                     var found=null;
                     for(var i=0;i<(d.data||[]).length;i++){if(d.data[i].nodeid===nodeid){found=d.data[i];break;}}
@@ -79,24 +96,14 @@ if(ms&&ms.socket){
                         h+='<div class="info"><div class="lbl">Usuário ativo</div><div class="val">'+usr+'</div></div>';
                     });
                     el.innerHTML=h;
-                } else if(d.method==='timeline'){
-                    var h='';
-                    for(var i=0;i<(d.data||[]).length;i++){
-                        var e=d.data[i],dt=e.detectedAt?new Date(e.detectedAt):new Date();
-                        var cls=e.eventType==='userLogin'?'lk':'lo',lbl=e.eventType==='userLogin'?'Login':'Logout';
-                        h+='<tr><td>'+dt.toLocaleDateString()+' '+dt.toLocaleTimeString()+'</td><td class="'+cls+'">'+lbl+'</td><td>'+(e.username||'')+'</td></tr>';
-                    }
-                    document.getElementById('tlbody').innerHTML=h||'<tr><td colspan="3" class="loading">Nenhum evento.</td></tr>';
-                }
+                } else if(d.method==='timeline'){renderHistory(d.data||[]);}
                 return;
             }
         }catch(e){}
         if(typeof orig==='function')orig.call(ms.socket,event);
     };
-    dlog('socket hooked');
 }
-
-document.addEventListener('DOMContentLoaded',function(){dlog('DOM ready');loadNow();});
+document.addEventListener('DOMContentLoaded',function(){loadNow();});
 </script>
 </body>
 </html>

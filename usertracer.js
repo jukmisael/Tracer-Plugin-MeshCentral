@@ -58,38 +58,38 @@ module.exports.usertracer = function (parent) {
                 var key = JSON.stringify(currentUsers);
                 var prev = obj.userCache[nodeid];
 
-                if (prev === key) return; // no change
-
-                obj.userCache[nodeid] = key;
                 var nodeName = doc.name || nodeid;
 
                 if (!prev) {
-                    // First time: log all current users
-                    console.log('UT SCAN: initial users for ' + nodeName + ': ' + JSON.stringify(currentUsers));
-                    currentUsers.forEach(function (u) { obj.storeEvent(nodeid, nodeName, u, 'userLogin'); });
-                } else {
-                    var prevUsers = JSON.parse(prev);
-                    // Logins: in current but not in prev
-                    currentUsers.forEach(function (u) {
-                        if (prevUsers.indexOf(u) === -1) {
-                            console.log('UT SCAN: LOGIN ' + u + ' on ' + nodeName);
-                            obj.storeEvent(nodeid, nodeName, u, 'userLogin');
-                        }
-                    });
-                    // Logouts: in prev but not in current
-                    prevUsers.forEach(function (u) {
-                        if (currentUsers.indexOf(u) === -1) {
-                            console.log('UT SCAN: LOGOUT ' + u + ' from ' + nodeName);
-                            obj.storeEvent(nodeid, nodeName, u, 'userLogout');
-                        }
-                    });
+                    // FIRST TIME: populate cache, do NOT log events
+                    obj.userCache[nodeid] = key;
+                    console.log('UT SCAN: cache initialized for ' + nodeName + ': ' + JSON.stringify(currentUsers));
+                    return;
                 }
+
+                if (prev === key) return; // no change
+
+                // CHANGE DETECTED: update cache and log events
+                obj.userCache[nodeid] = key;
+                var prevUsers = JSON.parse(prev);
+
+                currentUsers.forEach(function (u) {
+                    if (prevUsers.indexOf(u) === -1) {
+                        console.log('UT SCAN: LOGIN ' + u + ' on ' + nodeName);
+                        obj.storeEvent(nodeid, nodeName, u, 'userLogin');
+                    }
+                });
+                prevUsers.forEach(function (u) {
+                    if (currentUsers.indexOf(u) === -1) {
+                        console.log('UT SCAN: LOGOUT ' + u + ' from ' + nodeName);
+                        obj.storeEvent(nodeid, nodeName, u, 'userLogout');
+                    }
+                });
             } catch (e) {
                 console.log('UT SCAN: checkNode error: ' + e.message);
             }
         });
     };
-
     obj.storeEvent = function (nodeid, nodeName, userStr, eventType) {
         if (!obj.db || !obj.db.addEvent) return;
         var username = userStr;
