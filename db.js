@@ -65,36 +65,3 @@ module.exports.CreateDB = function (meshserver) {
 
     return obj;
 };
-
-    obj.addEvent = function (evt) {
-        evt.time = new Date();
-        if (obj.events.insert) obj.events.insert(evt);
-    };
-
-    obj.addEvents = function (events) {
-        for (var i = 0; i < events.length; i++) {
-            obj.addEvent(events[i]);
-        }
-    };
-
-    obj.getEvents = function (query, limit, callback) {
-        limit = limit || 200;
-        if (obj.events.find) {
-            obj.events.find(query || {}).sort({ detectedAt: -1 }).limit(limit).exec(function (err, docs) {
-                callback(docs || []);
-            });
-        } else {
-            callback([]);
-        }
-    };
-
-    obj.getEventsByNode = function (nodeid, limit, callback) {
-        obj.getEvents({ nodeid: nodeid }, limit, callback);
-    };
-
-    obj.getEventsByUser = function (username, limit, callback) {
-        obj.getEvents({ username: username }, limit, callback);
-    };
-
-    return obj;
-};
