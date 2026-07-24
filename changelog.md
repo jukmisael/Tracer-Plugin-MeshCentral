@@ -1,5 +1,14 @@
 # Changelog
 
+## 2.0.2 (2026-07-23)
+
+### Fixes
+- `db.js`: removed duplicate function block (30 linhas) que causava `SyntaxError: Unexpected token '}'` no carregamento
+- Lint em todos os arquivos: trailing whitespace removido, sintaxe validada
+
+### Notes
+- Delete a pasta manualmente como Administrador e reinstale pela URL do `config.json`
+
 ## 2.0.1 (2026-07-23)
 
 ### Fixes
