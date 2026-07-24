@@ -93,8 +93,10 @@ module.exports.CreateDB = function (meshserver) {
     // -----------------------------------------------------------------------
     // Query events by user
     // -----------------------------------------------------------------------
-    obj.getEventsByUser = function (username, limit, callback) {
-        obj.getEvents({ username: username }, limit, callback);
+    obj.getEventsByUser = function (username, opts, callback) {
+        if (typeof opts === 'function') { callback = opts; opts = {}; }
+        if (typeof opts === 'number') { opts = { limit: opts }; }
+        obj.getEvents({ username: username }, opts, callback);
     };
 
     // -----------------------------------------------------------------------

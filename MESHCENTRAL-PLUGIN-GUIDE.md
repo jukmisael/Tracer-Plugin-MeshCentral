@@ -341,10 +341,11 @@ obj.events.ensureIndex({ fieldName: 'detectedAt' });
 ### Métodos do DB
 
 ```javascript
-obj.addEvent(evt)                    // Insert
-obj.getEvents(query, limit, cb)      // Find com sort por detectedAt desc
-obj.getEventsByNode(nodeid, lim, cb) // Filtro por nodeid
-obj.getEventsByUser(username, lim, cb) // Filtro por username
+obj.addEvent(evt)                              // Insert
+obj.getEvents(query, opts, callback)            // Query com suporte a date range e device filter
+obj.getEventsByNode(nodeid, opts, callback)     // Filtro por nodeid
+obj.getEventsByUser(username, opts, callback)   // Filtro por username
+obj.getDeviceNames(callback)                    // Lista de dispositivos no histórico
 ```
 
 ---
