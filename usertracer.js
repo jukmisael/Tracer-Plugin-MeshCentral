@@ -11,74 +11,71 @@ module.exports.usertracer = function (parent) {
     obj.exports = ['onDeviceRefreshEnd'];
 
     obj.handleAdminReq = function (req, res, user) {
-        console.log('UT: handleAdminReq, user=' + (user ? user.name : 'null') + ', query=' + JSON.stringify(req.query));
+        console.log('UT: handleAdminReq user=' + (user ? user.name : 'null'));
         if (req.query.user == 1) { return res.render('device', { nodeid: req.query.nodeid || '', nodeName: req.query.nodeid ? obj.getNodeName(req.query.nodeid) : 'Unknown' }); }
         if (!user || (user.siteadmin & 0xFFFFFFFF) == 0) { console.log('UT: 401'); res.sendStatus(401); return; }
         res.render('admin', {});
     };
 
     obj.serveraction = function (command, myparent, gp) {
-        console.log('UT: serveraction called, plugin=' + command.plugin + ', action=' + command.pluginaction);
+        console.log('UT: serveraction action=' + command.pluginaction);
         if (command.plugin !== 'usertracer') return;
         var sid = null;
         try { sid = myparent.ws.sessionId; } catch (e) {}
-        console.log('UT: sid=' + sid);
+        if (!sid) return;
 
         if (command.pluginaction === 'getCurrentUsers') {
             var result = [];
             try {
-                // Dump meshServer structure
-                console.log('UT: meshServer type=' + typeof obj.meshServer);
-                console.log('UT: meshServer keys=' + Object.keys(obj.meshServer).sort().join(','));
+                var ws = obj.meshServer.webserver ? obj.meshServer.webserver.wsagents || {} : {};
+                console.log('UT: ' + Object.keys(ws).length + ' agents');
 
-                // Source 1: Try obj.meshServer.agents directly
-                try {
-                    if (obj.meshServer.agents) {
-                        console.log('UT: meshServer.agents count=' + Object.keys(obj.meshServer.agents).length);
-                        for (var nid in obj.meshServer.agents) {
-                            var a = obj.meshServer.agents[nid];
-                            console.log('UT: agents[' + nid + '] keys=' + Object.keys(a).sort().join(','));
-                            var u = obj.findUser(a);
-                            if (u) obj.addResult(result, nid, a.name || nid, u);
+                // Check agentInfo for user data (in-memory)
+                for (var nid in ws) {
+                    var a = ws[nid];
+                    // Dump agentInfo shape once
+                    if (a.agentInfo) {
+                        console.log('UT: agentInfo keys=' + Object.keys(a.agentInfo).sort().join(','));
+                        console.log('UT: agentInfo sample=' + JSON.stringify(a.agentInfo).substring(0, 300));
+                        if (a.agentInfo.username) {
+                            obj.addResult(result, nid, a.name || nid, [a.agentInfo.username]);
                         }
-                    } else { console.log('UT: meshServer.agents is ' + typeof obj.meshServer.agents); }
-                } catch (e) { console.log('UT: agents error: ' + e.message); }
+                        break; // dump only first
+                    }
+                }
 
-                // Source 2: wsagents via webserver
-                try {
-                    var ws = obj.meshServer.webserver ? obj.meshServer.webserver.wsagents || {} : {};
-                    console.log('UT: wsagents count=' + Object.keys(ws).length);
+                // Try DB
+                var db = obj.meshServer.db;
+                if (db && typeof db.Get === 'function') {
                     for (var nid in ws) {
                         if (obj.hasResult(result, nid)) continue;
-                        var a = ws[nid];
-                        console.log('UT: ws[' + nid + '] keys=' + Object.keys(a).sort().join(','));
-                        var u = obj.findUser(a);
-                        if (u) obj.addResult(result, nid, obj.getNodeName(nid), u);
+                        (function(nodeId) {
+                            try {
+                                db.Get(nodeId, function(err, docs) {
+                                    if (err || !docs || docs.length === 0) return;
+                                    var d = docs[0];
+                                    if (Array.isArray(d.users) && d.users.length > 0) {
+                                        obj.addResult(result, nodeId, d.name || nodeId, d.users);
+                                        console.log('UT: DB users=' + JSON.stringify(d.users));
+                                    } else if (Array.isArray(d.lusers) && d.lusers.length > 0) {
+                                        obj.addResult(result, nodeId, d.name || nodeId, d.lusers);
+                                        console.log('UT: DB lusers=' + JSON.stringify(d.lusers));
+                                    }
+                                });
+                            } catch(e) { console.log('UT: db error ' + e.message); }
+                        })(nid);
                     }
-                } catch (e) { console.log('UT: wsagents error: ' + e.message); }
-
-                // Source 3: obj.meshServer.parent
-                try {
-                    var p = obj.meshServer.parent;
-                    console.log('UT: meshServer.parent type=' + typeof p);
-                    if (p) {
-                        console.log('UT: meshServer.parent keys=' + Object.keys(p).sort().join(','));
-                        if (p.agents) console.log('UT: parent.agents count=' + Object.keys(p.agents).length);
-                    }
-                } catch (e) { console.log('UT: parent error: ' + e.message); }
-
-            } catch (e) { console.log('UT: fatal: ' + e.message); }
-            console.log('UT result: ' + result.length + ' devices');
-            if (sid) obj.send(sid, { action: 'plugin', plugin: 'usertracer', method: 'currentUsers', data: result });
+                } else { console.log('UT: db.Get not available'); }
+            } catch (e) { console.log('UT: error ' + e.message); }
+            console.log('UT: final result ' + result.length + ' devices');
+            if (sid) setTimeout(function() { obj.send(sid, { action:'plugin', plugin:'usertracer', method:'currentUsers', data: result }); }, 500);
         }
     };
 
     obj.findUser = function (o) {
         if (!o || typeof o !== 'object') return null;
         var props = ['users', 'lusers', 'upnusers'];
-        for (var i = 0; i < props.length; i++) {
-            if (Array.isArray(o[props[i]]) && o[props[i]].length > 0) return o[props[i]];
-        }
+        for (var i = 0; i < props.length; i++) { if (Array.isArray(o[props[i]]) && o[props[i]].length > 0) return o[props[i]]; }
         if (o._agent && o._agent.username) return [o._agent.username];
         if (o.info && o.info.username) return [o.info.username];
         return null;
@@ -94,13 +91,9 @@ module.exports.usertracer = function (parent) {
         return false;
     };
 
-    obj.getNodeName = function (nid) {
-        try { return obj.meshServer.webserver.wsagents[nid].name || nid; } catch (e) { return nid; }
-    };
+    obj.getNodeName = function (nid) { try { return obj.meshServer.webserver.wsagents[nid].name || nid; } catch (e) { return nid; } };
 
-    obj.send = function (sid, data) {
-        try { if (obj.meshServer.webserver.wssessions2 && obj.meshServer.webserver.wssessions2[sid]) obj.meshServer.webserver.wssessions2[sid].send(JSON.stringify(data)); } catch (e) {}
-    };
+    obj.send = function (sid, data) { try { if (obj.meshServer.webserver.wssessions2 && obj.meshServer.webserver.wssessions2[sid]) obj.meshServer.webserver.wssessions2[sid].send(JSON.stringify(data)); } catch (e) {} };
 
     obj.onDeviceRefreshEnd = function () {
         if (typeof currentNode === 'undefined' || !currentNode) return;
