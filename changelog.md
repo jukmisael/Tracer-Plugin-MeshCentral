@@ -1,5 +1,11 @@
 # Changelog
 
+## 3.0.2 (2026-07-23)
+
+### Ajustes
+- Código simplificado e limpo
+- Plugin funcional: admin panel com tabela de dispositivos + usuários ativos
+
 ## 3.0.1 (2026-07-23)
 
 ### Simplificação máxima
