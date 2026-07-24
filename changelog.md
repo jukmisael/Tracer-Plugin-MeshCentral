@@ -1,5 +1,10 @@
 # Changelog
 
+## 3.0.3 (2026-07-23)
+
+### Debug
+- Adicionado dump de chaves das fontes de dados (parent.agents, wsagents) para localizar onde estão os usuários ativos
+
 ## 3.0.2 (2026-07-23)
 
 ### Ajustes
