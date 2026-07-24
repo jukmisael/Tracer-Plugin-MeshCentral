@@ -457,6 +457,18 @@ module.exports.usertracer = function (parent) {
     };
 
 
+    obj.getNodeName = function (nid) {
+        try {
+            if (obj.meshServer.webserver.wsagents && obj.meshServer.webserver.wsagents[nid]) {
+                return obj.meshServer.webserver.wsagents[nid].name || nid;
+            }
+            return nid;
+        } catch (e) {
+            return nid;
+        }
+    };
+
+
     obj.onDeviceRefreshEnd = function () {
         try {
             console.log('=== UT DEVICETAB ===');
