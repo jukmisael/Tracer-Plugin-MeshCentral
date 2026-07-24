@@ -15,23 +15,14 @@ body{
 .stat{background:#fff;border:1px solid #aaa;border-radius:3px;padding:8px 12px;min-width:88px}
 .stat .n{font-size:18px;font-weight:700;color:#003366}
 .stat .l{font-size:10px;color:#666;text-transform:uppercase;margin-top:1px}
-.tabs{display:flex;gap:0;margin-bottom:10px;border-bottom:2px solid #003366}
-.tabs button{
-  border:1px solid #808080;border-bottom:none;background:#606060;color:#fff;
-  padding:7px 14px;cursor:pointer;font-family:inherit;font-size:12px;margin-right:2px;border-radius:4px 4px 0 0;
-}
-.tabs button:hover{background:#707070}
-.tabs button.active{background:#003366;border-color:#003366;font-weight:700}
-.pane{display:none}.pane.active{display:block}
 .panel{background:#fff;border:1px solid #aaa;border-radius:3px;padding:10px;margin-bottom:10px}
 .panel-title{
   background:#c0c0c0;color:#000;font-size:12px;font-weight:700;
   padding:5px 8px;margin:-10px -10px 10px -10px;border-bottom:1px solid #aaa;
 }
 .toolbar{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:8px}
-.toolbar .group{display:flex;align-items:center;gap:5px;flex-wrap:wrap}
 .toolbar label{font-size:11px;color:#444;font-weight:700}
-.toolbar input[type=date],.toolbar input[type=text],.toolbar select{
+.toolbar select{
   font-family:inherit;font-size:12px;border:1px solid #808080;background:#fff;
   color:#000;padding:4px 6px;border-radius:2px;
 }
@@ -42,25 +33,13 @@ body{
 .btn:hover{background:#e4e4e4}
 .btn-primary{background:#003366;color:#fff;border-color:#002244}
 .btn-primary:hover{background:#004080}
-.btn-chip{background:#ddd;border:1px solid #aaa;color:#333;padding:4px 10px;font-size:11px}
-.btn-chip.active{background:#003366;color:#fff;border-color:#003366;font-weight:700}
 .loading{text-align:center;padding:28px;color:#666}
 .muted{color:#666;font-size:11px}
-table.tbl{width:100%;border-collapse:collapse;font-size:12px}
-table.tbl th{
-  background:#aaa;color:#000;font-weight:700;text-align:left;
-  padding:6px 8px;border:1px solid #999;
-}
-table.tbl td{padding:6px 8px;border-bottom:1px solid #ddd}
-table.tbl tr:nth-child(even) td{background:#f4f6f5}
-table.tbl tr:hover td{background:#e8f0f8}
 .empty{text-align:center;padding:36px 16px;color:#666;background:#fff}
-
-/* cross-ref dual layout */
 .xref-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .xref-grid .col{min-width:0}
 @media(max-width:768px){.xref-grid{grid-template-columns:1fr}}
-.stacked{display:flex;gap:8px;flex-direction:column;max-height:280px;overflow-y:auto;padding-right:4px}
+.stacked{display:flex;gap:8px;flex-direction:column;max-height:320px;overflow-y:auto;padding-right:4px}
 .stacked .scard{
   display:flex;gap:8px;align-items:center;padding:8px 10px;
   background:#f7f8f7;border:1px solid #ddd;border-radius:2px;
@@ -69,7 +48,6 @@ table.tbl tr:hover td{background:#e8f0f8}
 .scard .tag{font-weight:700;color:#003366;font-size:12px;flex:1}
 .scard .tagl{color:#555;font-size:11px}
 .scard .badge{font-size:10px;color:#666;background:#eee;padding:2px 6px;border-radius:999px}
-
 #dbgToggle{cursor:pointer;font-size:11px;color:#003366;user-select:none;margin-top:10px;text-decoration:underline}
 #debug{
   display:none;background:#fff8e1;border:1px solid #e0c060;color:#333;
@@ -82,97 +60,40 @@ table.tbl tr:hover td{background:#e8f0f8}
 <div class="header">
   <div>
     <h1>User Tracer</h1>
-    <div class="sub">Lastro AD · usuários × dispositivos · auditoria de sessão</div>
+    <div class="sub">Lastro AD · cruzamento usuários × dispositivos · auditoria</div>
   </div>
   <div class="stats">
     <div class="stat"><div class="n" id="sDevices">—</div><div class="l">Dispositivos</div></div>
-    <div class="stat"><div class="n" id="sUsers">—</div><div class="l">Usuários ativos</div></div>
-    <div class="stat"><div class="n" id="sEvents">—</div><div class="l">Eventos (filtro)</div></div>
+    <div class="stat"><div class="n" id="sUsers">—</div><div class="l">Usuários</div></div>
+    <div class="stat"><div class="n" id="sEvents">—</div><div class="l">Eventos</div></div>
   </div>
 </div>
 
-<div class="tabs">
-  <button class="active" id="tabUsers" onclick="switchTab('users')">Usuários ativos</button>
-  <button id="tabTl" onclick="switchTab('timeline')">Timeline</button>
-  <button id="tabRef" onclick="switchTab('xref')">Cruzamento</button>
-</div>
-
-<div id="pane-users" class="pane active">
-  <div class="panel">
-    <div class="panel-title">Usuários ativos agora</div>
-    <div class="toolbar">
-      <div class="group">
-        <label>Buscar</label>
-        <input type="text" id="userSearch" placeholder="usuário ou máquina..." style="width:220px" oninput="filterUsers()">
+<div class="xref-grid">
+  <div class="col">
+    <div class="panel">
+      <div class="panel-title">Usuário → Dispositivos</div>
+      <div class="toolbar">
+        <select id="xrefUser" style="flex:1" onchange="loadXrefUser()">
+          <option value="">— Selecione um usuário —</option>
+        </select>
+        <button class="btn btn-primary" onclick="loadXrefUser()">Buscar</button>
+        <span class="muted" id="hintUser"></span>
       </div>
-      <button class="btn" onclick="loadUsers()">Atualizar</button>
-      <button class="btn btn-chip" id="viewCards" onclick="setUserView('cards')">Cards</button>
-      <button class="btn btn-chip active" id="viewTable" onclick="setUserView('table')">Lista</button>
-      <span class="muted" id="userHint"></span>
-    </div>
-    <div id="userGrid"></div>
-  </div>
-</div>
-
-<div id="pane-timeline" class="pane">
-  <div class="panel">
-    <div class="panel-title">Período</div>
-    <div class="toolbar">
-      <div class="group">
-        <button class="btn btn-chip" data-r="today" onclick="setRange('today',this)">Hoje</button>
-        <button class="btn btn-chip active" data-r="7d" onclick="setRange('7d',this)">7 dias</button>
-        <button class="btn btn-chip" data-r="30d" onclick="setRange('30d',this)">30 dias</button>
-        <button class="btn btn-chip" data-r="month" onclick="setRange('month',this)">Este mês</button>
-      </div>
-      <div class="group">
-        <label>De</label>
-        <input type="date" id="dStart">
-        <label>Até</label>
-        <input type="date" id="dEnd">
-      </div>
-      <button class="btn btn-primary" onclick="loadTimeline()">Aplicar</button>
-      <span class="muted" id="tlHint"></span>
+      <div id="xrefUserResult"><div class="empty">Selecione um usuário para ver em quais dispositivos ele já logou.</div></div>
     </div>
   </div>
-  <div class="panel">
-    <div class="panel-title">Dispositivos</div>
-    <div class="toolbar" style="margin-bottom:6px">
-      <button class="btn" onclick="selectAllDevs(true)">Todos</button>
-      <button class="btn" onclick="selectAllDevs(false)">Nenhum</button>
-      <input type="text" id="devSearch" placeholder="filtrar..." style="width:180px" oninput="filterDevChips()">
-    </div>
-    <div class="chips" id="devChips"><span class="muted">Carregando...</span></div>
-  </div>
-  <div class="panel" style="padding:0;overflow:hidden">
-    <div id="ganttContainer"><div class="loading">Selecione período e clique Aplicar.</div></div>
-  </div>
-</div>
-
-<div id="pane-xref" class="pane">
-  <div class="xref-grid">
-    <div class="col">
-      <div class="panel">
-        <div class="panel-title">Usuário → Dispositivos</div>
-        <div class="toolbar">
-          <select id="xrefUser" style="flex:1" onchange="loadXrefUser()">
-            <option value="">— Selecione um usuário —</option>
-          </select>
-          <button class="btn btn-primary" onclick="loadXrefUser()">Buscar</button>
-        </div>
-        <div id="xrefUserResult"><div class="empty">Selecione um usuário para ver em quais dispositivos ele já logou.</div></div>
+  <div class="col">
+    <div class="panel">
+      <div class="panel-title">Dispositivo → Usuários</div>
+      <div class="toolbar">
+        <select id="xrefDev" style="flex:1" onchange="loadXrefDev()">
+          <option value="">— Selecione um dispositivo —</option>
+        </select>
+        <button class="btn btn-primary" onclick="loadXrefDev()">Buscar</button>
+        <span class="muted" id="hintDev"></span>
       </div>
-    </div>
-    <div class="col">
-      <div class="panel">
-        <div class="panel-title">Dispositivo → Usuários</div>
-        <div class="toolbar">
-          <select id="xrefDev" style="flex:1" onchange="loadXrefDev()">
-            <option value="">— Selecione um dispositivo —</option>
-          </select>
-          <button class="btn btn-primary" onclick="loadXrefDev()">Buscar</button>
-        </div>
-        <div id="xrefDevResult"><div class="empty">Selecione um dispositivo para ver quais usuários já logaram nele.</div></div>
-      </div>
+      <div id="xrefDevResult"><div class="empty">Selecione um dispositivo para ver quais usuários já logaram nele.</div></div>
     </div>
   </div>
 </div>
@@ -182,191 +103,61 @@ table.tbl tr:hover td{background:#e8f0f8}
 
 <script>
 var D=[], ms=(typeof parent!=='undefined'&&parent.meshserver)||window.meshserver;
-var rawUsers=[], deviceList=[], selectedDevs={}, userView='table', _xrefPending='';
+var _allDevices=[], _allUsers=[], _xrefPending='';
 function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 function dlog(){var a=Array.prototype.slice.call(arguments);D.push(new Date().toLocaleTimeString()+' '+a.join(' '));var e=document.getElementById('debug');if(e)e.innerHTML=D.slice(-80).join('\n');}
-function initials(name){var p=String(name||'?').replace(/[._-]/g,' ').split(/\s+/).filter(Boolean);if(!p.length)return'?';if(p.length===1)return p[0].substring(0,2).toUpperCase();return (p[0][0]+p[1][0]).toUpperCase();}
 function splitUser(u){var p=String(u||'').split('\\');return p.length>1?{domain:p[0],user:p[1]}:{domain:'',user:u||''};}
 function fmtDate(d){var x=new Date(d);if(isNaN(x))return'—';var m=x.getMonth()+1,day=x.getDate();return (day<10?'0':'')+day+'/'+(m<10?'0':'')+m+' '+x.getHours()+':'+(x.getMinutes()<10?'0':'')+x.getMinutes();}
-function ymd(d){var x=new Date(d),m=x.getMonth()+1,day=x.getDate();return x.getFullYear()+'-'+(m<10?'0':'')+m+'-'+(day<10?'0':'')+day;}
-function setRange(kind,btn){
-  document.querySelectorAll('.btn-chip[data-r]').forEach(function(b){b.classList.remove('active');});
-  if(btn)btn.classList.add('active');
-  var end=new Date(), start=new Date();
-  if(kind==='today'){start=new Date(end.getFullYear(),end.getMonth(),end.getDate());}
-  else if(kind==='7d'){start.setDate(end.getDate()-6);}
-  else if(kind==='30d'){start.setDate(end.getDate()-29);}
-  else if(kind==='month'){start=new Date(end.getFullYear(),end.getMonth(),1);}
-  document.getElementById('dStart').value=ymd(start);
-  document.getElementById('dEnd').value=ymd(end);
-}
 
-function switchTab(n){
-  ['tabUsers','tabTl','tabRef'].forEach(function(id){document.getElementById(id).classList.toggle('active',id.slice(-n.length)!==n.toLowerCase());});
-  document.getElementById('pane-users').classList.toggle('active',n==='users');
-  document.getElementById('pane-timeline').classList.toggle('active',n==='timeline');
-  document.getElementById('pane-xref').classList.toggle('active',n==='xref');
-  if(n==='users')loadUsers();
-  else if(n==='timeline'){loadDeviceNames();loadTimeline();}
-  else{loadUserNames();loadDeviceNames();}
-}
-
-function setUserView(v){
-  userView=v;
-  document.getElementById('viewCards').classList.toggle('active',v==='cards');
-  document.getElementById('viewTable').classList.toggle('active',v==='table');
-  filterUsers();
-}
-
-/* ===== ACTIVE USERS ===== */
-function loadUsers(){
-  document.getElementById('userGrid').innerHTML='<div class="loading">Carregando...</div>';
-  if(ms)ms.send({action:'plugin',plugin:'usertracer',pluginaction:'getCurrentUsers'});
-}
-function renderUsers(list){
-  rawUsers=[];
-  (list||[]).forEach(function(row){
-    (row.users||[]).forEach(function(u){
-      var s=splitUser(u);
-      rawUsers.push({nodeid:row.nodeid,nodeName:row.nodeName||row.nodeid,user:s.user,domain:s.domain,raw:u});
-    });
-  });
-  var devs={}; rawUsers.forEach(function(r){devs[r.nodeName]=1;});
-  document.getElementById('sDevices').textContent=Object.keys(devs).length;
-  document.getElementById('sUsers').textContent=rawUsers.length;
-  filterUsers();
-}
-function filterUsers(){
-  var q=(document.getElementById('userSearch').value||'').toLowerCase().trim();
-  var rows=rawUsers.filter(function(r){
-    if(!q)return true;
-    return (r.user+' '+r.domain+' '+r.nodeName).toLowerCase().indexOf(q)>=0;
-  });
-  document.getElementById('userHint').textContent=rows.length+' de '+rawUsers.length;
-  if(!rows.length){document.getElementById('userGrid').innerHTML='<div class="empty">Nenhum usuário ativo encontrado.</div>';return;}
-  rows.sort(function(a,b){return a.user.localeCompare(b.user)||a.nodeName.localeCompare(b.nodeName);});
-  if(userView==='table'){
-    var h='<table class="tbl"><thead><tr><th>Usuário</th><th>Domínio</th><th>Dispositivo</th><th>Status</th></tr></thead><tbody>';
-    rows.forEach(function(r){
-      h+='<tr><td><b>'+esc(r.user)+'</b></td><td>'+esc(r.domain||'—')+'</td><td>'+esc(r.nodeName)+'</td><td style="color:#2e7d32;font-weight:700">Online</td></tr>';
-    });
-    h+='</tbody></table>';
-    document.getElementById('userGrid').innerHTML=h;
-    return;
+/* ===== LOAD DATA ===== */
+function loadAll(){
+  document.getElementById('sDevices').textContent='…';
+  if(ms){
+    ms.send({action:'plugin',plugin:'usertracer',pluginaction:'getDeviceNames'});
+    ms.send({action:'plugin',plugin:'usertracer',pluginaction:'getUserNames'});
   }
-  var h='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:8px">';
-  rows.forEach(function(r){
-    h+='<div style="display:flex;gap:10px;align-items:center;background:#f7f8f7;border:1px solid #bbb;border-radius:3px;padding:10px">'
-      +'<div style="width:38px;height:38px;border-radius:3px;display:flex;align-items:center;justify-content:center;background:#003366;color:#fff;font-weight:700;flex-shrink:0">'+esc(initials(r.user))+'</div>'
-      +'<div style="flex:1;overflow:hidden"><div style="font-weight:700;color:#000;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="'+esc(r.raw)+'">'+esc(r.user)+'</div>'
-      +'<div style="font-size:12px;color:#555;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(r.nodeName)+'</div>'
-      +(r.domain?'<span style="display:inline-block;margin-top:3px;font-size:10px;padding:1px 6px;background:#ddd;color:#333;font-weight:700">'+esc(r.domain)+'</span>':'')
-      +'</div><div style="width:8px;height:8px;border-radius:50%;background:#2e7d32;flex-shrink:0"></div></div>';
-  });
-  h+='</div>';
-  document.getElementById('userGrid').innerHTML=h;
 }
-
-/* ===== TIMELINE DEVICES ===== */
-function loadDeviceNames(){if(ms)ms.send({action:'plugin',plugin:'usertracer',pluginaction:'getDeviceNames'});}
-var _allDevices=[];
 function renderDeviceNames(list){
   _allDevices=(list||[]).slice().sort(function(a,b){return String(a.name).localeCompare(String(b.name));});
-  if(!Object.keys(selectedDevs).length){_allDevices.forEach(function(d){selectedDevs[d.nodeid]=true;});}
-  renderDevChips();
-}
-function renderDevChips(){
-  var q=(document.getElementById('devSearch').value||'').toLowerCase().trim();
-  var h='<div style="display:flex;flex-wrap:wrap;gap:5px;max-height:90px;overflow:auto;padding:2px">';
+  document.getElementById('sDevices').textContent=_allDevices.length;
+  var devSel=document.getElementById('xrefDev');
+  devSel.innerHTML='<option value="">— Selecione um dispositivo —</option>';
   _allDevices.forEach(function(d){
-    if(q && String(d.name).toLowerCase().indexOf(q)<0) return;
-    var on=!!selectedDevs[d.nodeid];
-    h+='<div class="chip'+(on?' sel':'')+'" style="display:inline-flex;align-items:center;gap:5px;background:'+(on?'#003366':'#eee')+';border:1px solid '+(on?'#003366':'#bbb')+';color:'+(on?'#fff':'#222')+';border-radius:12px;padding:3px 9px;font-size:11px;cursor:pointer;user-select:none" data-id="'+esc(d.nodeid)+'" onclick="toggleDev(this)"><span style="width:7px;height:7px;border-radius:50%;background:'+(on?'#7ec8ff':'#999')+'"></span>'+esc(d.name)+'</div>';
+    var opt=document.createElement('option');
+    opt.value=d.nodeid; opt.textContent=d.name; devSel.appendChild(opt);
   });
-  h+='</div>';
-  document.getElementById('devChips').innerHTML=h||'<span class="muted">Nenhum dispositivo.</span>';
 }
-function filterDevChips(){renderDevChips();}
-function toggleDev(el){
-  var id=el.getAttribute('data-id');
-  if(selectedDevs[id]) delete selectedDevs[id]; else selectedDevs[id]=true;
-  el.style.background=selectedDevs[id]?'#003366':'#eee';
-  el.style.color=selectedDevs[id]?'#fff':'#222';
-  el.firstChild.style.background=selectedDevs[id]?'#7ec8ff':'#999';
-}
-function selectAllDevs(yes){
-  selectedDevs={};
-  if(yes) _allDevices.forEach(function(d){selectedDevs[d.nodeid]=true;});
-  renderDevChips();
-}
-function loadTimeline(){
-  var start=document.getElementById('dStart').value;
-  var end=document.getElementById('dEnd').value;
-  if(!start||!end){document.getElementById('ganttContainer').innerHTML='<div class="empty">Selecione data início e fim.</div>';return;}
-  document.getElementById('ganttContainer').innerHTML='<div class="loading">Montando timeline...</div>';
-  var nodeids=Object.keys(selectedDevs);
-  document.getElementById('tlHint').textContent=nodeids.length? (nodeids.length+' dispositivos') : 'todos';
-  if(ms)ms.send({action:'plugin',plugin:'usertracer',pluginaction:'getTimeline',startDate:start+'T00:00:00',endDate:end+'T23:59:59.999',nodeids:nodeids,limit:8000});
-}
-function renderTimeline(events){
-  events=events||[];
-  document.getElementById('sEvents').textContent=events.length;
-  if(!events.length){document.getElementById('ganttContainer').innerHTML='<div class="empty">Nenhum evento no período.</div>';return;}
-  var byDev={};
-  events.forEach(function(e){
-    var n=e.nodeName||e.nodeid||'?';
-    if(!byDev[n]){byDev[n]={name:n,events:[]};}
-    byDev[n].events.push(e);
-  });
-  var names=Object.keys(byDev).sort();
-  var h='<table class="tbl"><thead><tr><th>Dispositivo</th><th>Eventos</th><th>Último</th><th>Usuários</th></tr></thead><tbody>';
-  names.forEach(function(name){
-    var evs=byDev[name].events.sort(function(a,b){return new Date(b.detectedAt)-new Date(a.detectedAt);});
-    var users={}; evs.forEach(function(e){users[e.displayUser||e.username]=true;});
-    var last=evs[0];
-    h+='<tr><td><b>'+esc(name)+'</b></td><td>'+evs.length+'</td><td style="font-size:11px;color:#555">'+fmtDate(last.detectedAt)+'</td>'
-      +'<td>'+Object.keys(users).sort().map(function(u){return esc(u.split('\\')[1]||u);}).join(', ')+'</td></tr>';
-  });
-  h+='</tbody></table>';
-  document.getElementById('ganttContainer').innerHTML=h;
-  document.getElementById('tlHint').textContent=events.length+' eventos · '+names.length+' máquinas';
-}
-
-/* ===== CROSS-REFERENCE ===== */
-function loadUserNames(){if(ms)ms.send({action:'plugin',plugin:'usertracer',pluginaction:'getUserNames'});}
 function renderUserNames(list){
+  _allUsers=(list||[]).slice().sort(function(a,b){return String(a.displayUser||a.username).localeCompare(String(b.displayUser||b.username));});
+  document.getElementById('sUsers').textContent=_allUsers.length;
   var sel=document.getElementById('xrefUser');
   sel.innerHTML='<option value="">— Selecione um usuário —</option>';
-  (list||[]).sort(function(a,b){return String(a.displayUser||a.username).localeCompare(String(b.displayUser||b.username));}).forEach(function(u){
+  _allUsers.forEach(function(u){
     var opt=document.createElement('option');
     opt.value=(u.username||u.displayUser);
     opt.textContent=(u.displayUser||u.username);
     sel.appendChild(opt);
   });
-  // also populate xref device dropdown
-  var devSel=document.getElementById('xrefDev');
-  devSel.innerHTML='<option value="">— Selecione um dispositivo —</option>';
-  _allDevices.forEach(function(d){
-    var opt=document.createElement('option');
-    opt.value=d.nodeid;
-    opt.textContent=d.name;
-    devSel.appendChild(opt);
-  });
 }
+
+/* ===== CROSS-REFERENCE ===== */
 function loadXrefUser(){
   var uname=document.getElementById('xrefUser').value;
   if(!uname){document.getElementById('xrefUserResult').innerHTML='<div class="empty">Selecione um usuário.</div>';return;}
   document.getElementById('xrefUserResult').innerHTML='<div class="loading">Buscando...</div>';
+  document.getElementById('hintUser').textContent='';
   _xrefPending='user'; if(ms)ms.send({action:'plugin',plugin:'usertracer',pluginaction:'getTimeline',username:uname,limit:5000});
 }
 function loadXrefDev(){
   var nid=document.getElementById('xrefDev').value;
   if(!nid){document.getElementById('xrefDevResult').innerHTML='<div class="empty">Selecione um dispositivo.</div>';return;}
   document.getElementById('xrefDevResult').innerHTML='<div class="loading">Buscando...</div>';
+  document.getElementById('hintDev').textContent='';
   _xrefPending='dev'; if(ms)ms.send({action:'plugin',plugin:'usertracer',pluginaction:'getTimeline',nodeid:nid,limit:5000});
 }
 function renderXrefUser(events){
   events=events||[];
+  document.getElementById('sEvents').textContent=events.length;
   if(!events.length){document.getElementById('xrefUserResult').innerHTML='<div class="empty">Nenhum evento encontrado para este usuário.</div>';return;}
   var byDev={};
   events.forEach(function(e){
@@ -375,15 +166,15 @@ function renderXrefUser(events){
     byDev[n].events.push(e);
   });
   var names=Object.keys(byDev).sort();
-  var h='<div style="margin-bottom:6px;font-size:11px;color:#555">'+events.length+' eventos em '+names.length+' dispositivos</div>';
-  h+='<div class="stacked">';
+  document.getElementById('hintUser').textContent=events.length+' eventos em '+names.length+' dispositivos';
+  var h='<div class="stacked">';
   names.forEach(function(name){
     var evs=byDev[name].events.sort(function(a,b){return new Date(b.detectedAt)-new Date(a.detectedAt);});
     var last=evs[0], first=evs[evs.length-1];
     h+='<div class="scard">'
       +'<div style="flex:1"><div class="tag">'+esc(name)+'</div>'
       +'<div class="tagl">'+evs.length+' eventos · '+fmtDate(first.detectedAt)+' → '+fmtDate(last.detectedAt)+'</div></div>'
-      +'<span class="badge">'+(last.eventType==='userLogin'?'Online':'Offline')+'</span>'
+      +'<span class="badge" style="color:'+(last.eventType==='userLogin'?'#2e7d32':'#888')+'">'+(last.eventType==='userLogin'?'Online':'Offline')+'</span>'
       +'</div>';
   });
   h+='</div>';
@@ -391,6 +182,7 @@ function renderXrefUser(events){
 }
 function renderXrefDev(events){
   events=events||[];
+  document.getElementById('sEvents').textContent=events.length;
   if(!events.length){document.getElementById('xrefDevResult').innerHTML='<div class="empty">Nenhum evento encontrado para este dispositivo.</div>';return;}
   var byUser={};
   events.forEach(function(e){
@@ -399,8 +191,8 @@ function renderXrefDev(events){
     byUser[u].events.push(e);
   });
   var usernames=Object.keys(byUser).sort();
-  var h='<div style="margin-bottom:6px;font-size:11px;color:#555">'+events.length+' eventos de '+usernames.length+' usuários</div>';
-  h+='<div class="stacked">';
+  document.getElementById('hintDev').textContent=events.length+' eventos de '+usernames.length+' usuários';
+  var h='<div class="stacked">';
   usernames.forEach(function(u){
     var g=byUser[u], evs=g.events.sort(function(a,b){return new Date(b.detectedAt)-new Date(a.detectedAt);});
     var last=evs[0], first=evs[evs.length-1];
@@ -408,7 +200,7 @@ function renderXrefDev(events){
     h+='<div class="scard">'
       +'<div style="flex:1"><div class="tag">'+esc(un.user||g.user)+'</div>'
       +'<div class="tagl">'+(g.domain?esc(g.domain)+' · ':'')+evs.length+' eventos · '+fmtDate(first.detectedAt)+' → '+fmtDate(last.detectedAt)+'</div></div>'
-      +'<span class="badge">'+(last.eventType==='userLogin'?'Online':'Offline')+'</span>'
+      +'<span class="badge" style="color:'+(last.eventType==='userLogin'?'#2e7d32':'#888')+'">'+(last.eventType==='userLogin'?'Online':'Offline')+'</span>'
       +'</div>';
   });
   h+='</div>';
@@ -423,14 +215,12 @@ if(ms&&ms.socket){
       var d=JSON.parse(event.data);
       if(d.action==='plugin'&&d.plugin==='usertracer'){
         dlog('WS', d.method, Array.isArray(d.data)?('n='+d.data.length):typeof d.data);
-        if(d.method==='currentUsers')renderUsers(d.data||[]);
+        if(d.method==='deviceNames')renderDeviceNames(d.data||[]);
+        else if(d.method==='userNames')renderUserNames(d.data||[]);
         else if(d.method==='timeline'){
           if(_xrefPending==='user'){renderXrefUser(d.data||[]);_xrefPending='';}
           else if(_xrefPending==='dev'){renderXrefDev(d.data||[]);_xrefPending='';}
-          else renderTimeline(d.data||[]);
         }
-        else if(d.method==='deviceNames'){renderDeviceNames(d.data||[]);_populateXrefDevs(d.data||[]);}
-        else if(d.method==='userNames')renderUserNames(d.data||[]);
         return;
       }
     }catch(e){}
@@ -438,17 +228,8 @@ if(ms&&ms.socket){
   };
   dlog('socket hooked');
 }
-function _populateXrefDevs(list){
-  var devSel=document.getElementById('xrefDev');
-  devSel.innerHTML='<option value="">— Selecione um dispositivo —</option>';
-  list.sort(function(a,b){return String(a.name).localeCompare(String(b.name));}).forEach(function(d){
-    var opt=document.createElement('option');
-    opt.value=d.nodeid; opt.textContent=d.name; devSel.appendChild(opt);
-  });
-}
 
-setRange('7d', document.querySelector('.btn-chip[data-r="7d"]'));
-document.addEventListener('DOMContentLoaded',function(){loadUsers();});
+document.addEventListener('DOMContentLoaded',function(){loadAll();});
 </script>
 </body>
 </html>
