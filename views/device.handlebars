@@ -4,44 +4,56 @@
 <title>{{nodeName}}</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'Segoe UI',system-ui,sans-serif;background:transparent;color:#e7ecf3;padding:12px;font-size:12px}
-h2{font-size:16px;font-weight:700;color:#fff}
-.sub{color:#8b98a8;font-size:11px;margin:2px 0 10px}
-.tabs{display:flex;gap:4px;background:#1a2332;padding:3px;border-radius:10px;width:fit-content;border:1px solid #2a3544;margin-bottom:10px}
-.tabs button{border:none;background:transparent;color:#8b98a8;padding:6px 12px;border-radius:8px;cursor:pointer;font-size:11px;font-weight:600}
-.tabs button.active{background:#2563eb;color:#fff}
+body{
+  font-family:"Trebuchet MS",Arial,Helvetica,sans-serif;
+  background:transparent;
+  color:#000;
+  padding:10px;
+  font-size:12px;
+}
+h2{font-size:15px;font-weight:700;color:#003366}
+.sub{color:#555;font-size:11px;margin:2px 0 8px}
+.tabs{display:flex;gap:0;margin-bottom:8px;border-bottom:2px solid #003366}
+.tabs button{
+  border:1px solid #808080;border-bottom:none;background:#606060;color:#fff;
+  padding:6px 12px;cursor:pointer;font-family:inherit;font-size:11px;margin-right:2px;
+  border-radius:4px 4px 0 0;
+}
+.tabs button.active{background:#003366;border-color:#003366;font-weight:700}
 .pane{display:none}.pane.active{display:block}
-.card{background:#1a2332;border:1px solid #2a3544;border-radius:12px;padding:12px;margin-bottom:8px}
-.ucard{display:flex;gap:10px;align-items:center;background:#121a24;border:1px solid #2a3544;border-radius:10px;padding:12px;margin-bottom:8px}
-.uav{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;flex-shrink:0}
-.uname{font-weight:700;color:#fff;font-size:13px}
-.udev{color:#8b98a8;font-size:11px;margin-top:2px}
-.ubadge{display:inline-block;margin-top:4px;font-size:10px;padding:2px 6px;border-radius:999px;background:#1e3a5f;color:#93c5fd}
-.online{width:8px;height:8px;border-radius:50%;background:#22c55e;box-shadow:0 0 0 3px rgba(34,197,94,.2);margin-left:auto}
-.toolbar{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:8px}
-.toolbar input{background:#0f1419;border:1px solid #2a3544;color:#e7ecf3;border-radius:7px;padding:5px 8px;font-size:11px}
-.btn{border:none;border-radius:7px;padding:5px 10px;font-size:11px;font-weight:600;cursor:pointer;background:#2563eb;color:#fff}
-.btn-chip{background:#243044;color:#c5d0de}
-.btn-chip.active{background:#1e3a5f;color:#5eb1ff;border:1px solid #2563eb}
-.tl-wrap{overflow:auto;border:1px solid #2a3544;border-radius:10px;background:#121a24}
-.tl-axis{display:flex;border-bottom:1px solid #2a3544;background:#1a2332;position:sticky;top:0;z-index:2}
-.tl-axis-label{width:90px;flex-shrink:0;padding:6px 8px;font-size:9px;color:#8b98a8;font-weight:700;border-right:1px solid #2a3544}
+.panel{background:#fff;border:1px solid #aaa;border-radius:2px;padding:10px;margin-bottom:8px}
+.panel-title{background:#c0c0c0;font-size:11px;font-weight:700;padding:4px 7px;margin:-10px -10px 8px -10px;border-bottom:1px solid #aaa}
+.ucard{display:flex;gap:10px;align-items:center;background:#f7f8f7;border:1px solid #bbb;border-radius:2px;padding:10px;margin-bottom:6px}
+.uav{width:34px;height:34px;border-radius:2px;display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;flex-shrink:0;background:#003366}
+.uname{font-weight:700;color:#000;font-size:13px}
+.udev{color:#555;font-size:11px;margin-top:1px}
+.ubadge{display:inline-block;margin-top:3px;font-size:10px;padding:1px 6px;border-radius:2px;background:#ddd;color:#333;font-weight:700}
+.online{width:8px;height:8px;border-radius:50%;background:#2e7d32;margin-left:auto}
+.toolbar{display:flex;flex-wrap:wrap;gap:5px;align-items:center;margin-bottom:6px}
+.toolbar input{font-family:inherit;font-size:11px;border:1px solid #808080;background:#fff;padding:4px 6px}
+.btn{font-family:inherit;font-size:11px;border:1px solid #808080;background:#f0f0f0;color:#000;padding:4px 10px;cursor:pointer;border-radius:2px}
+.btn-primary{background:#003366;color:#fff;border-color:#002244}
+.btn-chip{background:#ddd;border:1px solid #aaa}
+.btn-chip.active{background:#003366;color:#fff;border-color:#003366;font-weight:700}
+.tl-wrap{overflow:auto;border:1px solid #aaa;background:#fff}
+.tl-axis{display:flex;border-bottom:1px solid #aaa;background:#e4e9e7;position:sticky;top:0;z-index:2}
+.tl-axis-label{width:90px;flex-shrink:0;padding:6px 7px;font-size:9px;color:#333;font-weight:700;border-right:1px solid #aaa}
 .tl-axis-track{flex:1;position:relative;height:28px;min-width:520px}
-.tl-tick{position:absolute;top:0;bottom:0;border-left:1px dashed #2a3544}
-.tl-tick span{position:absolute;top:6px;left:3px;font-size:8px;color:#6b7a8d;white-space:nowrap}
-.tl-row{display:flex;min-height:42px;border-bottom:1px solid #1e2936}
-.tl-dev{width:90px;flex-shrink:0;padding:8px;border-right:1px solid #2a3544;font-size:10px;color:#8b98a8;display:flex;align-items:center}
-.tl-track{flex:1;position:relative;min-width:520px;min-height:42px}
-.sess{position:absolute;top:10px;height:20px;border-radius:5px;min-width:3px;font-size:9px;font-weight:700;color:#fff;padding:0 5px;display:flex;align-items:center;overflow:hidden;white-space:nowrap;border:1px solid rgba(255,255,255,.12);cursor:pointer}
-.sess.open{border-style:dashed}
-.marker{position:absolute;top:8px;width:8px;height:24px;border-radius:2px;opacity:.9}
-.marker.login{background:#22c55e}.marker.logout{background:#ef4444}
-.empty,.loading{text-align:center;padding:28px;color:#6b7a8d}
-.tip{position:fixed;z-index:99;background:#0b1220;border:1px solid #3b4f66;color:#e7ecf3;padding:6px 8px;border-radius:7px;font-size:10px;display:none;max-width:240px;pointer-events:none}
-.dbg{margin-top:8px;font-size:10px;color:#5eb1ff;cursor:pointer}
-#debug{display:none;background:#1a1508;border:1px solid #5c4a12;color:#e8d48b;padding:6px;margin-top:4px;font-size:9px;font-family:Consolas,monospace;max-height:100px;overflow:auto;border-radius:6px;white-space:pre-wrap}
-.legend{display:flex;gap:10px;font-size:10px;color:#8b98a8;margin-top:6px}
-.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:middle}
+.tl-tick{position:absolute;top:0;bottom:0;border-left:1px dashed #ccc}
+.tl-tick span{position:absolute;top:6px;left:3px;font-size:8px;color:#666;white-space:nowrap}
+.tl-row{display:flex;min-height:40px;border-bottom:1px solid #e0e0e0}
+.tl-dev{width:90px;flex-shrink:0;padding:7px;border-right:1px solid #ccc;font-size:10px;color:#003366;font-weight:700;display:flex;align-items:center;background:#fff}
+.tl-track{flex:1;position:relative;min-width:520px;min-height:40px}
+.sess{position:absolute;top:9px;height:20px;border-radius:2px;min-width:3px;font-size:9px;font-weight:700;color:#fff;padding:0 4px;display:flex;align-items:center;overflow:hidden;white-space:nowrap;border:1px solid rgba(0,0,0,.2);cursor:pointer}
+.sess.open{border-style:dashed;border-width:2px}
+.marker{position:absolute;top:8px;width:7px;height:22px;border-radius:1px;opacity:.9}
+.marker.login{background:#2e7d32}.marker.logout{background:#c62828}
+.empty,.loading{text-align:center;padding:24px;color:#666}
+.tip{position:fixed;z-index:99;background:#003366;border:1px solid #002244;color:#fff;padding:6px 8px;border-radius:2px;font-size:10px;display:none;max-width:240px;pointer-events:none}
+.dbg{margin-top:8px;font-size:10px;color:#003366;cursor:pointer;text-decoration:underline}
+#debug{display:none;background:#fff8e1;border:1px solid #e0c060;color:#333;padding:5px;margin-top:4px;font-size:9px;font-family:Consolas,monospace;max-height:100px;overflow:auto;white-space:pre-wrap}
+.legend{display:flex;gap:10px;font-size:10px;color:#444;margin-top:5px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:1px;margin-right:3px;vertical-align:middle;border:1px solid #999}
 </style>
 </head>
 <body>
@@ -53,23 +65,27 @@ h2{font-size:16px;font-weight:700;color:#fff}
 </div>
 
 <div id="pane-now" class="pane active">
-  <div class="card" id="info"><div class="loading">Carregando...</div></div>
+  <div class="panel">
+    <div class="panel-title">Usuário ativo</div>
+    <div id="info"><div class="loading">Carregando...</div></div>
+  </div>
 </div>
 
 <div id="pane-history" class="pane">
-  <div class="card">
+  <div class="panel">
+    <div class="panel-title">Período</div>
     <div class="toolbar">
       <button class="btn btn-chip" data-r="today" onclick="setRange('today',this)">Hoje</button>
       <button class="btn btn-chip active" data-r="7d" onclick="setRange('7d',this)">7 dias</button>
       <button class="btn btn-chip" data-r="30d" onclick="setRange('30d',this)">30 dias</button>
       <input type="date" id="dStart">
       <input type="date" id="dEnd">
-      <button class="btn" onclick="loadHistory()">Aplicar</button>
+      <button class="btn btn-primary" onclick="loadHistory()">Aplicar</button>
     </div>
     <div class="legend">
-      <span><i style="background:#3b82f6"></i>Sessão</span>
-      <span><i style="background:#22c55e"></i>Login</span>
-      <span><i style="background:#ef4444"></i>Logout</span>
+      <span><i style="background:#1565c0"></i>Sessão</span>
+      <span><i style="background:#2e7d32"></i>Login</span>
+      <span><i style="background:#c62828"></i>Logout</span>
     </div>
   </div>
   <div id="gantt"><div class="loading">Selecione o período.</div></div>
@@ -82,7 +98,7 @@ h2{font-size:16px;font-weight:700;color:#fff}
 <script>
 var D=[], nodeid='{{nodeid}}', nodeName='{{nodeName}}';
 var ms=(typeof parent!=='undefined'&&parent.meshserver)||window.meshserver;
-var COLORS=['#3b82f6','#8b5cf6','#06b6d4','#10b981','#f59e0b','#ef4444','#ec4899','#14b8a6'];
+var COLORS=['#003366','#1565c0','#2e7d32','#6a1b9a','#00838f','#ef6c00','#c62828','#455a64'];
 function dlog(){var a=Array.prototype.slice.call(arguments);D.push(new Date().toLocaleTimeString()+' '+a.join(' '));var e=document.getElementById('debug');if(e)e.innerHTML=D.slice(-60).join('\n');}
 function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 function colorFor(k){var h=0,s=String(k||'');for(var i=0;i<s.length;i++)h=((h<<5)-h)+s.charCodeAt(i)|0;return COLORS[Math.abs(h)%COLORS.length];}
@@ -178,7 +194,6 @@ function renderGantt(events){
   ticks.forEach(function(tk){h+='<div class="tl-tick" style="left:'+tk.pct+'%"><span>'+esc(tk.label)+'</span></div>';});
   h+='</div></div>';
 
-  // one row per user
   var byUser={};
   sessions.forEach(function(s){var k=s.display||s.user||'?';if(!byUser[k])byUser[k]=[];byUser[k].push(s);});
   var users=Object.keys(byUser).sort();

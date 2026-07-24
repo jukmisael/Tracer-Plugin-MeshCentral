@@ -1,6 +1,15 @@
 # Changelog
 
 
+## 3.3.1 (2026-07-24)
+
+### UI alinhada ao MeshCentral
+- Tema claro MeshCentral: fundo `#d3d9d6`, header `#003366`, painéis brancos
+- Fonte Trebuchet MS; abas estilo topbar (cinza/selecionado navy)
+- Usuários: lista tabela (padrão) + cards; botões nativos MeshCentral
+- Timeline Gantt mantida, cores compatíveis com UI clara
+
+
 ## 3.3.0 (2026-07-24)
 
 ### UI redesign
