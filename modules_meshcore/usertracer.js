@@ -1,7 +1,7 @@
 /**
  * User-Device Tracer — Agent-side Windows session monitor
  * Pattern: ScriptTask's modules_meshcore pattern
- * 
+ *
  * Runs on each Windows endpoint. Periodically runs `query user`
  * and reports session transitions (login/logout/disconnect/reconnect).
  * Supports RDP/TS multi-session.
