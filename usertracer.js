@@ -57,22 +57,29 @@ module.exports.usertracer = function (parent) {
                 var currentUsers = (Array.isArray(doc.users) ? doc.users : []).sort();
                 var key = JSON.stringify(currentUsers);
                 var prev = obj.userCache[nodeid];
-
                 var nodeName = doc.name || nodeid;
 
                 if (!prev) {
-                    // FIRST TIME: populate cache, do NOT log events
+                    // FIRST TIME this session: populate cache
                     obj.userCache[nodeid] = key;
-                    console.log('UT SCAN: cache initialized for ' + nodeName + ': ' + JSON.stringify(currentUsers));
+                    // Check if we already have events for this node in DB
+                    obj.db.getEventsByNode(nodeid, 1, function(events) {
+                        if (!events || events.length === 0) {
+                            // No events in DB → first time EVER → log current users
+                            console.log('UT SCAN: first-ever scan for ' + nodeName + ', logging ' + currentUsers.length + ' users');
+                            currentUsers.forEach(function (u) { obj.storeEvent(nodeid, nodeName, u, 'userLogin'); });
+                        } else {
+                            console.log('UT SCAN: cache initialized for ' + nodeName + ' (existing DB events)');
+                        }
+                    });
                     return;
                 }
 
                 if (prev === key) return; // no change
 
-                // CHANGE DETECTED: update cache and log events
+                // CHANGE DETECTED
                 obj.userCache[nodeid] = key;
                 var prevUsers = JSON.parse(prev);
-
                 currentUsers.forEach(function (u) {
                     if (prevUsers.indexOf(u) === -1) {
                         console.log('UT SCAN: LOGIN ' + u + ' on ' + nodeName);
