@@ -1,195 +1,50 @@
 <html>
-<head>
-<meta charset="utf-8">
-<title>User-Device Tracer — Admin Panel</title>
+<head><meta charset="utf-8"><title>User Tracer</title>
 <style>
-* { box-sizing:border-box; margin:0; padding:0; }
-body { font-family:'Segoe UI',sans-serif; background:#f5f5f5; color:#333; padding:20px; font-size:13px; }
-h1 { font-size:22px; margin-bottom:4px; }
-.sub { color:#666; font-size:12px; margin-bottom:16px; }
-.tab-bar { border-bottom:2px solid #ddd; margin-bottom:12px; }
-.tab-bar button { padding:8px 16px; border:none; background:#eee; cursor:pointer; font-size:13px; margin-bottom:-2px; border-bottom:2px solid transparent; }
-.tab-bar button:hover { background:#e0e0e0; }
-.tab-bar button.active { background:#fff; border-bottom-color:#1976D2; font-weight:600; color:#1976D2; }
-.pane { display:none; }
-.pane.active { display:block; }
-.ctrl { margin-bottom:10px; }
-.ctrl select,.ctrl input { padding:4px 8px; border:1px solid #ccc; border-radius:3px; font-size:12px; }
-.ctrl button { padding:4px 12px; background:#1976D2; color:#fff; border:none; border-radius:3px; cursor:pointer; font-size:12px; }
-table { width:100%; border-collapse:collapse; font-size:12px; }
-th,td { padding:5px 8px; text-align:left; border-bottom:1px solid #eee; }
-th { background:#fafafa; font-weight:600; }
-tr:hover { background:#f0f7ff; }
-.lk { color:#4CAF50; }
-.lo { color:#F44336; }
-.dc { color:#FF9800; }
-.rc { color:#2196F3; }
-.loading { text-align:center; padding:40px; color:#999; }
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',sans-serif;background:#f5f5f5;color:#333;padding:20px;font-size:13px}
+h1{font-size:20px;margin-bottom:4px}
+.sub{color:#666;font-size:12px;margin-bottom:16px}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th,td{padding:6px 10px;text-align:left;border-bottom:1px solid #eee}
+th{background:#fafafa;font-weight:600}
+tr:hover{background:#f0f7ff}
+.loading{text-align:center;padding:40px;color:#999}
 </style>
 </head>
 <body>
-<h1>User-Device Tracer</h1>
-<p class="sub">Rastreio de login de usuários Windows nos dispositivos gerenciados</p>
-
-<div class="tab-bar">
-    <button class="active" onclick="switchTab('list')">Lista</button>
-    <button onclick="switchTab('users')">Por Usuário</button>
-    <button onclick="switchTab('devices')">Por Dispositivo</button>
+<h1>User Tracer</h1>
+<p class="sub">Usuários ativos nos dispositivos neste momento</p>
+<div style="overflow-x:auto">
+<table><thead><tr><th>Dispositivo</th><th>Usuário</th><th>Domínio</th></tr></thead>
+<tbody id="tbody"><tr><td colspan="3" class="loading">Carregando...</td></tr></tbody></table>
 </div>
-
-<div id="pane-list" class="pane active">
-    <div class="ctrl">
-        <select id="ftype" onchange="loadList()">
-            <option value="">Todos</option>
-            <option value="userLogin">Login</option>
-            <option value="userLogout">Logout</option>
-            <option value="sessionDisconnected">Desconectou</option>
-            <option value="sessionReconnected">Reconectou</option>
-        </select>
-        <input type="text" id="fuser" placeholder="Usuário..." onkeyup="loadList()">
-        <input type="text" id="fdevice" placeholder="Dispositivo..." onkeyup="loadList()">
-        <button onclick="loadList()">Atualizar</button>
-    </div>
-    <div style="overflow-x:auto">
-        <table><thead><tr>
-            <th>Data</th><th>Evento</th><th>Usuário</th><th>Domínio</th><th>Dispositivo</th><th>Sessão</th>
-        </tr></thead>
-        <tbody id="listBody"><tr><td colspan="6" class="loading">Carregando...</td></tr></tbody></table>
-    </div>
-</div>
-
-<div id="pane-users" class="pane">
-    <div class="ctrl"><input type="text" id="fu2" placeholder="Filtrar..." onkeyup="loadUsers()"></div>
-    <div id="userGrid"></div>
-</div>
-
-<div id="pane-devices" class="pane">
-    <div class="ctrl"><input type="text" id="fd2" placeholder="Filtrar..." onkeyup="loadDevices()"></div>
-    <div id="deviceGrid"></div>
-</div>
-
 <script>
-var meshserver = (typeof parent !== 'undefined' && parent.meshserver) ? parent.meshserver : (window.meshserver || null);
-
-function sendCmd(a, extra) {
-    if (!meshserver) return;
-    meshserver.send(Object.assign({ action:'plugin', plugin:'usertracer', pluginaction:a }, extra || {}));
+var ms=(typeof parent!=='undefined'&&parent.meshserver)||window.meshserver;
+function load(){
+    document.getElementById('tbody').innerHTML='<tr><td colspan="3" class="loading">Carregando...</td></tr>';
+    if(ms) ms.send({action:'plugin',plugin:'usertracer',pluginaction:'getCurrentUsers'});
 }
-
-function switchTab(n) {
-    document.querySelectorAll('.tab-bar button').forEach(function(b) { b.classList.remove('active'); });
-    document.querySelectorAll('.pane').forEach(function(p) { p.classList.remove('active'); });
-    document.querySelector('.tab-bar button[onclick*="'+n+'"]').classList.add('active');
-    document.getElementById('pane-'+n).classList.add('active');
-    if (n==='list') loadList();
-    else if (n==='users') loadUsers();
-    else loadDevices();
-}
-
-// --- List ---
-function loadList() {
-    document.getElementById('listBody').innerHTML = '<tr><td colspan="6" class="loading">Carregando...</td></tr>';
-    sendCmd('getAllEvents', { limit:500 });
-}
-function renderList(d) {
-    var tbody = document.getElementById('listBody');
-    if (!d||!d.length) { tbody.innerHTML='<tr><td colspan="6" class="loading">Nenhum evento.</td></tr>'; return; }
-    var ft=document.getElementById('ftype').value, fu=document.getElementById('fuser').value.toLowerCase(), fd=document.getElementById('fdevice').value.toLowerCase();
-    var labels={userLogin:'<b class="lk">Login</b>',userLogout:'<b class="lo">Logout</b>',sessionDisconnected:'<b class="dc">Desconectou</b>',sessionReconnected:'<b class="rc">Reconectou</b>'};
-    var h='';
-    for(var i=0;i<d.length;i++) {
-        var e=d[i];
-        if(ft&&e.eventType!==ft) continue;
-        if(fu&&(e.username||'').toLowerCase().indexOf(fu)===-1) continue;
-        if(fd&&(e.nodeName||'').toLowerCase().indexOf(fd)===-1) continue;
-        var dt=new Date(e.detectedAt);
-        h+='<tr><td>'+dt.toLocaleDateString()+' '+dt.toLocaleTimeString()+'</td>'
-          +'<td>'+(labels[e.eventType]||e.eventType)+'</td>'
-          +'<td>'+(e.username||'')+'</td><td>'+(e.domain||'')+'</td>'
-          +'<td>'+(e.nodeName||'')+'</td><td>'+(e.sessionName||'')+'</td></tr>';
-    }
-    tbody.innerHTML=h||'<tr><td colspan="6" class="loading">Nada encontrado.</td></tr>';
-}
-
-// --- Users ---
-function loadUsers() {
-    document.getElementById('userGrid').innerHTML='<div class="loading">Carregando...</div>';
-    sendCmd('getAllEvents',{limit:500});
-    window._userMode=true;
-}
-function renderUsers(d) {
-    var grid=document.getElementById('userGrid');
-    if(!d||!d.length){grid.innerHTML='<div class="loading">Sem dados.</div>';return;}
-    var fl=(document.getElementById('fu2').value||'').toLowerCase();
-    var byUser={};
-    for(var i=0;i<d.length;i++){
-        var e=d[i],key=e.domain?e.domain+'\\'+e.username:e.username;
-        if(!byUser[key]) byUser[key]={username:e.username,domain:e.domain||'',devices:{},total:0};
-        byUser[key].total++;
-        if(!byUser[key].devices[e.nodeName]) byUser[key].devices[e.nodeName]=0;
-        byUser[key].devices[e.nodeName]++;
-    }
-    var keys=Object.keys(byUser).sort(),h='',c=0;
-    for(var k=0;k<keys.length;k++){
-        var u=byUser[keys[k]];
-        if(fl&&keys[k].toLowerCase().indexOf(fl)===-1) continue;
-        c++;
-        var devs=Object.keys(u.devices).sort().map(function(d){return d+' ('+u.devices[d]+')';}).join(', ');
-        h+='<div style="background:#fff;border:1px solid #e0e0e0;border-radius:6px;padding:10px;margin-bottom:8px">'
-          +'<b>'+keys[k]+'</b> <span style="color:#666;font-size:11px">('+u.total+' eventos)</span><br>'
-          +'<span style="font-size:11px;color:#666">Dispositivos: '+devs+'</span></div>';
-    }
-    grid.innerHTML=c?h:'<div class="loading">Nenhum usuário.</div>';
-}
-
-// --- Devices ---
-function loadDevices() {
-    document.getElementById('deviceGrid').innerHTML='<div class="loading">Carregando...</div>';
-    sendCmd('getAllEvents',{limit:500});
-    window._userMode=false;
-}
-function renderDevices(d) {
-    var grid=document.getElementById('deviceGrid');
-    if(!d||!d.length){grid.innerHTML='<div class="loading">Sem dados.</div>';return;}
-    var fl=(document.getElementById('fd2').value||'').toLowerCase();
-    var byDev={};
-    for(var i=0;i<d.length;i++){
-        var e=d[i],key=e.nodeName||e.nodeid;
-        if(!byDev[key]) byDev[key]={nodeName:e.nodeName||e.nodeid,users:{},total:0};
-        byDev[key].total++;
-        var un=e.domain?e.domain+'\\'+e.username:e.username;
-        if(!byDev[key].users[un]) byDev[key].users[un]=0;
-        byDev[key].users[un]++;
-    }
-    var keys=Object.keys(byDev).sort(),h='',c=0;
-    for(var k=0;k<keys.length;k++){
-        var d2=byDev[keys[k]];
-        if(fl&&keys[k].toLowerCase().indexOf(fl)===-1) continue;
-        c++;
-        var us=Object.keys(d2.users).sort().map(function(u){return u+' ('+d2.users[u]+')';}).join(', ');
-        h+='<div style="background:#fff;border:1px solid #e0e0e0;border-radius:6px;padding:10px;margin-bottom:8px">'
-          +'<b>'+keys[k]+'</b> <span style="color:#666;font-size:11px">('+d2.total+' eventos)</span><br>'
-          +'<span style="font-size:11px;color:#666">Usuários: '+us+'</span></div>';
-    }
-    grid.innerHTML=c?h:'<div class="loading">Nenhum dispositivo.</div>';
-}
-
-// --- Response handler registration ---
 (function(){
     var t=null;
     try{t=(typeof pluginHandler!=='undefined'&&pluginHandler.usertracer)||(parent&&parent.pluginHandler&&parent.pluginHandler.usertracer);}catch(e){}
     if(!t){setTimeout(arguments.callee,500);return;}
-    t.allEvents=function(msg){
-        var d=(msg&&msg.data)?msg.data:msg;
-        if(window._userMode) renderUsers(d); else renderDevices(d);
-    };
-    t.deviceEvents=function(msg){
-        var d=(msg&&msg.data)?msg.data:msg;
-        renderList(d);
+    t.currentUsers=function(msg){
+        var d=msg&&msg.data?msg.data:[];
+        var h='';
+        for(var i=0;i<d.length;i++){
+            var users=d[i].users||[];
+            for(var j=0;j<users.length;j++){
+                var u=users[j],dom='',usr=u;
+                if(u.indexOf('\\')>=0){dom=u.split('\\')[0];usr=u.split('\\')[1];}
+                else if(u.indexOf('@')>=0){dom=u.split('@')[1];usr=u.split('@')[0];}
+                h+='<tr><td>'+d[i].nodeName+'</td><td>'+usr+'</td><td>'+dom+'</td></tr>';
+            }
+        }
+        document.getElementById('tbody').innerHTML=h||'<tr><td colspan="3" class="loading">Nenhum usuário ativo.</td></tr>';
     };
 })();
-
-document.addEventListener('DOMContentLoaded',loadList);
+document.addEventListener('DOMContentLoaded',load);
 </script>
 </body>
 </html>

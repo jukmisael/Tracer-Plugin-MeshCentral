@@ -1,5 +1,16 @@
 # Changelog
 
+## 3.0.1 (2026-07-23)
+
+### Simplificação máxima
+- Server-side reduzido de 200+ linhas para **85 linhas** — só lê o usuário atual dos agentes
+- `db.js` removido — sem banco, sem NeDB, sem dependências externas
+- `modules_meshcore/usertracer.js` removido — sem código no agente
+- Admin panel: tabela simples com dispositivo + usuário + domínio
+- Device tab: card com usuário ativo da máquina
+- Sem `hook_agentCoreIsStable`, sem `hook_processAgentData`, sem `server_startup`
+- Basta reinstalar que funciona imediatamente
+
 ## 3.0.0 (2026-07-23)
 
 ### Mudança fundamental de abordagem
