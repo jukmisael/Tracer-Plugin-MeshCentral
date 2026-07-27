@@ -106,7 +106,7 @@ body{font-family:"Trebuchet MS",Arial,Helvetica,sans-serif;background:#d3d9d6;co
 <div id="debug">aguardando...</div>
 
 <script>
-var D=[],ms=(typeof parent!=='undefined'&&parent.meshserver)||window.meshserver;
+var D=[],ms=(typeof top!=='undefined'&&top.meshserver)||(typeof parent!=='undefined'&&parent.meshserver)||window.meshserver;
 var _allDevices=[],_allUsers=[],_xrefPending='',selectedDevs={};
 var _savedEvents=[],_savedRange={rs:0,re:0};
 function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}

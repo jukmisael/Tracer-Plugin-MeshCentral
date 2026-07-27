@@ -2,6 +2,11 @@
 
 
 
+## 3.5.7 (2026-07-27)
+
+### Fixes
+- Device tab vazia: `parent.meshserver` não alcançava iframe aninhado → `top.meshserver`
+
 ## 3.5.6 (2026-07-27)
 
 ### Fixes
