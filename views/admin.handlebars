@@ -226,10 +226,11 @@ function setupGanttDrag(){
   var sel=null,ov=null;
   function getPct(e){
     var wrap=document.querySelector('.gantt-wrap');if(!wrap)return 0;
-    var rect=wrap.getBoundingClientRect();
     var tickArea=wrap.querySelector('[style*="min-width"]');
-    var cw=tickArea?tickArea.scrollWidth:(rect.width-110);
-    var x=e.clientX-rect.left+wrap.scrollLeft-110;
+    if(!tickArea)return 0;
+    var taRect=tickArea.getBoundingClientRect();
+    var cw=tickArea.offsetWidth;
+    var x=e.clientX-taRect.left;
     return Math.max(0,Math.min(100,(x/cw)*100));
   }
   function stopDrag(){

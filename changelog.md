@@ -2,6 +2,11 @@
 
 
 
+## 3.5.49 (2026-07-27)
+
+### Fixes
+- getPct: usa `tickArea.getBoundingClientRect()` + `offsetWidth` para precisão máxima
+
 ## 3.5.48 (2026-07-27)
 
 ### Fixes
