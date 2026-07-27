@@ -2,6 +2,12 @@
 
 
 
+## 3.5.15 (2026-07-27)
+
+### Debug
+- Log detalhado em cada etapa: RG (renderGantt), GR (_renderGantt), WSE (WS error)
+- Error catch com log em vez de silencioso
+
 ## 3.5.14 (2026-07-27)
 
 ### Features

@@ -121,8 +121,13 @@ function buildSessions(events,rs,re){
   });return out;
 }
 function _renderGantt(events,rs,re){
+  dlog('GR','enter events',events.length,'range',new Date(rs).toISOString(),new Date(re).toISOString());
   _savedEvents=events;
-  var total=re-rs,sessions=buildSessions(events,rs,re),dayMs=86400000,hourMs=3600000,span=total/dayMs;
+  var total=re-rs;if(total<=0){dlog('GR','total zero');total=86400000;}
+  var sessions=buildSessions(events,rs,re);dlog('GR','sessions',sessions.length);
+  if(!sessions.length){dlog('GR','no sessions');document.getElementById('gantt').innerHTML='<div class="empty">Nenhuma sessão.</div>';return;}
+  dlog('GR','first session',JSON.stringify(sessions[0]).slice(0,200));
+  var dayMs=86400000,hourMs=3600000,span=total/dayMs;
   var step=span<=1?hourMs:(span<=7?hourMs*3:(span<=14?dayMs:dayMs*2));
   var ticks=[],t0=Math.ceil(rs/step)*step;
   for(var t=t0;t<=re;t+=step){var d=new Date(t);ticks.push({pct:((t-rs)/total)*100,label:step<dayMs?((d.getHours()<10?'0':'')+d.getHours()+':00'):((d.getDate()<10?'0':'')+d.getDate()+'/'+(d.getMonth()+1<10?'0':'')+(d.getMonth()+1))});}
@@ -162,11 +167,18 @@ function _renderGantt(events,rs,re){
   ul+='</tbody></table>';document.getElementById('userList').innerHTML=ul;
 }
 function renderGantt(events){
+  dlog('RG','enter',events?'n='+events.length:'no events');
   events=events||[];
-  if(!events.length){document.getElementById('gantt').innerHTML='<div class="empty">Nenhum evento no período selecionado.</div>';document.getElementById('userList').innerHTML='<div class="empty">Nenhum evento.</div>';return;}
-  var rs=new Date(document.getElementById('dStart').value+'T00:00:00').getTime(),re=new Date(document.getElementById('dEnd').value+'T23:59:59.999').getTime();
-  if(isNaN(rs)||isNaN(re)||re<=rs){rs=Infinity;re=-Infinity;events.forEach(function(e){var t=new Date(e.detectedAt).getTime();if(t<rs)rs=t;if(t>re)re=t;});if(re<=rs)re=rs+86400000;}
-  _renderGantt(events,rs,re);
+  if(!events.length){dlog('RG','empty');document.getElementById('gantt').innerHTML='<div class="empty">Nenhum evento no período selecionado.</div>';document.getElementById('userList').innerHTML='<div class="empty">Nenhum evento.</div>';return;}
+  var ds=document.getElementById('dStart'),de=document.getElementById('dEnd');
+  dlog('RG','dates',ds.value,de.value);
+  var rs=new Date(ds.value+'T00:00:00').getTime(),re=new Date(de.value+'T23:59:59.999').getTime();
+  dlog('RG','rs',rs,'re',re,'valid',!isNaN(rs),!isNaN(re));
+  if(isNaN(rs)||isNaN(re)||re<=rs){
+    rs=Infinity;re=-Infinity;events.forEach(function(e){var t=new Date(e.detectedAt).getTime();if(t<rs)rs=t;if(t>re)re=t;});if(re<=rs)re=rs+86400000;
+    dlog('RG','recalc rs',rs,'re',re);
+  }
+  try{_renderGantt(events,rs,re);dlog('RG','_renderGantt OK');}catch(ex){dlog('RGERR',ex.message);}
 }
 (function(){
   // Registra no pluginHandler (pode ser chamado na inicialização, mas ignora se for meshserver)
@@ -189,7 +201,7 @@ function renderGantt(events){
           dlog('WS','got timeline n='+(d.data?d.data.length:'?'));
           renderGantt(d.data||[]);
         }
-      }catch(ex){}
+      }catch(ex){dlog('WSE',ex.message);}
     };
     // Tenta addEventListener primeiro
     try{ws.addEventListener('message',handler);dlog('WS','addEventListener OK');}catch(ex){dlog('WS','addEventListener fail',ex.message);}
