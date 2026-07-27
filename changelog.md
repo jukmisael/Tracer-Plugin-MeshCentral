@@ -2,6 +2,14 @@
 
 
 
+## 3.5.53 (2026-07-27)
+
+### Rewrite
+- Gantt range selection reescrito: `.gantt-track` com `data-rs`/`data-re`, `timeAt(clientX)` linear, overlay em px no track
+- Zoom client-side via `_eventsCache` (sem refetch); datepicker = range base do servidor
+- Coluna DISPOSITIVO sticky (`position:sticky;left:0`) sem sobrepor track
+- Estado limpo: `_viewRange` / `_baseRange` (remove `_fullRange`/`_savedRange`/`_selectedRange`)
+
 ## 3.5.52 (2026-07-27)
 
 ### Fixes
