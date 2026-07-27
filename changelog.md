@@ -2,6 +2,11 @@
 
 
 
+## 3.5.4 (2026-07-27)
+
+### Fixes
+- Navegação: `top.location.href` em vez de `parent`/`window` — evitava iframe aninhado
+
 ## 3.5.3 (2026-07-27)
 
 ### Fixes
