@@ -2,6 +2,12 @@
 
 
 
+## 3.5.13 (2026-07-27)
+
+### Features
+- Gantt com segmentos coloridos por estado: verde (Online), laranja (Bloqueado), âmbar (Desbloqueado), cinza (Offline)
+- `buildSessions` agora processa `userLock`/`userUnlock` como segmentos separados
+
 ## 3.5.12 (2026-07-27)
 
 ### Fixes
