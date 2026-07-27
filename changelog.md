@@ -2,6 +2,12 @@
 
 
 
+## 3.5.45 (2026-07-27)
+
+### Features
+- Botão ↺ para resetar zoom do Gantt
+- Duplo clique no segmento → zoom no período do evento
+
 ## 3.5.44 (2026-07-27)
 
 ### Fixes

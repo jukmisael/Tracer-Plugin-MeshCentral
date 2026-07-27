@@ -68,6 +68,7 @@ body{font-family:"Trebuchet MS",Arial,Helvetica,sans-serif;background:#d3d9d6;co
   <div class="toolbar">
     <label>De</label><input type="date" id="dStart" onchange="_selectedRange=null;_fullRange=null;loadTimeline()">
     <label>Até</label><input type="date" id="dEnd" onchange="_selectedRange=null;_fullRange=null;loadTimeline()">
+    <button class="btn btn-sm" onclick="_selectedRange=null;_fullRange=null;loadTimeline()" title="Resetar zoom">↺</button>
     <span class="muted" style="margin-left:6px" id="tlFilter"></span>
   </div>
   <div id="gantt"><div class="empty">Selecione um usuário ou dispositivo abaixo.</div></div>
@@ -199,7 +200,7 @@ function _renderGantt(events,rs,re,pwrMap){
         var pct=((sRight-sLeft)/barW)*100;if(pct<0.25)pct=0.25;
         var em2=eventMeta(s.state==='lock'?'userLock':s.state==='unlock'?'userUnlock':s.state==='login'?'userLogin':'userLogout');
         var tt='Usuário: '+esc(s.user||s.display)+'\nDe: '+fmtDate(s.start)+'\nAté: '+fmtDate(s.end)+'\nEstado: '+em2.label+'\nDuração: '+fmtDur(s.end-s.start);
-        h+='<div style="height:100%;width:'+pct+'%;background:'+segColor(s.state,s.open)+';border-right:1px solid rgba(0,0,0,.15);min-width:2px" title="'+esc(tt)+'"></div>';
+        h+='<div style="height:100%;width:'+pct+'%;background:'+segColor(s.state,s.open)+';border-right:1px solid rgba(0,0,0,.15);min-width:2px" title="'+esc(tt)+'" ondblclick="event.stopPropagation();_selectedRange={rs:'+s.start+',re:'+s.end+'};loadTimeline()"></div>';
       });
       h+='<span style="position:absolute;top:1px;left:3px;font-size:8px;font-weight:700;color:#fff;text-shadow:0 0 2px rgba(0,0,0,.6);pointer-events:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:calc(100% - 6px)" title="'+esc(segs[0].user||'')+'">'+esc(segs[0].user||'')+'</span>';
       h+='</div>';
