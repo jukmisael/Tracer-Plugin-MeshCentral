@@ -2,6 +2,11 @@
 
 
 
+## 3.5.26 (2026-07-27)
+
+### UI
+- Seletor de dispositivos: `<select multiple>` nativo em vez de panel custom
+
 ## 3.5.25 (2026-07-27)
 
 ### UI
