@@ -2,6 +2,13 @@
 
 
 
+## 3.5.25 (2026-07-27)
+
+### UI
+- Dispositivos: chips substituídos por painel busca+checkbox
+- Botão mostra contador `N/total`
+- Painel com scroll para 500+ dispositivos
+
 ## 3.5.24 (2026-07-27)
 
 ### UI

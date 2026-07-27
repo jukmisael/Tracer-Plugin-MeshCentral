@@ -75,13 +75,14 @@ body{font-family:"Trebuchet MS",Arial,Helvetica,sans-serif;background:#d3d9d6;co
     <label>Até</label><input type="date" id="dEnd">
     <button class="btn btn-primary" onclick="loadTimeline()">Aplicar</button>
   </div>
-  <div class="toolbar" style="margin-bottom:6px">
+  <div class="toolbar" id="devselWrap" style="margin-bottom:6px;position:relative">
     <span class="devlabel">Dispositivos</span>
     <button class="btn btn-sm" onclick="selectAllDevs(true)">Todos</button>
     <button class="btn btn-sm" onclick="selectAllDevs(false)">Nenhum</button>
-    <input type="text" id="devSearch" placeholder="filtrar..." class="devsearch" oninput="filterDevChips()">
+    <input type="text" id="devSearch" placeholder="buscar..." class="devsearch" oninput="filterDevList()" style="width:120px">
+    <button class="btn btn-sm btn-primary" onclick="toggleDevPanel()" style="margin-left:4px"><span id="devCount">0</span></button>
+    <div id="devPanel" style="display:none;position:absolute;top:100%;left:0;right:0;max-height:220px;overflow-y:auto;border:1px solid #aaa;background:#fff;z-index:100;border-radius:2px;box-shadow:0 2px 8px rgba(0,0,0,.15);margin-top:2px"></div>
   </div>
-  <div class="chips" id="devChips"><span class="muted">Carregando...</span></div>
   <div id="gantt"><div class="empty">Selecione período e dispositivos.</div></div>
 </div>
 
@@ -137,16 +138,35 @@ function renderDeviceNames(list){
   _allDevices=(list||[]).slice().sort(function(a,b){return String(a.name).localeCompare(String(b.name));});
   document.getElementById('sDevices').textContent=_allDevices.length;
   _allDevices.forEach(function(d){if(selectedDevs[d.nodeid]===undefined)selectedDevs[d.nodeid]=true;});
-  _populateXrefDevs(_allDevices);renderDevChips();
+  _populateXrefDevs(_allDevices);renderDevList();
 }
-function renderDevChips(){
-  var q=(document.getElementById('devSearch').value||'').toLowerCase().trim(),h='';
-  _allDevices.forEach(function(d){if(q&&String(d.name).toLowerCase().indexOf(q)<0)return;h+='<div class="chip'+(selectedDevs[d.nodeid]?' sel':'')+'" data-id="'+esc(d.nodeid)+'" onclick="toggleDev(this)"><span class="dot"></span>'+esc(d.name)+'</div>';});
-  document.getElementById('devChips').innerHTML=h||'<span class="muted">Nenhum dispositivo.</span>';
+function renderDevList(){
+  var q=(document.getElementById('devSearch').value||'').toLowerCase().trim();
+  var selCount=0,h='';
+  _allDevices.forEach(function(d){
+    var isSel=!!selectedDevs[d.nodeid];if(isSel)selCount++;
+    if(q&&String(d.name).toLowerCase().indexOf(q)<0&&!isSel)return;
+    h+='<label style="display:flex;align-items:center;gap:4px;padding:3px 6px;cursor:pointer;font-size:12px;background:'+(isSel?'#e8f0f8':'transparent')+'" onmouseover="this.style.background=\'#eef3f8\'" onmouseout="this.style.background='+(isSel?'\'#e8f0f8\'':'\'transparent\'')+'"><input type="checkbox" '+(isSel?'checked':'')+' onchange="toggleDev2(\''+esc(d.nodeid)+'\',this)"><span style="flex:1">'+esc(d.name)+'</span></label>';
+  });
+  document.getElementById('devPanel').innerHTML=h||'<div style="padding:8px;color:#666;font-size:11px">Nenhum dispositivo.</div>';
+  document.getElementById('devCount').textContent=selCount+'/'+_allDevices.length;
 }
-function filterDevChips(){renderDevChips();}
-function toggleDev(el){var id=el.getAttribute('data-id');if(selectedDevs[id])delete selectedDevs[id];else selectedDevs[id]=true;el.classList.toggle('sel',!!selectedDevs[id]);}
-function selectAllDevs(yes){selectedDevs={};if(yes)_allDevices.forEach(function(d){selectedDevs[d.nodeid]=true;});renderDevChips();}
+function toggleDev2(id,cb){if(cb.checked)selectedDevs[id]=true;else delete selectedDevs[id];renderDevList();}
+function filterDevList(){renderDevList();}
+function toggleDevPanel(){
+  var p=document.getElementById('devPanel');
+  if(p.style.display==='block'){p.style.display='none';return;}
+  p.style.display='block';renderDevList();
+}
+// Fecha o painel ao clicar fora
+document.addEventListener('click',function(e){
+  var w=document.getElementById('devselWrap');if(w&&!w.contains(e.target))document.getElementById('devPanel').style.display='none';
+});
+function selectAllDevs(yes){
+  selectedDevs={};
+  if(yes)_allDevices.forEach(function(d){selectedDevs[d.nodeid]=true;});
+  renderDevList();
+}
 function loadTimeline(){
   var s=document.getElementById('dStart').value,e=document.getElementById('dEnd').value;
   if(!s||!e){document.getElementById('gantt').innerHTML='<div class="empty">Selecione datas.</div>';return;}
