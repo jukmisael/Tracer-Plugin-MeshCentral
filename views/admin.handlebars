@@ -74,17 +74,9 @@ body{font-family:"Trebuchet MS",Arial,Helvetica,sans-serif;background:#d3d9d6;co
     <label>De</label><input type="date" id="dStart">
     <label>Até</label><input type="date" id="dEnd">
     <button class="btn btn-primary" onclick="loadTimeline()">Aplicar</button>
+    <span class="muted" style="margin-left:6px" id="tlFilter"></span>
   </div>
-  <div class="toolbar" id="devselWrap" style="margin-bottom:6px">
-    <span class="devlabel">Dispositivos</span>
-    <button class="btn btn-sm" onclick="selectAllDevs(true)">Todos</button>
-    <button class="btn btn-sm" onclick="selectAllDevs(false)">Nenhum</button>
-    <input type="text" id="devSearch" placeholder="buscar..." class="devsearch" oninput="filterDevList()" style="width:120px">
-    <span class="muted" id="devCount">0</span>
-  </div>
-  <select multiple id="devSelect" style="width:100%;height:80px;font-size:12px;font-family:inherit;border:1px solid #808080;background:#fff;padding:2px;border-radius:2px;margin-bottom:6px"></select>
-  </div>
-  <div id="gantt"><div class="empty">Selecione período e dispositivos.</div></div>
+  <div id="gantt"><div class="empty">Selecione um usuário ou dispositivo abaixo.</div></div>
 </div>
 
 <div class="xref-grid">
@@ -139,37 +131,11 @@ function renderDeviceNames(list){
   _allDevices=(list||[]).slice().sort(function(a,b){return String(a.name).localeCompare(String(b.name));});
   document.getElementById('sDevices').textContent=_allDevices.length;
   _allDevices.forEach(function(d){if(selectedDevs[d.nodeid]===undefined)selectedDevs[d.nodeid]=true;});
-  _populateXrefDevs(_allDevices);renderDevList();
-  document.getElementById('devSelect').onchange=applyDevSelect;
-}
-function renderDevList(){
-  var q=(document.getElementById('devSearch').value||'').toLowerCase().trim();
-  var sel=document.getElementById('devSelect'),h='';
-  _allDevices.forEach(function(d){
-    if(q&&String(d.name).toLowerCase().indexOf(q)<0)return;
-    h+='<option value="'+esc(d.nodeid)+'"'+(selectedDevs[d.nodeid]?' selected':'')+'>'+esc(d.name)+'</option>';
-  });
-  sel.innerHTML=h;
-  document.getElementById('devCount').textContent=Object.keys(selectedDevs).length+'/'+_allDevices.length;
-}
-function filterDevList(){renderDevList();}
-function applyDevSelect(){
-  var sel=document.getElementById('devSelect');
-  selectedDevs={};
-  for(var i=0;i<sel.options.length;i++){if(sel.options[i].selected)selectedDevs[sel.options[i].value]=true;}
-  document.getElementById('devCount').textContent=Object.keys(selectedDevs).length+'/'+_allDevices.length;
-}
-function selectAllDevs(yes){
-  selectedDevs={};
-  if(yes)_allDevices.forEach(function(d){selectedDevs[d.nodeid]=true;});
-  renderDevList();
+  _populateXrefDevs(_allDevices);
 }
 function loadTimeline(){
-  applyDevSelect();
-  var s=document.getElementById('dStart').value,e=document.getElementById('dEnd').value;
-  if(!s||!e){document.getElementById('gantt').innerHTML='<div class="empty">Selecione datas.</div>';return;}
-  var ids=[];Object.keys(selectedDevs).forEach(function(k){if(selectedDevs[k])ids.push(k);});
-  if(ms)ms.send({action:'plugin',plugin:'usertracer',pluginaction:'getTimeline',startDate:s+'T00:00:00',endDate:e+'T23:59:59.999',nodeids:ids,limit:8000});
+  var u=document.getElementById('xrefUser').value,d=document.getElementById('xrefDev').value;
+  if(u)loadXrefUser();else if(d)loadXrefDev();
 }
 function buildSessions(events,rs,re){
   var by={};
@@ -257,8 +223,8 @@ function _populateXrefDevs(list){
   var devSel=document.getElementById('xrefDev');devSel.innerHTML='<option value="">— Selecione um dispositivo —</option>';
   list.sort(function(a,b){return String(a.name).localeCompare(String(b.name));}).forEach(function(d){var opt=document.createElement('option');opt.value=d.nodeid;opt.textContent=d.name;devSel.appendChild(opt);});
 }
-function loadXrefUser(){var u=document.getElementById('xrefUser').value;if(!u){document.getElementById('xrefUserResult').innerHTML='<div class="empty">Selecione um usuário.</div>';return;}document.getElementById('xrefUserResult').innerHTML='<div class="loading">Buscando...</div>';document.getElementById('hintUser').textContent='';_xrefPending='user';if(ms)ms.send({action:'plugin',plugin:'usertracer',pluginaction:'getTimeline',username:u,limit:5000});}
-function loadXrefDev(){applyDevSelect();var n=document.getElementById('xrefDev').value;if(!n){document.getElementById('xrefDevResult').innerHTML='<div class="empty">Selecione um dispositivo.</div>';return;}document.getElementById('xrefDevResult').innerHTML='<div class="loading">Buscando...</div>';document.getElementById('hintDev').textContent='';_xrefPending='dev';if(ms)ms.send({action:'plugin',plugin:'usertracer',pluginaction:'getTimeline',nodeid:n,limit:5000});}
+function loadXrefUser(){var u=document.getElementById('xrefUser').value;if(!u){document.getElementById('xrefUserResult').innerHTML='<div class="empty">Selecione um usuário.</div>';return;}document.getElementById('xrefUserResult').innerHTML='<div class="loading">Buscando...</div>';document.getElementById('hintUser').textContent='';_xrefPending='user';document.getElementById('gantt').innerHTML='<div class="loading">Carregando...</div>';document.getElementById('tlFilter').textContent='Usuário: '+esc(u);if(ms)ms.send({action:'plugin',plugin:'usertracer',pluginaction:'getTimeline',username:u,startDate:document.getElementById('dStart').value+'T00:00:00',endDate:document.getElementById('dEnd').value+'T23:59:59.999',limit:8000});}
+function loadXrefDev(){var n=document.getElementById('xrefDev').value;if(!n){document.getElementById('xrefDevResult').innerHTML='<div class="empty">Selecione um dispositivo.</div>';return;}document.getElementById('xrefDevResult').innerHTML='<div class="loading">Buscando...</div>';document.getElementById('hintDev').textContent='';_xrefPending='dev';document.getElementById('gantt').innerHTML='<div class="loading">Carregando...</div>';document.getElementById('tlFilter').textContent='Dispositivo: '+esc(document.getElementById('xrefDev').options[document.getElementById('xrefDev').selectedIndex].text);if(ms)ms.send({action:'plugin',plugin:'usertracer',pluginaction:'getTimeline',nodeid:n,startDate:document.getElementById('dStart').value+'T00:00:00',endDate:document.getElementById('dEnd').value+'T23:59:59.999',limit:8000});}
 function renderXrefUser(e){e=e||[];document.getElementById('sEvents').textContent=e.length;if(!e.length){document.getElementById('xrefUserResult').innerHTML='<div class="empty">Nenhum evento encontrado.</div>';return;}
   var by={};e.forEach(function(v){var n=v.nodeName||v.nodeid||'?';if(!by[n])by[n]={name:n,events:[]};by[n].events.push(v);});
   var names=Object.keys(by).sort();document.getElementById('hintUser').textContent=e.length+' eventos em '+names.length+' dispositivos';
@@ -275,7 +241,7 @@ function renderXrefDev(e){e=e||[];document.getElementById('sEvents').textContent
   try{
     var ph=(top&&top.pluginHandler&&top.pluginHandler.usertracer)||(parent&&parent.pluginHandler&&parent.pluginHandler.usertracer);
     if(ph){
-      ph.timeline=function(m){if(m&&m.data&&Array.isArray(m.data)){dlog('PHOK','timeline n='+m.data.length);if(_xrefPending==='user'){renderXrefUser(m.data);_xrefPending='';}else if(_xrefPending==='dev'){renderXrefDev(m.data);_xrefPending='';}else renderTimeline(m.data,m._pwrMap);}else dlog('PHSKIP','timeline',typeof m);};
+      ph.timeline=function(m){if(m&&m.data&&Array.isArray(m.data)){dlog('PHOK','timeline n='+m.data.length);if(_xrefPending==='user'){renderXrefUser(m.data);_xrefPending='';renderTimeline(m.data,m._pwrMap);}else if(_xrefPending==='dev'){renderXrefDev(m.data);_xrefPending='';renderTimeline(m.data,m._pwrMap);}else renderTimeline(m.data,m._pwrMap);}else dlog('PHSKIP','timeline',typeof m);};
       ph.deviceNames=function(m){if(m&&m.data&&Array.isArray(m.data)){dlog('PHOK','deviceNames n='+m.data.length);renderDeviceNames(m.data);}else dlog('PHSKIP','deviceNames',typeof m);};
       ph.userNames=function(m){if(m&&m.data&&Array.isArray(m.data)){dlog('PHOK','userNames n='+m.data.length);renderUserNames(m.data);}else dlog('PHSKIP','userNames',typeof m);};
       dlog('PH','registered');
@@ -289,7 +255,7 @@ function renderXrefDev(e){e=e||[];document.getElementById('sEvents').textContent
         dlog('WS',d.method,Array.isArray(d.data)?('n='+d.data.length):typeof d.data);
         if(d.method==='deviceNames')renderDeviceNames(d.data||[]);
         else if(d.method==='userNames')renderUserNames(d.data||[]);
-        else if(d.method==='timeline'){if(_xrefPending==='user'){renderXrefUser(d.data||[]);_xrefPending='';}else if(_xrefPending==='dev'){renderXrefDev(d.data||[]);_xrefPending='';}else renderTimeline(d.data||[],d._pwrMap);}
+        else if(d.method==='timeline'){if(_xrefPending==='user'){renderXrefUser(d.data||[]);_xrefPending='';renderTimeline(d.data||[],d._pwrMap);}else if(_xrefPending==='dev'){renderXrefDev(d.data||[]);_xrefPending='';renderTimeline(d.data||[],d._pwrMap);}else renderTimeline(d.data||[],d._pwrMap);}
       }}catch(ex){}
     };
     try{ws.addEventListener('message',handler);did=true;}catch(ex){dlog('WSE','addEventListener',ex.message);}

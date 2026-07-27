@@ -2,6 +2,13 @@
 
 
 
+## 3.5.28 (2026-07-27)
+
+### UI
+- Timeline simplificada: apenas período + datas
+- Filtro por usuário/dispositivo via selects do cruzamento
+- Xref + Gantt atualizam juntos
+
 ## 3.5.27 (2026-07-27)
 
 ### Fixes
