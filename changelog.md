@@ -2,6 +2,12 @@
 
 
 
+## 3.5.31 (2026-07-27)
+
+### Fixes
+- `splitUser is not defined` no admin — função faltava
+- `_xrefPending` sempre limpo mesmo em erro
+
 ## 3.5.30 (2026-07-27)
 
 ### Fixes
