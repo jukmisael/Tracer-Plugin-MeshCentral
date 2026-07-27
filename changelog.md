@@ -2,6 +2,12 @@
 
 
 
+## 3.5.47 (2026-07-27)
+
+### Ajustes
+- Step dinâmico conforme span: 5min, 15min, 30min, 1h, 3h, 6h, 12h
+- Label das ticks mostra HH:MM para steps < 1h
+
 ## 3.5.46 (2026-07-27)
 
 ### Ajustes
