@@ -2,6 +2,11 @@
 
 
 
+## 3.5.9 (2026-07-27)
+
+### Fixes
+- Mensagem consumida pelo MeshCentral: registrar handler em `pluginHandler.usertracer[method]`
+
 ## 3.5.8 (2026-07-27)
 
 ### Fixes

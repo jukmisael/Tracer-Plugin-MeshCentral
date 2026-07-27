@@ -145,16 +145,13 @@ function renderGantt(events){
   if(isNaN(rs)||isNaN(re)||re<=rs){rs=Infinity;re=-Infinity;events.forEach(function(e){var t=new Date(e.detectedAt).getTime();if(t<rs)rs=t;if(t>re)re=t;});if(re<=rs)re=rs+86400000;}
   _renderGantt(events,rs,re);
 }
-if(ms&&ms.socket){
-  ms.socket.addEventListener('message',function(event){
-    try{
-      var d=JSON.parse(event.data);
-      if(d.action==='plugin'&&d.plugin==='usertracer'){
-        if(d.method==='timeline')renderGantt(d.data||[]);
-      }
-    }catch(e){}
-  });
-}
+(function(){
+  try{
+    var ph=(top&&top.pluginHandler&&top.pluginHandler.usertracer)||(parent&&parent.pluginHandler&&parent.pluginHandler.usertracer);
+    if(ph){ph.timeline=function(m){renderGantt(m.data||[]);};dlog('PH','timeline handler registered');}
+    else {dlog('PH','pluginHandler not found');if(ms&&ms.socket){ms.socket.addEventListener('message',function(e){try{var d=JSON.parse(e.data);if(d.action==='plugin'&&d.plugin==='usertracer'&&d.method==='timeline')renderGantt(d.data||[]);}catch(ex){}});}}
+  }catch(e){dlog('PH','err',e.message);}
+})();
 setRange('7d',document.querySelector('.btn-chip[data-r="7d"]'));
 loadHistory();
 </script>

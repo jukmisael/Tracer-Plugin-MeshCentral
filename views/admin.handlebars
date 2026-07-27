@@ -217,19 +217,17 @@ function renderXrefDev(e){e=e||[];document.getElementById('sEvents').textContent
   var h='<div class="stacked">';names.forEach(function(u){var g=by[u],evs=g.events.sort(function(a,b){return new Date(b.detectedAt)-new Date(a.detectedAt);}),last=evs[0],first=evs[evs.length-1],un=splitUser(g.user),em=eventMeta(last.eventType);h+='<div class="scard"><div style="flex:1"><div class="tag">'+esc(un.user||g.user)+'</div><div class="tagl">'+(g.domain?esc(g.domain)+' · ':'')+evs.length+' eventos · '+fmtDate(first.detectedAt)+' → '+(em.endLabel||fmtDate(last.detectedAt))+'</div></div><span class="badge" style="color:'+em.color+'">'+em.label+'</span></div>';});
   h+='</div>';document.getElementById('xrefDevResult').innerHTML=h;
 }
-if(ms&&ms.socket){
-  ms.socket.addEventListener('message',function(event){
-    try{
-      var d=JSON.parse(event.data);
-      if(d.action==='plugin'&&d.plugin==='usertracer'){
-        dlog('WS',d.method,Array.isArray(d.data)?('n='+d.data.length):typeof d.data);
-        if(d.method==='deviceNames')renderDeviceNames(d.data||[]);
-        else if(d.method==='userNames')renderUserNames(d.data||[]);
-        else if(d.method==='timeline'){if(_xrefPending==='user'){renderXrefUser(d.data||[]);_xrefPending='';}else if(_xrefPending==='dev'){renderXrefDev(d.data||[]);_xrefPending='';}else renderTimeline(d.data||[]);}
-      }
-    }catch(e){}
-  });
-}
+(function(){
+  try{
+    var ph=(top&&top.pluginHandler&&top.pluginHandler.usertracer)||(parent&&parent.pluginHandler&&parent.pluginHandler.usertracer);
+    if(ph){
+      ph.timeline=function(m){dlog('PH','timeline',Array.isArray(m.data)?('n='+m.data.length):typeof m.data);if(_xrefPending==='user'){renderXrefUser(m.data||[]);_xrefPending='';}else if(_xrefPending==='dev'){renderXrefDev(m.data||[]);_xrefPending='';}else renderTimeline(m.data||[]);};
+      ph.deviceNames=function(m){dlog('PH','deviceNames',Array.isArray(m.data)?('n='+m.data.length):typeof m.data);renderDeviceNames(m.data||[]);};
+      ph.userNames=function(m){dlog('PH','userNames',Array.isArray(m.data)?('n='+m.data.length):typeof m.data);renderUserNames(m.data||[]);};
+      dlog('PH','handlers registered (timeline,deviceNames,userNames)');
+    } else {dlog('PH','pluginHandler not found');if(ms&&ms.socket){ms.socket.addEventListener('message',function(e){try{var d=JSON.parse(e.data);if(d.action==='plugin'&&d.plugin==='usertracer'){dlog('WS',d.method);if(d.method==='deviceNames')renderDeviceNames(d.data||[]);else if(d.method==='userNames')renderUserNames(d.data||[]);else if(d.method==='timeline'){if(_xrefPending==='user'){renderXrefUser(d.data||[]);_xrefPending='';}else if(_xrefPending==='dev'){renderXrefDev(d.data||[]);_xrefPending='';}else renderTimeline(d.data||[]);}}}catch(ex){}});}}
+  }catch(e){dlog('PH','err',e.message);}
+})();
 setRange('7d',document.querySelector('.btn-chip[data-r="7d"]'));
 document.addEventListener('DOMContentLoaded',function(){loadDeviceNames();loadUserNames();});
 </script>
