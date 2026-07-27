@@ -2,6 +2,11 @@
 
 
 
+## 3.5.5 (2026-07-27)
+
+### Fixes
+- `gotonode`: remove prefix `node//` antes de montar URL
+
 ## 3.5.4 (2026-07-27)
 
 ### Fixes
