@@ -2,6 +2,11 @@
 
 
 
+## 3.5.44 (2026-07-27)
+
+### Fixes
+- `getPct` corrigido: inclui `scrollLeft` e `scrollWidth` (scroll horizontal quebrava o cálculo)
+
 ## 3.5.43 (2026-07-27)
 
 ### Fixes

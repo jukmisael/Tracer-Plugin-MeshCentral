@@ -224,8 +224,12 @@ function setupGanttDrag(){
   var wrap=document.querySelector('.gantt-wrap');if(!wrap)return;
   var sel=null,ov=null;
   function getPct(e){
+    var wrap=document.querySelector('.gantt-wrap');
+    if(!wrap)return 0;
     var rect=wrap.getBoundingClientRect();
-    return Math.max(0,Math.min(100,((e.clientX-rect.left)/rect.width)*100));
+    var content=wrap.firstElementChild;// inner flex container
+    var cw=content?content.scrollWidth:rect.width;
+    return Math.max(0,Math.min(100,((e.clientX-rect.left+wrap.scrollLeft)/cw)*100));
   }
   function stopDrag(){
     if(ov){ov.remove();ov=null;}
