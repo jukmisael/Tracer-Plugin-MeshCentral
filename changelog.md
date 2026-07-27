@@ -2,6 +2,12 @@
 
 
 
+## 3.5.30 (2026-07-27)
+
+### Fixes
+- WS/ph handler: `renderTimeline` sempre executado mesmo se xref falhar
+- Log de erros `WS_XREF_ERR`/`PH_XREF_ERR` no debug panel
+
 ## 3.5.29 (2026-07-27)
 
 ### Features

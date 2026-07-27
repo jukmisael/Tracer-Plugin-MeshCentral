@@ -252,7 +252,7 @@ function renderXrefDev(e){e=e||[];document.getElementById('sEvents').textContent
   try{
     var ph=(top&&top.pluginHandler&&top.pluginHandler.usertracer)||(parent&&parent.pluginHandler&&parent.pluginHandler.usertracer);
     if(ph){
-      ph.timeline=function(m){if(m&&m.data&&Array.isArray(m.data)){dlog('PHOK','timeline n='+m.data.length);if(_xrefPending==='user'){renderXrefUser(m.data);_xrefPending='';renderTimeline(m.data,m._pwrMap);}else if(_xrefPending==='dev'){renderXrefDev(m.data);_xrefPending='';renderTimeline(m.data,m._pwrMap);}else renderTimeline(m.data,m._pwrMap);}else dlog('PHSKIP','timeline',typeof m);};
+      ph.timeline=function(m){if(m&&m.data&&Array.isArray(m.data)){dlog('PHOK','timeline n='+m.data.length);try{if(_xrefPending==='user'){renderXrefUser(m.data);_xrefPending='';}else if(_xrefPending==='dev'){renderXrefDev(m.data);_xrefPending='';}}catch(ex2){dlog('PH_XREF_ERR',ex2.message);}renderTimeline(m.data,m._pwrMap);}else dlog('PHSKIP','timeline',typeof m);};
       ph.deviceNames=function(m){if(m&&m.data&&Array.isArray(m.data)){dlog('PHOK','deviceNames n='+m.data.length);renderDeviceNames(m.data);}else dlog('PHSKIP','deviceNames',typeof m);};
       ph.userNames=function(m){if(m&&m.data&&Array.isArray(m.data)){dlog('PHOK','userNames n='+m.data.length);renderUserNames(m.data);}else dlog('PHSKIP','userNames',typeof m);};
       dlog('PH','registered');
@@ -266,7 +266,13 @@ function renderXrefDev(e){e=e||[];document.getElementById('sEvents').textContent
         dlog('WS',d.method,Array.isArray(d.data)?('n='+d.data.length):typeof d.data);
         if(d.method==='deviceNames')renderDeviceNames(d.data||[]);
         else if(d.method==='userNames')renderUserNames(d.data||[]);
-        else if(d.method==='timeline'){if(_xrefPending==='user'){renderXrefUser(d.data||[]);_xrefPending='';renderTimeline(d.data||[],d._pwrMap);}else if(_xrefPending==='dev'){renderXrefDev(d.data||[]);_xrefPending='';renderTimeline(d.data||[],d._pwrMap);}else renderTimeline(d.data||[],d._pwrMap);}
+        else if(d.method==='timeline'){
+          try{
+            if(_xrefPending==='user'){renderXrefUser(d.data||[]);_xrefPending='';}
+            else if(_xrefPending==='dev'){renderXrefDev(d.data||[]);_xrefPending='';}
+          }catch(ex2){dlog('WS_XREF_ERR',ex2.message);}
+          renderTimeline(d.data||[],d._pwrMap);
+        }
       }}catch(ex){}
     };
     try{ws.addEventListener('message',handler);did=true;}catch(ex){dlog('WSE','addEventListener',ex.message);}
