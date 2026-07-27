@@ -2,6 +2,11 @@
 
 
 
+## 3.5.43 (2026-07-27)
+
+### Fixes
+- Drag-to-select: usa `_fullRange` em vez de `_savedRange` para evitar escala corrompida
+
 ## 3.5.42 (2026-07-27)
 
 ### Fixes

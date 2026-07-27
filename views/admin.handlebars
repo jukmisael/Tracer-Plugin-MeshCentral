@@ -66,8 +66,8 @@ body{font-family:"Trebuchet MS",Arial,Helvetica,sans-serif;background:#d3d9d6;co
 <div class="panel">
   <div class="panel-title">Timeline</div>
   <div class="toolbar">
-    <label>De</label><input type="date" id="dStart" onchange="_selectedRange=null;loadTimeline()">
-    <label>Até</label><input type="date" id="dEnd" onchange="_selectedRange=null;loadTimeline()">
+    <label>De</label><input type="date" id="dStart" onchange="_selectedRange=null;_fullRange=null;loadTimeline()">
+    <label>Até</label><input type="date" id="dEnd" onchange="_selectedRange=null;_fullRange=null;loadTimeline()">
     <span class="muted" style="margin-left:6px" id="tlFilter"></span>
   </div>
   <div id="gantt"><div class="empty">Selecione um usuário ou dispositivo abaixo.</div></div>
@@ -101,7 +101,7 @@ body{font-family:"Trebuchet MS",Arial,Helvetica,sans-serif;background:#d3d9d6;co
 
 <script>
 var D=[],ms=(typeof top!=='undefined'&&top.meshserver)||(typeof parent!=='undefined'&&parent.meshserver)||window.meshserver;
-var _allDevices=[],_allUsers=[],_xrefPending='',_selectedRange=null,selectedDevs={};
+var _allDevices=[],_allUsers=[],_xrefPending='',_selectedRange=null,_fullRange=null,selectedDevs={};
 var _savedEvents=[],_savedRange={rs:0,re:0};
 function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 function segColor(st,op){return st==='lock'?'#e65100':st==='logout'?'#888':'#2e7d32';}
@@ -166,6 +166,7 @@ function buildSessions(events,rs,re){
 }
 function _renderGantt(events,rs,re,pwrMap){
   _savedEvents=events;_savedRange={rs:rs,re:re};
+  if(!_selectedRange)_fullRange={rs:rs,re:re};
   document.getElementById('sEvents').textContent=events.length;
   var total=re-rs,sessions=buildSessions(events,rs,re),dayMs=86400000,hourMs=3600000,span=total/dayMs;
   var step=span<=1?hourMs:(span<=7?hourMs*3:(span<=14?dayMs:dayMs*2));
@@ -228,10 +229,10 @@ function setupGanttDrag(){
   }
   function stopDrag(){
     if(ov){ov.remove();ov=null;}
-    if(sel&&_savedRange){
-      var total=_savedRange.re-_savedRange.rs,pctStart=Math.min(sel.s,sel.e),pctEnd=Math.max(sel.s,sel.e);
+    if(sel&&_fullRange){
+      var total=_fullRange.re-_fullRange.rs,pctStart=Math.min(sel.s,sel.e),pctEnd=Math.max(sel.s,sel.e);
       if(pctEnd-pctStart>0.5){
-        var newRs=_savedRange.rs+total*pctStart/100,newRe=_savedRange.rs+total*pctEnd/100;
+        var newRs=_fullRange.rs+total*pctStart/100,newRe=_fullRange.rs+total*pctEnd/100;
         _selectedRange={rs:newRs,re:newRe};
         document.getElementById('tlFilter').textContent=new Date(newRs).toLocaleTimeString()+' → '+new Date(newRe).toLocaleTimeString()+' ('+fmtDur(newRe-newRs)+')';
         var u=document.getElementById('xrefUser').value,d=document.getElementById('xrefDev').value;
@@ -262,14 +263,14 @@ function gotoUser(displayUser){
   for(var i=0;i<sel.options.length;i++){if(sel.options[i].textContent===displayUser||sel.options[i].value===displayUser){sel.selectedIndex=i;loadXrefUser();return;}}
 }
 function resetUserFilter(){
-  _selectedRange=null;
+  _selectedRange=null;_fullRange=null;
   document.getElementById('xrefUser').value='';document.getElementById('xrefUserResult').innerHTML='<div class="empty">Selecione um usuário.</div>';
   document.getElementById('hintUser').textContent='';_populateXrefDevs(_allDevices);
   document.getElementById('xrefDevResult').innerHTML='<div class="empty">Selecione um dispositivo.</div>';document.getElementById('hintDev').textContent='';
   document.getElementById('tlFilter').textContent='';document.getElementById('gantt').innerHTML='<div class="empty">Selecione um usuário ou dispositivo.</div>';
 }
 function resetDevFilter(){
-  _selectedRange=null;
+  _selectedRange=null;_fullRange=null;
   document.getElementById('xrefDev').value='';document.getElementById('xrefDevResult').innerHTML='<div class="empty">Selecione um dispositivo.</div>';
   document.getElementById('hintDev').textContent='';_populateXrefDevs(_allDevices);
   document.getElementById('xrefUserResult').innerHTML='<div class="empty">Selecione um usuário.</div>';document.getElementById('hintUser').textContent='';
