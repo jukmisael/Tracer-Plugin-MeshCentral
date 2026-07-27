@@ -2,6 +2,11 @@
 
 
 
+## 3.5.16 (2026-07-27)
+
+### Fixes
+- `esc is not defined`: função `esc()` acidentalmente removida ao adicionar `segColor()`
+
 ## 3.5.15 (2026-07-27)
 
 ### Debug
