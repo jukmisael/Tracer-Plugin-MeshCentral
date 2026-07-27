@@ -164,10 +164,6 @@ function selectAllDevs(yes){
   if(yes)_allDevices.forEach(function(d){selectedDevs[d.nodeid]=true;});
   renderDevList();
 }
-  selectedDevs={};
-  if(yes)_allDevices.forEach(function(d){selectedDevs[d.nodeid]=true;});
-  renderDevList();
-}
 function loadTimeline(){
   applyDevSelect();
   var s=document.getElementById('dStart').value,e=document.getElementById('dEnd').value;

@@ -2,6 +2,11 @@
 
 
 
+## 3.5.27 (2026-07-27)
+
+### Fixes
+- JS syntax: linhas órfãs duplicadas após selectAllDevs
+
 ## 3.5.26 (2026-07-27)
 
 ### UI
