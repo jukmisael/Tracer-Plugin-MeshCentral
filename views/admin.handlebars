@@ -210,7 +210,12 @@ function _renderGantt(events,rs,re,pwrMap){
 }
 function renderTimeline(events,pwrMap){events=events||[];
   if(!events.length){document.getElementById('gantt').innerHTML='<div class="empty">Nenhum evento no período.</div>';return;}
-  var rs=new Date(document.getElementById('dStart').value+'T00:00:00').getTime(),re=new Date(document.getElementById('dEnd').value+'T23:59:59.999').getTime();
+  var rs,re;
+  if(_selectedRange){rs=_selectedRange.rs;re=_selectedRange.re;}
+  else{
+    rs=new Date(document.getElementById('dStart').value+'T00:00:00').getTime();
+    re=new Date(document.getElementById('dEnd').value+'T23:59:59.999').getTime();
+  }
   if(isNaN(rs)||isNaN(re)||re<=rs){rs=Infinity;re=-Infinity;events.forEach(function(e){var t=new Date(e.detectedAt).getTime();if(t<rs)rs=t;if(t>re)re=t;});if(re<=rs)re=rs+86400000;}
   _renderGantt(events,rs,re,pwrMap);
 }

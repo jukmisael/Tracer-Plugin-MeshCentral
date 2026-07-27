@@ -2,6 +2,11 @@
 
 
 
+## 3.5.42 (2026-07-27)
+
+### Fixes
+- `renderTimeline` usa `_selectedRange` quando disponível (zoom sub-dia)
+
 ## 3.5.41 (2026-07-27)
 
 ### Features
