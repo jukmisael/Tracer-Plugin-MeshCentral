@@ -2,6 +2,11 @@
 
 
 
+## 3.5.36 (2026-07-27)
+
+### Fixes
+- JS syntax: `}` faltando no `renderXrefDev`
+
 ## 3.5.35 (2026-07-27)
 
 ### Fixes

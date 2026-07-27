@@ -251,6 +251,7 @@ function renderXrefDev(e){e=e||[];document.getElementById('sEvents').textContent
     var usrSel=document.getElementById('xrefUser');var curVal=usrSel.value;usrSel.innerHTML='<option value="">— Relacionados —</option>';
     names.forEach(function(u){var g=by[u];var un=splitUser(g.user);var opt=document.createElement('option');opt.value=(un.user||g.user);opt.textContent=(g.domain?g.domain+'\\':'')+(un.user||g.user);if((un.user||g.user)===curVal)opt.selected=true;usrSel.appendChild(opt);});
   }
+}
 (function(){
   // pluginHandler registration (MeshCentral chama na inicialização, ignoramos se for meshserver obj)
   try{
