@@ -2,6 +2,12 @@
 
 
 
+## 3.5.3 (2026-07-27)
+
+### Fixes
+- Navegação: `?viewmode=10&gotonode=` agora usa path root-relative (`/`)
+- device.handlebars: remove query duplicada no iframe
+
 ## 3.5.2 (2026-07-24)
 
 ### Limpeza e navegação
