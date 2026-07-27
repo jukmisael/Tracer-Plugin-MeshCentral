@@ -8,6 +8,11 @@
 - **Seta ▾** ao lado do input: clica para limpar o campo e mostrar TODAS as opções do datalist de uma vez, sem precisar digitar.
 - **Restore on blur**: se clicar fora sem selecionar, o input volta a exibir a seleção anterior.
 
+## 3.5.62 (2026-07-27)
+
+### Changed
+- **Dropdown: input é o próprio campo de busca**: a barra de seleção virou um `<input>` que ao clicar remove o readonly e vira campo de busca. Um só elemento — sem barra de seleção separada do search input.
+
 ## 3.5.61 (2026-07-27)
 
 ### Fixed
