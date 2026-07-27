@@ -2,6 +2,11 @@
 
 
 
+## 3.5.32 (2026-07-27)
+
+### Ajustes
+- Dropdowns sempre mostram todos usuários/dispositivos (sem filtro vinculado)
+
 ## 3.5.31 (2026-07-27)
 
 ### Fixes
