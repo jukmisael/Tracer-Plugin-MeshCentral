@@ -110,9 +110,9 @@ var D=[],ms=(typeof top!=='undefined'&&top.meshserver)||(typeof parent!=='undefi
 var _allDevices=[],_allUsers=[],_xrefPending='',selectedDevs={};
 var _savedEvents=[],_savedRange={rs:0,re:0};
 function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
-function segColor(st,op){return st==='lock'?'#e65100':st==='unlock'?'#ff8f00':st==='login'?'#2e7d32':'#888';}
+function segColor(st,op){return st==='lock'?'#e65100':st==='logout'?'#888':'#2e7d32';}
 function dlog(){var a=Array.prototype.slice.call(arguments);D.push(new Date().toLocaleTimeString()+' '+a.join(' '));var e=document.getElementById('debug');if(e)e.innerHTML=D.slice(-80).join('\n');}
-function eventMeta(t){return{color:t==='userLogin'?'#2e7d32':t==='userLock'?'#e65100':t==='userUnlock'?'#ff8f00':'#888',label:t==='userLogin'?'Online':t==='userLock'?'Bloqueado':t==='userUnlock'?'Desbloqueado':'Offline',endLabel:t==='userLogin'?'<b>Agora</b>':t==='userUnlock'?'<b>Desbloqueado</b>':''};}
+function eventMeta(t){return{color:t==='userLock'?'#e65100':t==='userLogout'?'#888':'#2e7d32',label:t==='userLock'?'Bloqueado':t==='userLogout'?'Offline':'Online',endLabel:t==='userLogin'?'<b>Agora</b>':t==='userUnlock'?'<b>Agora</b>':''};}
 function fmtDate(d){var x=new Date(d);if(isNaN(x))return'—';var m=x.getMonth()+1,day=x.getDate();return (day<10?'0':'')+day+'/'+(m<10?'0':'')+m+' '+x.getHours()+':'+(x.getMinutes()<10?'0':'')+x.getMinutes();}
 function fmtShort(d){var x=new Date(d);if(isNaN(x))return'—';return (x.getDate()<10?'0':'')+x.getDate()+'/'+(x.getMonth()+1<10?'0':'')+(x.getMonth()+1)+' '+x.getHours()+':'+(x.getMinutes()<10?'0':'')+x.getMinutes();}
 function fmtDur(ms){if(ms<0)ms=0;var m=Math.floor(ms/60000),h=Math.floor(m/60),d=Math.floor(h/24);m%=60;h%=24;if(d>0)return d+'d '+h+'h';if(h>0)return h+'h '+m+'m';return m+'m';}

@@ -74,8 +74,8 @@ var D=[], nodeid='{{nodeid}}', nodeName='{{nodeName}}';
 var ms=(typeof top!=='undefined'&&top.meshserver)||(typeof parent!=='undefined'&&parent.meshserver)||window.meshserver;
 var COLORS=['#003366','#1565c0','#2e7d32','#6a1b9a','#00838f','#ef6c00','#c62828','#455a64'];
 var _savedEvents=[];function dlog(){var a=Array.prototype.slice.call(arguments);D.push(new Date().toLocaleTimeString()+' '+a.join(' '));var e=document.getElementById('debug');if(e)e.innerHTML=D.slice(-60).join('\n');}
-function eventMeta(t){return{color:t==='userLogin'?'#2e7d32':t==='userLock'?'#e65100':t==='userUnlock'?'#ff8f00':'#888',label:t==='userLogin'?'Online':t==='userLock'?'Bloqueado':t==='userUnlock'?'Desbloqueado':'Offline',endLabel:t==='userLogin'?'<b>Agora</b>':t==='userUnlock'?'<b>Desbloqueado</b>':null};}
-function segColor(st,op){return st==='lock'?'#e65100':st==='unlock'?'#ff8f00':st==='login'?'#2e7d32':'#888';}
+function eventMeta(t){return{color:t==='userLock'?'#e65100':t==='userLogout'?'#888':'#2e7d32',label:t==='userLock'?'Bloqueado':t==='userLogout'?'Offline':'Online',endLabel:t==='userLogin'?'<b>Agora</b>':t==='userUnlock'?'<b>Agora</b>':null};}
+function segColor(st,op){return st==='lock'?'#e65100':st==='logout'?'#888':'#2e7d32';}
 function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 function colorFor(k){var h=0,s=String(k||'');for(var i=0;i<s.length;i++)h=((h<<5)-h)+s.charCodeAt(i)|0;return COLORS[Math.abs(h)%COLORS.length];}
 function splitUser(u){var p=String(u||'').split('\\');return p.length>1?{d:p[0],u:p[1]}:{d:'',u:u||''};}

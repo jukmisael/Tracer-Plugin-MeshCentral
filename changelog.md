@@ -2,6 +2,12 @@
 
 
 
+## 3.5.21 (2026-07-27)
+
+### Ajustes
+- Desbloqueado → Online (mesma cor verde)
+- Apenas Bloqueado (laranja) e Offline (cinza) destoam
+
 ## 3.5.20 (2026-07-27)
 
 ### Ajustes
