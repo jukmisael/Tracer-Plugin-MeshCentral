@@ -235,13 +235,21 @@ function renderXrefUser(e){e=e||[];document.getElementById('sEvents').textConten
   var names=Object.keys(by).sort();document.getElementById('hintUser').textContent=e.length+' eventos em '+names.length+' dispositivos';
   var h='<div class="stacked">';names.forEach(function(n){var evs=by[n].events.sort(function(a,b){return new Date(b.detectedAt)-new Date(a.detectedAt);}),last=evs[0],first=evs[evs.length-1],em=eventMeta(last.eventType);h+='<div class="scard" style="cursor:pointer" onclick="gotoDev(\''+esc(by[n].nodeid)+'\')"><div style="flex:1"><div class="tag">'+esc(n)+'</div><div class="tagl">'+evs.length+' eventos · '+fmtDate(first.detectedAt)+' → '+(em.endLabel||fmtDate(last.detectedAt))+'</div></div><span class="badge" style="color:'+em.color+'">'+em.label+'</span></div>';});
   h+='</div>';document.getElementById('xrefUserResult').innerHTML=h;
-}
+  // Se usuario selecionado, filtra dispositivos relacionados
+  if(document.getElementById('xrefUser').value){
+    var devSel=document.getElementById('xrefDev');var curVal=devSel.value;devSel.innerHTML='<option value="">— Relacionados —</option>';
+    names.forEach(function(n){var d=by[n];var opt=document.createElement('option');opt.value=d.nodeid;opt.textContent=n;if(d.nodeid===curVal)opt.selected=true;devSel.appendChild(opt);});
+  }
 function renderXrefDev(e){e=e||[];document.getElementById('sEvents').textContent=e.length;if(!e.length){document.getElementById('xrefDevResult').innerHTML='<div class="empty">Nenhum evento encontrado.</div>';return;}
   var by={};e.forEach(function(v){var u=v.displayUser||v.username||'?';if(!by[u])by[u]={user:u,domain:v.domain,events:[]};by[u].events.push(v);});
   var names=Object.keys(by).sort();document.getElementById('hintDev').textContent=e.length+' eventos de '+names.length+' usuários';
   var h='<div class="stacked">';names.forEach(function(u){var g=by[u],evs=g.events.sort(function(a,b){return new Date(b.detectedAt)-new Date(a.detectedAt);}),last=evs[0],first=evs[evs.length-1],un=splitUser(g.user),em=eventMeta(last.eventType);h+='<div class="scard" style="cursor:pointer" onclick="gotoUser(\''+esc(un.user||g.user)+'\')"><div style="flex:1"><div class="tag">'+esc(un.user||g.user)+'</div><div class="tagl">'+(g.domain?esc(g.domain)+' · ':'')+evs.length+' eventos · '+fmtDate(first.detectedAt)+' → '+(em.endLabel||fmtDate(last.detectedAt))+'</div></div><span class="badge" style="color:'+em.color+'">'+em.label+'</span></div>';});
   h+='</div>';document.getElementById('xrefDevResult').innerHTML=h;
-}
+  // Se dispositivo selecionado, filtra usuarios relacionados
+  if(document.getElementById('xrefDev').value){
+    var usrSel=document.getElementById('xrefUser');var curVal=usrSel.value;usrSel.innerHTML='<option value="">— Relacionados —</option>';
+    names.forEach(function(u){var g=by[u];var un=splitUser(g.user);var opt=document.createElement('option');opt.value=(un.user||g.user);opt.textContent=(g.domain?g.domain+'\\':'')+(un.user||g.user);if((un.user||g.user)===curVal)opt.selected=true;usrSel.appendChild(opt);});
+  }
 (function(){
   // pluginHandler registration (MeshCentral chama na inicialização, ignoramos se for meshserver obj)
   try{

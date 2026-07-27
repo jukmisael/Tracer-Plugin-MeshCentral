@@ -2,6 +2,11 @@
 
 
 
+## 3.5.34 (2026-07-27)
+
+### Ajustes
+- Filtragem vinculada re-adicionada: só filtra quando um filtro está ativo
+
 ## 3.5.33 (2026-07-27)
 
 ### Fixes
