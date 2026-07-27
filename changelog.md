@@ -2,6 +2,13 @@
 
 
 
+## 3.5.29 (2026-07-27)
+
+### Features
+- Filtros vinculados: selecionar usuário filtra dispositivos relacionados e vice-versa
+- Cards clicáveis: clica no dispositivo → abre timeline dele, clica no usuário → abre timeline
+- Botões reset (✕) para limpar cada filtro
+
 ## 3.5.28 (2026-07-27)
 
 ### UI
