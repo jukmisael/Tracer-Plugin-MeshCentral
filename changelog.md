@@ -2,6 +2,12 @@
 
 
 
+## 3.5.14 (2026-07-27)
+
+### Features
+- Gantt: segmentos unificados em barra contínua com cores por estado
+- Tooltip no hover com: usuário, horário, estado, duração
+
 ## 3.5.13 (2026-07-27)
 
 ### Features
