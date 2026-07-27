@@ -2,6 +2,11 @@
 
 
 
+## 3.5.50 (2026-07-27)
+
+### Fixes
+- Drag usa `_savedRange` (range atual do Gantt) em vez de `_fullRange` — arrastos subsequentes funcionam no zoom
+
 ## 3.5.49 (2026-07-27)
 
 ### Fixes

@@ -235,10 +235,10 @@ function setupGanttDrag(){
   }
   function stopDrag(){
     if(ov){ov.remove();ov=null;}
-    if(sel&&_fullRange){
-      var total=_fullRange.re-_fullRange.rs,pctStart=Math.min(sel.s,sel.e),pctEnd=Math.max(sel.s,sel.e);
+    if(sel&&_savedRange&&_savedRange.re>_savedRange.rs){
+      var total=_savedRange.re-_savedRange.rs,pctStart=Math.min(sel.s,sel.e),pctEnd=Math.max(sel.s,sel.e);
       if(pctEnd-pctStart>0.5){
-        var newRs=_fullRange.rs+total*pctStart/100,newRe=_fullRange.rs+total*pctEnd/100;
+        var newRs=_savedRange.rs+total*pctStart/100,newRe=_savedRange.rs+total*pctEnd/100;
         _selectedRange={rs:newRs,re:newRe};
         document.getElementById('tlFilter').textContent=new Date(newRs).toLocaleTimeString()+' → '+new Date(newRe).toLocaleTimeString()+' ('+fmtDur(newRe-newRs)+')';
         var u=document.getElementById('xrefUser').value,d=document.getElementById('xrefDev').value;
