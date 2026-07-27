@@ -240,6 +240,7 @@ function renderXrefUser(e){e=e||[];document.getElementById('sEvents').textConten
     var devSel=document.getElementById('xrefDev');var curVal=devSel.value;devSel.innerHTML='<option value="">— Relacionados —</option>';
     names.forEach(function(n){var d=by[n];var opt=document.createElement('option');opt.value=d.nodeid;opt.textContent=n;if(d.nodeid===curVal)opt.selected=true;devSel.appendChild(opt);});
   }
+}
 function renderXrefDev(e){e=e||[];document.getElementById('sEvents').textContent=e.length;if(!e.length){document.getElementById('xrefDevResult').innerHTML='<div class="empty">Nenhum evento encontrado.</div>';return;}
   var by={};e.forEach(function(v){var u=v.displayUser||v.username||'?';if(!by[u])by[u]={user:u,domain:v.domain,events:[]};by[u].events.push(v);});
   var names=Object.keys(by).sort();document.getElementById('hintDev').textContent=e.length+' eventos de '+names.length+' usuários';
