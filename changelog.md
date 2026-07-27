@@ -8,6 +8,11 @@
 - **Seta ▾** ao lado do input: clica para limpar o campo e mostrar TODAS as opções do datalist de uma vez, sem precisar digitar.
 - **Restore on blur**: se clicar fora sem selecionar, o input volta a exibir a seleção anterior.
 
+## 3.5.60 (2026-07-27)
+
+### Changed
+- **Dropdown reescrito do zero**: substituído `<datalist>` nativo por dropdown customizado (`sd-wrap`/`sd-sel`/`sd-drop`/`sd-opts`) com busca interna, lista de opções, e fechamento automático. Funciona em qualquer browser sem inconsistências.
+
 ## 3.5.58 (2026-07-27)
 
 ### Changed
