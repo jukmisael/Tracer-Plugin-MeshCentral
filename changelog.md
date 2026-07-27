@@ -2,6 +2,12 @@
 
 
 
+## 3.5.38 (2026-07-27)
+
+### Ajustes
+- Botão "Aplicar" removido — filtros aplicam automaticamente
+- Presets de período e datepicker auto-carregam timeline
+
 ## 3.5.37 (2026-07-27)
 
 ### Fixes

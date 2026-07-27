@@ -53,9 +53,7 @@ table.tbl tr:nth-child(even) td{background:#f4f6f5}table.tbl tr:hover td{backgro
     <button class="btn btn-chip" data-r="today" onclick="setRange('today',this)">Hoje</button>
     <button class="btn btn-chip active" data-r="7d" onclick="setRange('7d',this)">7 dias</button>
     <button class="btn btn-chip" data-r="30d" onclick="setRange('30d',this)">30 dias</button>
-    <span class="tbsep"></span>
-    <input type="date" id="dStart"><input type="date" id="dEnd">
-    <button class="btn btn-primary" onclick="loadHistory()">Aplicar</button>
+    <input type="date" id="dStart" onchange="loadHistory()"><input type="date" id="dEnd" onchange="loadHistory()">
   </div>
 </div>
 <div class="panel" style="padding:0;overflow:hidden">
@@ -91,6 +89,7 @@ function setRange(kind,btn){
   if(kind==='today')start=new Date(end.getFullYear(),end.getMonth(),end.getDate());
   else if(kind==='7d')start.setDate(end.getDate()-6);else if(kind==='30d')start.setDate(end.getDate()-29);
   document.getElementById('dStart').value=ymd(start);document.getElementById('dEnd').value=ymd(end);
+  loadHistory();
 }
 function loadHistory(){
   var s=document.getElementById('dStart').value,e=document.getElementById('dEnd').value;

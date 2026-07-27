@@ -71,9 +71,8 @@ body{font-family:"Trebuchet MS",Arial,Helvetica,sans-serif;background:#d3d9d6;co
     <button class="btn btn-chip" data-r="30d" onclick="setRange('30d',this)">30 dias</button>
     <button class="btn btn-chip" data-r="month" onclick="setRange('month',this)">Este mês</button>
     <span class="tbsep"></span>
-    <label>De</label><input type="date" id="dStart">
-    <label>Até</label><input type="date" id="dEnd">
-    <button class="btn btn-primary" onclick="loadTimeline()">Aplicar</button>
+    <label>De</label><input type="date" id="dStart" onchange="loadTimeline()">
+    <label>Até</label><input type="date" id="dEnd" onchange="loadTimeline()">
     <span class="muted" style="margin-left:6px" id="tlFilter"></span>
   </div>
   <div id="gantt"><div class="empty">Selecione um usuário ou dispositivo abaixo.</div></div>
@@ -126,6 +125,7 @@ function setRange(kind,btn){
   else if(kind==='7d'){start.setDate(end.getDate()-6);}else if(kind==='30d'){start.setDate(end.getDate()-29);}
   else if(kind==='month'){start=new Date(end.getFullYear(),end.getMonth(),1);}
   document.getElementById('dStart').value=ymd(start);document.getElementById('dEnd').value=ymd(end);
+  loadTimeline();
 }
 function loadDeviceNames(){if(ms)ms.send({action:'plugin',plugin:'usertracer',pluginaction:'getDeviceNames'});}
 function renderDeviceNames(list){
