@@ -2,6 +2,12 @@
 
 
 
+## 3.5.18 (2026-07-27)
+
+### Ajustes
+- Admin: removido nome de usuário de dentro das barras do Gantt (tooltip substitui)
+- Admin: tooltip nas barras individuais (igual ao device)
+
 ## 3.5.17 (2026-07-27)
 
 ### Ajustes

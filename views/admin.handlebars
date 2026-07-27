@@ -194,7 +194,9 @@ function _renderGantt(events,rs,re){
     dev.sessions.forEach(function(s){
       var left=Math.max(0,((s.start-rs)/total)*100),right=Math.min(100,((s.end-rs)/total)*100);if(right<=left)right=left+0.2;
       var w=Math.max(0.25,right-left),c=segColor(s.state,s.open);
-      h+='<div style="position:absolute;top:8px;height:20px;border-radius:2px;min-width:3px;font-size:9px;font-weight:700;color:#fff;padding:0 4px;display:flex;align-items:center;overflow:hidden;white-space:nowrap;border:'+(s.open?'2px dashed':'1px solid')+' rgba(0,0,0,.2);cursor:pointer;left:'+left+'%;width:'+w+'%;background:'+c+'" onclick="top.location.href=\'/?viewmode=10&gotonode='+(s.nodeid||'').replace(/^node\/\//,'')+'\'">'+esc(s.user||'')+'</div>';
+      var em2=eventMeta(s.state==='lock'?'userLock':s.state==='unlock'?'userUnlock':s.state==='login'?'userLogin':'userLogout');
+      var tt='Usuário: '+esc(s.user||s.display)+'\nDe: '+fmtDate(s.start)+'\nAté: '+fmtDate(s.end)+'\nEstado: '+em2.label+'\nDuração: '+fmtDur(s.end-s.start);
+      h+='<div style="position:absolute;top:8px;height:20px;border-radius:2px;min-width:3px;font-size:9px;font-weight:700;color:#fff;padding:0 4px;display:flex;align-items:center;overflow:hidden;white-space:nowrap;border:'+(s.open?'2px dashed':'1px solid')+' rgba(0,0,0,.2);cursor:pointer;left:'+left+'%;width:'+w+'%;background:'+c+'" title="'+esc(tt)+'" onclick="top.location.href=\'/?viewmode=10&gotonode='+(s.nodeid||'').replace(/^node\/\//,'')+'\'"></div>';
     });
     h+='</div></div>';
   });
