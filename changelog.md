@@ -2,6 +2,12 @@
 
 
 
+## 3.5.41 (2026-07-27)
+
+### Features
+- Drag no Gantt usa `_selectedRange` com timestamps precisos (suporta sub-dia)
+- Datepicker limpa `_selectedRange` ao mudar
+
 ## 3.5.40 (2026-07-27)
 
 ### Features
