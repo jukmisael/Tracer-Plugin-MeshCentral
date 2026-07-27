@@ -123,13 +123,17 @@ module.exports.usertracer = function (parent) {
                 console.log('UT CHECKNODE: doc.keys=' + Object.keys(doc).sort().join(','));
 
                 var currentUsers = (Array.isArray(doc.users) ? doc.users : []).sort();
-                var key = JSON.stringify(currentUsers);
+                var currentLusers = (Array.isArray(doc.lusers) ? doc.lusers : []).sort();
+                // Encode both active and locked users in cache key
+                var cacheState = { users: currentUsers, lusers: currentLusers };
+                var key = JSON.stringify(cacheState);
                 var prev = obj.userCache[nodeid];
                 var nodeName = doc.name || nodeid;
 
                 console.log('UT CHECKNODE: currentUsers=' + JSON.stringify(currentUsers));
-                console.log('UT CHECKNODE: cache prev=' + (prev ? prev.substring(0, 100) : 'null'));
-                console.log('UT CHECKNODE: cache key=' + key.substring(0, 100));
+                console.log('UT CHECKNODE: currentLusers=' + JSON.stringify(currentLusers));
+                console.log('UT CHECKNODE: cache prev=' + (prev ? prev.substring(0, 120) : 'null'));
+                console.log('UT CHECKNODE: cache key=' + key.substring(0, 120));
 
                 if (!prev) {
                     console.log('UT CHECKNODE: FIRST TIME for node, populating cache');
@@ -161,21 +165,49 @@ module.exports.usertracer = function (parent) {
                 }
 
                 console.log('UT CHECKNODE: *** CHANGE DETECTED for ' + nodeName + ' ***');
-                console.log('UT CHECKNODE: old=' + prev);
-                console.log('UT CHECKNODE: new=' + key);
                 obj.userCache[nodeid] = key;
-                var prevUsers = JSON.parse(prev);
 
+                var prevState = JSON.parse(prev);
+                var prevUsers = prevState.users || [];
+                var prevLusers = prevState.lusers || [];
+
+                // --- Detect LOGIN / LOGOUT from users[] changes ---
                 currentUsers.forEach(function (u) {
                     if (prevUsers.indexOf(u) === -1) {
-                        console.log('UT CHECKNODE: >>> LOGIN ' + u + ' on ' + nodeName);
-                        obj.storeEvent(nodeid, nodeName, u, 'userLogin');
+                        // Check if this is an unlock (was in lusers before login even though not in users)
+                        if (prevLusers.indexOf(u) >= 0) {
+                            // Was locked, now logged in without lock → actually came back from lock
+                            console.log('UT CHECKNODE: userLogin (was locked, now active) ' + u + ' on ' + nodeName);
+                            obj.storeEvent(nodeid, nodeName, u, 'userLogin');
+                        } else {
+                            console.log('UT CHECKNODE: >>> LOGIN ' + u + ' on ' + nodeName);
+                            obj.storeEvent(nodeid, nodeName, u, 'userLogin');
+                        }
                     }
                 });
                 prevUsers.forEach(function (u) {
                     if (currentUsers.indexOf(u) === -1) {
                         console.log('UT CHECKNODE: >>> LOGOUT ' + u + ' from ' + nodeName);
                         obj.storeEvent(nodeid, nodeName, u, 'userLogout');
+                    }
+                });
+
+                // --- Detect LOCK / UNLOCK from lusers[] changes ---
+                // A user in both users[] AND lusers[] = locked session
+                // Transition: was in users-only → now in users+lusers = LOCK
+                // Transition: was in users+lusers → now in users-only = UNLOCK
+                currentUsers.forEach(function (u) {
+                    var isNowLocked = (currentLusers.indexOf(u) >= 0);
+                    var wasLocked = (prevLusers.indexOf(u) >= 0) && (prevUsers.indexOf(u) >= 0);
+
+                    if (isNowLocked && !wasLocked && prevUsers.indexOf(u) >= 0) {
+                        // User was active, now locked
+                        console.log('UT CHECKNODE: >>> LOCK ' + u + ' on ' + nodeName);
+                        obj.storeEvent(nodeid, nodeName, u, 'userLock');
+                    } else if (!isNowLocked && wasLocked && currentUsers.indexOf(u) >= 0) {
+                        // User was locked, now active again
+                        console.log('UT CHECKNODE: >>> UNLOCK ' + u + ' on ' + nodeName);
+                        obj.storeEvent(nodeid, nodeName, u, 'userUnlock');
                     }
                 });
             } catch (e) {
