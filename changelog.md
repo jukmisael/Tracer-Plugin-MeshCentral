@@ -2,6 +2,11 @@
 
 
 
+## 3.5.6 (2026-07-27)
+
+### Fixes
+- JS syntax: backslashes literais do edit tool quebravam parser do script
+
 ## 3.5.5 (2026-07-27)
 
 ### Fixes
