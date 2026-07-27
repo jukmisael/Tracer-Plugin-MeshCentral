@@ -2,6 +2,11 @@
 
 
 
+## 3.5.51 (2026-07-27)
+
+### Fixes
+- Flex container com `min-width:0` evita sobreposição da coluna DISPOSITIVO sobre o Gantt
+
 ## 3.5.50 (2026-07-27)
 
 ### Fixes

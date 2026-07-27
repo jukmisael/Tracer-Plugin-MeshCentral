@@ -174,7 +174,7 @@ function _renderGantt(events,rs,re,pwrMap){
   var ticks=[],t0=Math.ceil(rs/step)*step;
   for(var t=t0;t<=re;t+=step){var d=new Date(t);ticks.push({pct:((t-rs)/total)*100,label:step<3600000?((d.getHours()<10?'0':'')+d.getHours()+':'+(d.getMinutes()<10?'0':'')+d.getMinutes()):step<dayMs?((d.getHours()<10?'0':'')+d.getHours()+':00'):((d.getDate()<10?'0':'')+d.getDate()+'/'+(d.getMonth()+1<10?'0':'')+(d.getMonth()+1))});}
   var mw=Math.max(720,Math.min(3600,Math.floor(span*120)));
-  var h='<div class="gantt-wrap"><div style="display:flex;border-bottom:1px solid #aaa;background:#e4e9e7;position:sticky;top:0;z-index:2"><div style="width:110px;flex-shrink:0;padding:6px 8px;font-size:10px;color:#333;font-weight:700;border-right:1px solid #aaa">DISPOSITIVO</div><div style="flex:1;position:relative;height:28px;min-width:'+mw+'px">';
+  var h='<div class="gantt-wrap"><div style="display:flex;border-bottom:1px solid #aaa;background:#e4e9e7;position:sticky;top:0;z-index:2;min-width:0"><div style="width:110px;flex-shrink:0;padding:6px 8px;font-size:10px;color:#333;font-weight:700;border-right:1px solid #aaa">DISPOSITIVO</div><div style="flex:1;position:relative;height:28px;min-width:'+mw+'px">';
   ticks.forEach(function(tk){h+='<div style="position:absolute;top:0;bottom:0;border-left:1px dashed #ccc;left:'+tk.pct+'%"><span style="position:absolute;top:6px;left:3px;font-size:8px;color:#666;white-space:nowrap">'+esc(tk.label)+'</span></div>';});
   h+='</div></div>';
   var byDev={};sessions.forEach(function(s){var n=s.nodeName||'?';if(!byDev[n])byDev[n]={name:n,sessions:[]};byDev[n].sessions.push(s);});
@@ -186,7 +186,7 @@ function _renderGantt(events,rs,re,pwrMap){
     var byU={};dev.sessions.forEach(function(s){var k=s.display||s.user||'?';if(!byU[k])byU[k]=[];byU[k].push(s);});
     var uNames=Object.keys(byU).sort();
     var rowH=Math.max(38,10+uNames.length*22);
-    h+='<div style="display:flex;min-height:'+rowH+'px;border-bottom:1px solid #e0e0e0"><div style="width:110px;flex-shrink:0;padding:7px 8px;border-right:1px solid #ccc;font-size:11px;color:#003366;font-weight:700;display:flex;align-items:center;background:#fff">'+esc(name)+'</div><div style="flex:1;position:relative;min-width:'+mw+'px;min-height:'+rowH+'px">';
+    h+='<div style="display:flex;min-height:'+rowH+'px;border-bottom:1px solid #e0e0e0;min-width:0"><div style="width:110px;flex-shrink:0;padding:7px 8px;border-right:1px solid #ccc;font-size:11px;color:#003366;font-weight:700;display:flex;align-items:center;background:#fff">'+esc(name)+'</div><div style="flex:1;position:relative;min-width:'+mw+'px;min-height:'+rowH+'px">';
     ticks.forEach(function(tk){h+='<div style="position:absolute;top:0;bottom:0;border-left:1px dashed #ccc;left:'+tk.pct+'%"></div>';});
     uNames.forEach(function(un,ui){
       var segs=byU[un];if(!segs.length)return;
