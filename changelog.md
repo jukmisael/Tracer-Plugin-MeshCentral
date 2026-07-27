@@ -2,6 +2,11 @@
 
 
 
+## 3.5.10 (2026-07-27)
+
+### Debug
+- Log detalhado no handler timeline
+
 ## 3.5.9 (2026-07-27)
 
 ### Fixes

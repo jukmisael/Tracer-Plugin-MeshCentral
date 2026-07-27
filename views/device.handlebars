@@ -148,7 +148,7 @@ function renderGantt(events){
 (function(){
   try{
     var ph=(top&&top.pluginHandler&&top.pluginHandler.usertracer)||(parent&&parent.pluginHandler&&parent.pluginHandler.usertracer);
-    if(ph){ph.timeline=function(m){renderGantt(m.data||[]);};dlog('PH','timeline handler registered');}
+    if(ph){ph.timeline=function(m){dlog('PH','timeline CALLED','data=',typeof m,Array.isArray(m&&m.data)?('arr['+m.data.length+']'):JSON.stringify(m).slice(0,100));renderGantt((m&&m.data)||[]);};dlog('PH','timeline handler registered');}
     else {dlog('PH','pluginHandler not found');if(ms&&ms.socket){ms.socket.addEventListener('message',function(e){try{var d=JSON.parse(e.data);if(d.action==='plugin'&&d.plugin==='usertracer'&&d.method==='timeline')renderGantt(d.data||[]);}catch(ex){}});}}
   }catch(e){dlog('PH','err',e.message);}
 })();
