@@ -422,6 +422,26 @@ module.exports.usertracer = function (parent) {
                 return;
             }
 
+            // --- getNodeDetails ---
+            if (command.pluginaction === 'getNodeDetails') {
+                var nid = command.nodeid;
+                if (!nid) { obj.send(sid, { action:'plugin', plugin:'usertracer', method:'nodeDetails', data: null }); return; }
+                if (obj.mdb && typeof obj.mdb.Get === 'function') {
+                    obj.mdb.Get(nid, function(err, docs) {
+                        if (!err && docs && docs.length > 0) {
+                            var d = docs[0];
+                            obj.send(sid, { action:'plugin', plugin:'usertracer', method:'nodeDetails', data: {
+                                nodeid: nid, name: d.name, host: d.host, ip: d.ip, osdesc: d.osdesc,
+                                domain: d.domain, mtype: d.mtype, agent: d.agent,
+                                lastbootuptime: d.lastbootuptime, idletime: d.idletime
+                            }});
+                        } else { obj.send(sid, { action:'plugin', plugin:'usertracer', method:'nodeDetails', data: null }); }
+                    });
+                } else { obj.send(sid, { action:'plugin', plugin:'usertracer', method:'nodeDetails', data: null }); }
+                return;
+            }
+
+
 
             console.log('UT CMD: unknown action=' + command.pluginaction);
         } catch (e) {
