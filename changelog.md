@@ -1,6 +1,16 @@
 # Changelog
 
 
+## 3.5.0
+
+### Gantt interativo
+- Auto-refresh ao vivo (30s) com botão Ao Vivo
+- Linha "agora" no timeline
+- Clique na barra de sessão → detalhes (início, duração, eventos)
+- Zoom por rolagem do mouse
+- Admin: timeline multi-dispositivo + cross-reference
+- Device: Gantt ao vivo + user history
+
 ## 3.4.0 (2026-07-24)
 
 ### Cross-reference tab
