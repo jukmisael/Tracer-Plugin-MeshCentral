@@ -2,6 +2,12 @@
 
 
 
+## 3.5.39 (2026-07-27)
+
+### Features
+- Presets de hora: 1h, 2h, 4h, 6h, 8h (padrão)
+- Separador entre presets de dia e hora
+
 ## 3.5.38 (2026-07-27)
 
 ### Ajustes

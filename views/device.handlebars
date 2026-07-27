@@ -50,9 +50,16 @@ table.tbl tr:nth-child(even) td{background:#f4f6f5}table.tbl tr:hover td{backgro
 <div class="panel">
   <div class="panel-title">Período</div>
   <div class="toolbar">
+    <button class="btn btn-chip active" data-r="8h" onclick="setRange('8h',this)">8h</button>
     <button class="btn btn-chip" data-r="today" onclick="setRange('today',this)">Hoje</button>
-    <button class="btn btn-chip active" data-r="7d" onclick="setRange('7d',this)">7 dias</button>
+    <button class="btn btn-chip" data-r="7d" onclick="setRange('7d',this)">7 dias</button>
     <button class="btn btn-chip" data-r="30d" onclick="setRange('30d',this)">30 dias</button>
+    <span class="tbsep"></span>
+    <button class="btn btn-chip" data-r="1h" onclick="setRange('1h',this)">1h</button>
+    <button class="btn btn-chip" data-r="2h" onclick="setRange('2h',this)">2h</button>
+    <button class="btn btn-chip" data-r="4h" onclick="setRange('4h',this)">4h</button>
+    <button class="btn btn-chip" data-r="6h" onclick="setRange('6h',this)">6h</button>
+    <span class="tbsep"></span>
     <input type="date" id="dStart" onchange="loadHistory()"><input type="date" id="dEnd" onchange="loadHistory()">
   </div>
 </div>
@@ -86,7 +93,12 @@ function fmtDur(ms){if(ms<0)ms=0;var m=Math.floor(ms/60000),h=Math.floor(m/60),d
 function setRange(kind,btn){
   document.querySelectorAll('.btn-chip[data-r]').forEach(function(b){b.classList.remove('active');});
   if(btn)btn.classList.add('active');var end=new Date(),start=new Date();
-  if(kind==='today')start=new Date(end.getFullYear(),end.getMonth(),end.getDate());
+  if(kind==='1h'){start.setTime(end.getTime()-3600000);}
+  else if(kind==='2h'){start.setTime(end.getTime()-7200000);}
+  else if(kind==='4h'){start.setTime(end.getTime()-14400000);}
+  else if(kind==='6h'){start.setTime(end.getTime()-21600000);}
+  else if(kind==='8h'){start.setTime(end.getTime()-28800000);}
+  else if(kind==='today')start=new Date(end.getFullYear(),end.getMonth(),end.getDate());
   else if(kind==='7d')start.setDate(end.getDate()-6);else if(kind==='30d')start.setDate(end.getDate()-29);
   document.getElementById('dStart').value=ymd(start);document.getElementById('dEnd').value=ymd(end);
   loadHistory();
@@ -221,7 +233,7 @@ function renderGantt(events,pwrMap){
     }catch(ex){dlog('WS','onmessage fail',ex.message);}
   } else {dlog('WS','no socket');}
 })();
-setRange('7d',document.querySelector('.btn-chip[data-r="7d"]'));
+setRange('8h',document.querySelector('.btn-chip[data-r="8h"]'));
 loadHistory();
 </script>
 </body>
