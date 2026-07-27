@@ -18,6 +18,11 @@ body{font-family:"Trebuchet MS",Arial,Helvetica,sans-serif;background:#d3d9d6;co
 .btn{font-family:inherit;font-size:12px;border:1px solid #808080;background:#f0f0f0;color:#000;padding:5px 12px;border-radius:2px;cursor:pointer}
 .btn:hover{background:#e4e4e4}.btn-primary{background:#003366;color:#fff;border-color:#002244}
 .btn-primary:hover{background:#004080}
+.btn-sm{font-family:inherit;font-size:11px;border:1px solid #808080;background:#f0f0f0;color:#000;padding:3px 8px;border-radius:2px;cursor:pointer}
+.btn-sm:hover{background:#e4e4e4}
+.tbsep{display:inline-block;width:1px;height:20px;background:#bbb;margin:0 6px}
+.devlabel{font-size:11px;color:#444;font-weight:700;margin-right:2px}
+.devsearch{font-family:inherit;font-size:12px;border:1px solid #808080;background:#fff;color:#000;padding:4px 6px;border-radius:2px;width:140px}
 .btn-live{background:#c62828;color:#fff;border-color:#a02121;font-weight:700}
 .btn-live.active{background:#2e7d32;border-color:#1b5e20}
 .btn-chip{background:#ddd;border:1px solid #aaa;color:#333;padding:4px 10px;font-size:11px}
@@ -59,21 +64,22 @@ body{font-family:"Trebuchet MS",Arial,Helvetica,sans-serif;background:#d3d9d6;co
 </div>
 
 <div class="panel">
-  <div class="panel-title">Timeline ao vivo</div>
+  <div class="panel-title">Timeline</div>
   <div class="toolbar">
     <button class="btn btn-chip" data-r="today" onclick="setRange('today',this)">Hoje</button>
     <button class="btn btn-chip active" data-r="7d" onclick="setRange('7d',this)">7 dias</button>
     <button class="btn btn-chip" data-r="30d" onclick="setRange('30d',this)">30 dias</button>
     <button class="btn btn-chip" data-r="month" onclick="setRange('month',this)">Este mês</button>
-    <label style="margin-left:6px">De</label><input type="date" id="dStart"><label>Até</label><input type="date" id="dEnd">
+    <span class="tbsep"></span>
+    <label>De</label><input type="date" id="dStart">
+    <label>Até</label><input type="date" id="dEnd">
     <button class="btn btn-primary" onclick="loadTimeline()">Aplicar</button>
-    <span class="muted" id="tlHint"></span>
   </div>
   <div class="toolbar" style="margin-bottom:6px">
-    <button class="btn" onclick="selectAllDevs(true)">Todos</button>
-    <button class="btn" onclick="selectAllDevs(false)">Nenhum</button>
-    <input type="text" id="devSearch" placeholder="filtrar..." style="width:160px" oninput="filterDevChips()">
-    <span class="muted" id="tlHint"></span>
+    <span class="devlabel">Dispositivos</span>
+    <button class="btn btn-sm" onclick="selectAllDevs(true)">Todos</button>
+    <button class="btn btn-sm" onclick="selectAllDevs(false)">Nenhum</button>
+    <input type="text" id="devSearch" placeholder="filtrar..." class="devsearch" oninput="filterDevChips()">
   </div>
   <div class="chips" id="devChips"><span class="muted">Carregando...</span></div>
   <div id="gantt"><div class="empty">Selecione período e dispositivos.</div></div>

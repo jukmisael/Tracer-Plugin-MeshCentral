@@ -2,6 +2,13 @@
 
 
 
+## 3.5.24 (2026-07-27)
+
+### UI
+- Filtros do admin reorganizados: presets + separador + datas + dispositivos
+- CSS: `.tbsep`, `.btn-sm`, `.devlabel`, `.devsearch`
+- Removido `tlHint` duplicado
+
 ## 3.5.23 (2026-07-27)
 
 ### Ajustes
