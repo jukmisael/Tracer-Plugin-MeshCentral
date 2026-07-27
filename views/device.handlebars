@@ -218,19 +218,9 @@ function renderGantt(events,pwrMap){
         }
       }catch(ex){dlog('WSE',ex.message);}
     };
-    // Tenta addEventListener primeiro
-    try{ws.addEventListener('message',handler);dlog('WS','addEventListener OK');}catch(ex){dlog('WS','addEventListener fail',ex.message);}
-    // Tenta onmessage (com proxy pra evitar sobrescrita)
-    try{
-      if(ws.onmessage&&ws.onmessage!==handler){
-        dlog('WS','existing onmessage, chaining');
-        var old=ws.onmessage;
-        ws.onmessage=function(ev){handler(ev);old.call(ws,ev);};
-      }else{
-        ws.onmessage=handler;
-      }
-      dlog('WS','onmessage set');
-    }catch(ex){dlog('WS','onmessage fail',ex.message);}
+    // addEventListener apenas — sem proxy onmessage (previne execução duplicada)
+    try{ws.addEventListener('message',handler);dlog('WS','installed');}
+    catch(ex){dlog('WS','addEventListener fail',ex.message);try{ws.onmessage=handler;dlog('WS','onmessage fallback');}catch(ex2){dlog('WS','onmessage fail',ex2.message);}}
   } else {dlog('WS','no socket');}
 })();
 setRange('8h',document.querySelector('.btn-chip[data-r="8h"]'));

@@ -111,7 +111,7 @@ body{font-family:"Trebuchet MS",Arial,Helvetica,sans-serif;background:#d3d9d6;co
 <script>
 var D=[],ms=(typeof top!=='undefined'&&top.meshserver)||(typeof parent!=='undefined'&&parent.meshserver)||window.meshserver;
 var _allDevices=[],_allUsers=[],_xrefPending='',_reqUser='',_reqDev='',selectedDevs={};
-var _eventsCache=[],_viewRange=null,_baseRange={rs:0,re:0},_pwrMap=null;
+var _eventsCache=[],_viewRange=null,_baseRange={rs:0,re:0},_pwrMap=null,_reqSeq=0;
 function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 function segColor(st,op){return st==='lock'?'#e65100':st==='logout'?'#888':'#2e7d32';}
 function dlog(){var a=Array.prototype.slice.call(arguments);D.push(new Date().toLocaleTimeString()+' '+a.join(' '));var e=document.getElementById('debug');if(e)e.innerHTML=D.slice(-80).join('\n');}
@@ -375,7 +375,7 @@ function loadXrefUser(){
   _xrefPending='user';document.getElementById('gantt').innerHTML='<div class="loading">Carregando...</div>';
   var baseTxt='Usuário: '+u;document.getElementById('tlFilter').setAttribute('data-base',baseTxt);document.getElementById('tlFilter').textContent=baseTxt;
   var pr=pickerRange();
-  if(ms)ms.send({action:'plugin',plugin:'usertracer',pluginaction:'getTimeline',username:u,startDate:new Date(pr.rs).toISOString(),endDate:new Date(pr.re).toISOString(),limit:8000});
+  if(ms){var _s=++_reqSeq;ms.send({action:'plugin',plugin:'usertracer',pluginaction:'getTimeline',username:u,startDate:new Date(pr.rs).toISOString(),endDate:new Date(pr.re).toISOString(),limit:8000,_reqSeq:_s});}
 }
 function loadXrefDev(){
   var n=document.getElementById('xrefDev').value;if(!n){document.getElementById('xrefDevResult').innerHTML='<div class="empty">Selecione um dispositivo.</div>';return;}
@@ -385,7 +385,7 @@ function loadXrefDev(){
   var baseTxt='Dispositivo: '+document.getElementById('xrefDev').options[document.getElementById('xrefDev').selectedIndex].text;
   document.getElementById('tlFilter').setAttribute('data-base',baseTxt);document.getElementById('tlFilter').textContent=baseTxt;
   var pr=pickerRange();
-  if(ms)ms.send({action:'plugin',plugin:'usertracer',pluginaction:'getTimeline',nodeid:n,startDate:new Date(pr.rs).toISOString(),endDate:new Date(pr.re).toISOString(),limit:8000});
+  if(ms){var _s=++_reqSeq;ms.send({action:'plugin',plugin:'usertracer',pluginaction:'getTimeline',nodeid:n,startDate:new Date(pr.rs).toISOString(),endDate:new Date(pr.re).toISOString(),limit:8000,_reqSeq:_s});}
 }
 function renderXrefUser(e){e=e||[];document.getElementById('sEvents').textContent=e.length;if(!e.length){document.getElementById('xrefUserResult').innerHTML='<div class="empty">Nenhum evento encontrado.</div>';return;}
   if(document.getElementById('xrefUser').value!==_reqUser){dlog('STALE','user response ignored');return;}
@@ -416,18 +416,19 @@ function renderXrefDev(e){e=e||[];document.getElementById('sEvents').textContent
   try{
     var ph=(top&&top.pluginHandler&&top.pluginHandler.usertracer)||(parent&&parent.pluginHandler&&parent.pluginHandler.usertracer);
     if(ph){
-      ph.timeline=function(m){if(m&&m.data&&Array.isArray(m.data)){dlog('PHOK','timeline n='+m.data.length);try{if(_xrefPending==='user'){renderXrefUser(m.data);_xrefPending='';}else if(_xrefPending==='dev'){renderXrefDev(m.data);_xrefPending='';}else _xrefPending='';}catch(ex2){dlog('PH_XREF_ERR',ex2.message);_xrefPending='';}renderTimeline(m.data,m._pwrMap);}else dlog('PHSKIP','timeline',typeof m);};
+      ph.timeline=function(m){if(m&&m.data&&Array.isArray(m.data)){dlog('PHOK','timeline n='+m.data.length);if(m._reqSeq&&m._reqSeq!==_reqSeq){dlog('PH_STALE','timeline',m._reqSeq,'!=',_reqSeq);return;}try{if(_xrefPending==='user'){renderXrefUser(m.data);_xrefPending='';}else if(_xrefPending==='dev'){renderXrefDev(m.data);_xrefPending='';}else _xrefPending='';}catch(ex2){dlog('PH_XREF_ERR',ex2.message);_xrefPending='';}renderTimeline(m.data,m._pwrMap);}else dlog('PHSKIP','timeline',typeof m);};
       ph.deviceNames=function(m){if(m&&m.data&&Array.isArray(m.data)){dlog('PHOK','deviceNames n='+m.data.length);renderDeviceNames(m.data);}else dlog('PHSKIP','deviceNames',typeof m);};
       ph.userNames=function(m){if(m&&m.data&&Array.isArray(m.data)){dlog('PHOK','userNames n='+m.data.length);renderUserNames(m.data);}else dlog('PHSKIP','userNames',typeof m);};
       dlog('PH','registered');
     }
   }catch(e){dlog('PHE','err',e.message);}
-  // WebSocket handler robusto
+  // WebSocket handler — single addEventListener, no onmessage override (prevents triple-fire)
   if(ms&&ms.socket){
-    var ws=ms.socket,did=false;
     var handler=function(e){
       try{var d=JSON.parse(e.data);if(d.action==='plugin'&&d.plugin==='usertracer'){
         dlog('WS',d.method,Array.isArray(d.data)?('n='+d.data.length):typeof d.data);
+        if(d.method==='deviceNames'||d.method==='userNames'){/* no stale check for bootstrap calls */}
+        else if(d._reqSeq&&d._reqSeq!==_reqSeq){dlog('WS_STALE',d.method,d._reqSeq,'!=',_reqSeq);return;}
         if(d.method==='deviceNames')renderDeviceNames(d.data||[]);
         else if(d.method==='userNames')renderUserNames(d.data||[]);
         else if(d.method==='timeline'){
@@ -439,8 +440,8 @@ function renderXrefDev(e){e=e||[];document.getElementById('sEvents').textContent
         }
       }}catch(ex){}
     };
-    try{ws.addEventListener('message',handler);did=true;}catch(ex){dlog('WSE','addEventListener',ex.message);}
-    if(!did||ws.onmessage!==handler){var old=ws.onmessage;ws.onmessage=function(ev){handler(ev);if(typeof old==='function')old.call(ws,ev);};}dlog('WS','installed');
+    try{ms.socket.addEventListener('message',handler);dlog('WS','installed');}
+    catch(ex){dlog('WSE','addEventListener',ex.message);ms.socket.onmessage=handler;}
   } else {dlog('WS','no socket');}
 })();
 var _d=new Date();document.getElementById('dStart').value=ymd(new Date(_d.getTime()-28800000));document.getElementById('dEnd').value=ymd(_d);

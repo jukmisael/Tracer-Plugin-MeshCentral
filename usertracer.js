@@ -415,7 +415,7 @@ module.exports.usertracer = function (parent) {
                 console.log('UT CMD: nodeids=' + (command.nodeids ? JSON.stringify(command.nodeids).substring(0, 100) : 'null'));
                 if (!obj.db || !obj.db.getEvents) {
                     console.log('UT CMD: db.getEvents not available, db=' + typeof obj.db + ' getEvents=' + (obj.db ? typeof obj.db.getEvents : 'N/A'));
-                    obj.send(sid, { action:'plugin', plugin:'usertracer', method:'timeline', data: [] });
+                    obj.send(sid, { action:'plugin', plugin:'usertracer', method:'timeline', data: [], _reqSeq: command._reqSeq });
                     return;
                 }
                 var opts = { limit: command.limit || 5000 };
@@ -433,7 +433,9 @@ module.exports.usertracer = function (parent) {
                         var ids={};(docs||[]).forEach(function(e){if(e.nodeid)ids[e.nodeid]=1;});
                         Object.keys(ids).forEach(function(id){if(obj.devicePwr[id])pwrMap[id]=obj.devicePwr[id];});
                     }
-                    obj.send(sid, { action:'plugin', plugin:'usertracer', method:'timeline', data: docs || [], _pwrMap: pwrMap });
+                    var resp = { action:'plugin', plugin:'usertracer', method:'timeline', data: docs || [], _pwrMap: pwrMap };
+                    if (command._reqSeq) resp._reqSeq = command._reqSeq;
+                    obj.send(sid, resp);
                 });
                 return;
             }
@@ -442,11 +444,15 @@ module.exports.usertracer = function (parent) {
             if (command.pluginaction === 'getDeviceNames') {
                 if (obj.db && obj.db.getDeviceNames) {
                     obj.db.getDeviceNames(function(d) {
-                        obj.send(sid, { action:'plugin', plugin:'usertracer', method:'deviceNames', data: d || [] });
+                        var respDn = { action:'plugin', plugin:'usertracer', method:'deviceNames', data: d || [] };
+if (command._reqSeq) respDn._reqSeq = command._reqSeq;
+obj.send(sid, respDn);
                     });
                 } else {
                     console.log('UT CMD: getDeviceNames not available');
-                    obj.send(sid, { action:'plugin', plugin:'usertracer', method:'deviceNames', data: [] });
+                    var respDn2 = { action:'plugin', plugin:'usertracer', method:'deviceNames', data: [] };
+if (command._reqSeq) respDn2._reqSeq = command._reqSeq;
+obj.send(sid, respDn2);
                 }
                 return;
             }
@@ -469,11 +475,15 @@ module.exports.usertracer = function (parent) {
                                 try{var st=JSON.parse(obj.userCache[nid]);(st.users||[]).forEach(function(u){mergeUser(collect,u.split('\\').pop(),u,'');});(st.lusers||[]).forEach(function(u){mergeUser(collect,u.split('\\').pop(),u,'');});}catch(ex){}
                             });
                         }
-                        obj.send(sid, { action:'plugin', plugin:'usertracer', method:'userNames', data: collect });
+                        var respUn = { action:'plugin', plugin:'usertracer', method:'userNames', data: collect };
+if (command._reqSeq) respUn._reqSeq = command._reqSeq;
+obj.send(sid, respUn);
                     });
                 } else {
                     console.log('UT CMD: getUserNames not available');
-                    obj.send(sid, { action:'plugin', plugin:'usertracer', method:'userNames', data: [] });
+                    var respUn2 = { action:'plugin', plugin:'usertracer', method:'userNames', data: [] };
+if (command._reqSeq) respUn2._reqSeq = command._reqSeq;
+obj.send(sid, respUn2);
                 }
                 return;
             }

@@ -2,6 +2,12 @@
 
 
 
+## 3.5.54 (2026-07-27)
+
+### Fixed
+- **Stale response race**: server echoes `_reqSeq` from client request; frontend ignores responses where seq doesn't match latest sent. Prevents old query results (e.g. victor.portes) from overwriting current selection (e.g. alexandre.matias) when responses arrive out of order.
+- **Triple WS execution**: removed broken `ws.onmessage` override that caused each message to fire 3× (addEventListener + onmessage wrapper + pluginHandler). Now uses clean `addEventListener` only.
+
 ## 3.5.53 (2026-07-27)
 
 ### Rewrite
