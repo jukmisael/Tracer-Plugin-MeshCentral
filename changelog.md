@@ -2,6 +2,16 @@
 
 
 
+## 3.5.2 (2026-07-24)
+
+### Limpeza e navegação
+- Removido "Ao Vivo" (auto-refresh) e zoom do Gantt
+- Removido detail-panel (clique na barra agora navega para viewmode=10&gotonode)
+- Removida aba "Agora" do device.handlebars (apenas Timeline)
+- Clique na barra → `window.location.href='?viewmode=10&gotonode=NODEID'`
+- Lock/unlock tracking completo (userLock, userUnlock, userLogout)
+
+
 ## 3.5.1 (2026-07-24)
 
 ### Gantt detalhado
