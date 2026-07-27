@@ -2,6 +2,11 @@
 
 
 
+## 3.5.8 (2026-07-27)
+
+### Fixes
+- WS listener sobrescrito pelo MeshCentral: usar `addEventListener` em vez de `onmessage`
+
 ## 3.5.7 (2026-07-27)
 
 ### Fixes

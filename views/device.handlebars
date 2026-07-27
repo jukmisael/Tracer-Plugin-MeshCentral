@@ -146,17 +146,14 @@ function renderGantt(events){
   _renderGantt(events,rs,re);
 }
 if(ms&&ms.socket){
-  var orig=ms.socket.onmessage;
-  ms.socket.onmessage=function(event){
+  ms.socket.addEventListener('message',function(event){
     try{
       var d=JSON.parse(event.data);
       if(d.action==='plugin'&&d.plugin==='usertracer'){
         if(d.method==='timeline')renderGantt(d.data||[]);
-        return;
       }
     }catch(e){}
-    if(typeof orig==='function')orig.call(ms.socket,event);
-  };
+  });
 }
 setRange('7d',document.querySelector('.btn-chip[data-r="7d"]'));
 loadHistory();

@@ -218,8 +218,7 @@ function renderXrefDev(e){e=e||[];document.getElementById('sEvents').textContent
   h+='</div>';document.getElementById('xrefDevResult').innerHTML=h;
 }
 if(ms&&ms.socket){
-  var orig=ms.socket.onmessage;
-  ms.socket.onmessage=function(event){
+  ms.socket.addEventListener('message',function(event){
     try{
       var d=JSON.parse(event.data);
       if(d.action==='plugin'&&d.plugin==='usertracer'){
@@ -229,8 +228,7 @@ if(ms&&ms.socket){
         else if(d.method==='timeline'){if(_xrefPending==='user'){renderXrefUser(d.data||[]);_xrefPending='';}else if(_xrefPending==='dev'){renderXrefDev(d.data||[]);_xrefPending='';}else renderTimeline(d.data||[]);}
       }
     }catch(e){}
-    if(typeof orig==='function')orig.call(ms.socket,event);
-  };
+  });
 }
 setRange('7d',document.querySelector('.btn-chip[data-r="7d"]'));
 document.addEventListener('DOMContentLoaded',function(){loadDeviceNames();loadUserNames();});
