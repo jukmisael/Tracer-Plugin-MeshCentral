@@ -2,6 +2,12 @@
 
 
 
+## 3.5.37 (2026-07-27)
+
+### Fixes
+- `gotoUser`: busca por textContent (resolve \t escapando no onclick)
+- Reset: limpa ambos painéis completamente
+
 ## 3.5.36 (2026-07-27)
 
 ### Fixes
