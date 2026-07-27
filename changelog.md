@@ -1,6 +1,16 @@
 # Changelog
 
 
+
+## 3.5.1 (2026-07-24)
+
+### Gantt detalhado
+- Clique na barra de sessão → detalhes com IP, SO, Agente, Domínio (via getNodeDetails)
+- Linha "agora" clicável → heartbeat info do scanner
+- Zoom por rolagem do mouse no Gantt
+- Auto-refresh ao vivo com botão "Ao Vivo" (30s)
+- getNodeDetails: novo serveraction que busca doc do nó no meshServer.db
+
 ## 3.5.0
 
 ### Gantt interativo
