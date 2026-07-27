@@ -2,10 +2,15 @@
 
 
 
+## 3.5.57 (2026-07-27)
+
+### Changed
+- **Searchable dropdown estilo W3Schools**: dropdowns de usuário e dispositivo agora abrem um painel com campo de busca interno + lista filtrada. Clica no display → abre painel → digita para filtrar → clica na opção para selecionar. Select original mantido oculto para compatibilidade. Fecha ao clicar fora.
+
 ## 3.5.56 (2026-07-27)
 
 ### Changed
-- **Barra de pesquisa integrada ao dropdown**: input de filtro agora fica visualmente DENTRO do componente (borda compartilhada com o select, sem gap). Mesma largura, input em cima + select embaixo formando um box único.
+- **Barra de pesquisa integrada ao dropdown**: input de filtro agora fica visualmente DENTRO do componente (borda compartilhada com o select, sem gap).
 
 ## 3.5.55 (2026-07-27)
 

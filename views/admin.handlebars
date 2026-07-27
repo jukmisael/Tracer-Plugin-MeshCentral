@@ -25,6 +25,17 @@ body{font-family:"Trebuchet MS",Arial,Helvetica,sans-serif;background:#d3d9d6;co
 .devsearch{font-family:inherit;font-size:12px;border:1px solid #808080;background:#fff;color:#000;padding:4px 6px;border-radius:2px;width:140px}
 .btn-live{background:#c62828;color:#fff;border-color:#a02121;font-weight:700}
 .btn-live.active{background:#2e7d32;border-color:#1b5e20}
+.cd-wrap{flex:1;position:relative}
+.cd-display{border:1px solid #808080;background:#fff;color:#000;padding:3px 6px;border-radius:2px;cursor:pointer;font-size:12px;font-family:inherit;min-height:22px;display:flex;align-items:center;justify-content:space-between}
+.cd-display:hover{border-color:#666}
+.cd-arrow{font-size:10px;color:#666;margin-left:4px}
+.cd-panel{display:none;position:absolute;top:100%;left:0;right:0;z-index:1000;background:#fff;border:1px solid #808080;border-top:none;border-radius:0 0 2px 2px;max-height:280px;overflow-y:auto;box-shadow:0 2px 6px rgba(0,0,0,.15)}
+.cd-search{width:100%;box-sizing:border-box;padding:5px 6px;border:none;border-bottom:1px solid #ddd;font-size:12px;font-family:inherit;background:#fff;color:#000}
+.cd-search:focus{outline:none;border-bottom-color:#003366}
+.cd-list{max-height:240px;overflow-y:auto}
+.cd-option{padding:4px 6px;cursor:pointer;font-size:12px;font-family:inherit;color:#000}
+.cd-option:hover{background:#e8f0fe;color:#000}
+.cd-option:active{background:#d2e3fc}
 .btn-chip{background:#ddd;border:1px solid #aaa;color:#333;padding:4px 10px;font-size:11px}
 .btn-chip.active{background:#003366;color:#fff;border-color:#003366;font-weight:700}
 .loading{text-align:center;padding:28px;color:#666}.muted{color:#666;font-size:11px}
@@ -87,9 +98,10 @@ body{font-family:"Trebuchet MS",Arial,Helvetica,sans-serif;background:#d3d9d6;co
     <div class="panel">
       <div class="panel-title">Usuário → Dispositivos</div>
       <div class="toolbar">
-        <div style="flex:1;display:flex;flex-direction:column">
-        <input type="text" id="filterUserXref" placeholder="Filtrar usuário..." style="font-size:11px;padding:3px 4px;border:1px solid #aaa;border-bottom:none;border-radius:2px 2px 0 0" oninput="filterSel('xrefUser',this.value)">
-        <select id="xrefUser" onchange="loadXrefUser()" style="border:1px solid #aaa;border-top:none;border-radius:0 0 2px 2px"><option value="">— Selecione um usuário —</option></select>
+        <div class="cd-wrap" style="flex:1;position:relative">
+          <div class="cd-display" onclick="event.stopPropagation();cdToggle('xrefUser')"><span id="cdDispXrefUser" class="cd-dtext">— Selecione um usuário —</span><span class="cd-arrow">▾</span></div>
+          <div class="cd-panel" id="cdPanelUser"><input type="text" class="cd-search" id="cdSearchUser" placeholder="Filtrar..." oninput="cdFilter('xrefUser',this.value)" onclick="event.stopPropagation()"><div class="cd-list" id="cdListUser"></div></div>
+          <select id="xrefUser" style="display:none" onchange="loadXrefUser()"><option value="">— Selecione um usuário —</option></select>
         </div>
         <button class="btn btn-primary" onclick="loadXrefUser()">Buscar</button><button class="btn btn-sm" onclick="resetUserFilter()" title="Limpar filtro" style="margin-left:2px;font-weight:700;color:#c62828">✕</button><button class="btn btn-sm" onclick="loadUserNames()" title="Atualizar lista" style="margin-left:2px">↻</button><span class="muted" id="hintUser"></span>
       </div>
@@ -100,9 +112,10 @@ body{font-family:"Trebuchet MS",Arial,Helvetica,sans-serif;background:#d3d9d6;co
     <div class="panel">
       <div class="panel-title">Dispositivo → Usuários</div>
       <div class="toolbar">
-        <div style="flex:1;display:flex;flex-direction:column">
-        <input type="text" id="filterDevXref" placeholder="Filtrar dispositivo..." style="font-size:11px;padding:3px 4px;border:1px solid #aaa;border-bottom:none;border-radius:2px 2px 0 0" oninput="filterSel('xrefDev',this.value)">
-        <select id="xrefDev" onchange="loadXrefDev()" style="border:1px solid #aaa;border-top:none;border-radius:0 0 2px 2px"><option value="">— Selecione um dispositivo —</option></select>
+        <div class="cd-wrap" style="flex:1;position:relative">
+          <div class="cd-display" onclick="event.stopPropagation();cdToggle('xrefDev')"><span id="cdDispXrefDev" class="cd-dtext">— Selecione um dispositivo —</span><span class="cd-arrow">▾</span></div>
+          <div class="cd-panel" id="cdPanelDev"><input type="text" class="cd-search" id="cdSearchDev" placeholder="Filtrar..." oninput="cdFilter('xrefDev',this.value)" onclick="event.stopPropagation()"><div class="cd-list" id="cdListDev"></div></div>
+          <select id="xrefDev" style="display:none" onchange="loadXrefDev()"><option value="">— Selecione um dispositivo —</option></select>
         </div>
         <button class="btn btn-primary" onclick="loadXrefDev()">Buscar</button><button class="btn btn-sm" onclick="resetDevFilter()" title="Limpar filtro" style="margin-left:2px;font-weight:700;color:#c62828">✕</button><button class="btn btn-sm" onclick="loadDeviceNames()" title="Atualizar lista" style="margin-left:2px">↻</button><span class="muted" id="hintDev"></span>
       </div>
@@ -128,7 +141,68 @@ function fmtDur(ms){if(ms<0)ms=0;var m=Math.floor(ms/60000),h=Math.floor(m/60),d
 function ymd(d){var x=new Date(d),m=x.getMonth()+1,day=x.getDate();return x.getFullYear()+'-'+(m<10?'0':'')+m+'-'+(day<10?'0':'')+day;}
 function colorFor(k){var h=0,s=String(k||'');for(var i=0;i<s.length;i++)h=((h<<5)-h)+s.charCodeAt(i)|0;return ['#003366','#1565c0','#2e7d32','#6a1b9a','#00838f','#ef6c00','#c62828','#455a64','#5d4037','#283593'][Math.abs(h)%10];}
 function splitUser(u){var p=String(u||'').split('\\');return p.length>1?{d:p[0],u:p[1]}:{d:'',u:u||''};}
-function filterSel(selId,q){try{var sel=document.getElementById(selId);q=String(q||'').toLowerCase();for(var i=0;i<sel.options.length;i++){var o=sel.options[i];o.style.display=(!q||o.textContent.toLowerCase().indexOf(q)>=0)?'':'none';}}catch(ex){}}
+/* --- Searchable dropdown (W3Schools pattern) --- */
+var _cdOpen=null;
+document.addEventListener('click',function(e){if(_cdOpen){var sel=document.getElementById(_cdOpen);if(!sel)return;var wrap=sel.parentNode;if(wrap&&!wrap.contains(e.target)){var p=document.getElementById('cdPanel'+_cdOpen);if(p)p.style.display='none';_cdOpen=null;}}});
+function cdToggle(id){
+  var panel=document.getElementById('cdPanel'+id);
+  if(!panel)return;
+  var opening=panel.style.display!=='block';
+  if(_cdOpen&&_cdOpen!==id){var op=document.getElementById('cdPanel'+_cdOpen);if(op)op.style.display='none';}
+  _cdOpen=opening?id:null;
+  panel.style.display=opening?'block':'none';
+  if(opening){var s=document.getElementById('cdSearch'+id);if(s){s.value='';s.focus();cdFilter(id,'');}}
+}
+function cdToggleOutside(ev){
+  // handled by document click listener above
+}
+function cdFilter(id,q){
+  var list=document.getElementById('cdList'+id);
+  if(!list)return;
+  q=String(q||'').toLowerCase();
+  Array.from(list.children).forEach(function(el){
+    el.style.display=(!q||el.textContent.toLowerCase().indexOf(q)>=0)?'':'none';
+  });
+}
+function cdSelect(id,value,text){
+  var sel=document.getElementById(id);
+  if(!sel)return;
+  for(var i=0;i<sel.options.length;i++){
+    if(sel.options[i].value===value){sel.selectedIndex=i;break;}
+  }
+  var disp=document.getElementById('cdDisp'+id.charAt(0).toUpperCase()+id.slice(1));
+  if(disp)disp.textContent=text;
+  var panel=document.getElementById('cdPanel'+id);
+  if(panel)panel.style.display='none';
+  _cdOpen=null;
+  if(typeof sel.onchange==='function')sel.onchange();
+}
+function cdSync(id){
+  var sel=document.getElementById(id);
+  var list=document.getElementById('cdList'+id);
+  if(!sel||!list)return;
+  var curVal=sel.value;
+  list.innerHTML='';
+  var found=!curVal; // placeholder always valid
+  Array.from(sel.options).forEach(function(opt){
+    if(!opt.value&&opt===sel.options[0])return; // skip placeholder
+    if(opt.value===curVal)found=true;
+    var el=document.createElement('div');
+    el.className='cd-option';
+    el.textContent=opt.textContent;
+    el.onclick=function(e){e.stopPropagation();cdSelect(id,opt.value,opt.textContent);};
+    list.appendChild(el);
+  });
+  if(!found){sel.value='';cdUpdateDisplay(id);}
+}
+function cdUpdateDisplay(id){
+  var sel=document.getElementById(id);
+  var txt=sel.options[sel.selectedIndex]?sel.options[sel.selectedIndex].textContent:'—';
+  var disp=document.getElementById('cdDisp'+id.charAt(0).toUpperCase()+id.slice(1));
+  if(disp)disp.textContent=txt;
+}
+/* --- end searchable dropdown --- */
+
 function setRange(kind,btn){
   document.querySelectorAll('.btn-chip[data-r]').forEach(function(b){b.classList.remove('active');});
   if(btn)btn.classList.add('active');var end=new Date(),start=new Date();
@@ -350,24 +424,25 @@ function renderUserNames(list){
   var sel=document.getElementById('xrefUser');sel.innerHTML='<option value="">— Selecione um usuário —</option>';
   _allUsers.forEach(function(u){var opt=document.createElement('option');opt.value=(u.username||u.displayUser);opt.textContent=(u.displayUser||u.username);sel.appendChild(opt);});
   // Re-aplica filtro se ativo
-  var fvu=(document.getElementById('filterUserXref')||{}).value;if(fvu)filterSel('xrefUser',fvu);
+  cdSync('xrefUser');
+  var fvu=(document.getElementById('cdSearchUser')||{}).value;if(fvu)cdFilter('xrefUser',fvu);
 }
 function _populateXrefDevs(list){
   var devSel=document.getElementById('xrefDev');devSel.innerHTML='<option value="">— Selecione um dispositivo —</option>';
   list.sort(function(a,b){return String(a.name).localeCompare(String(b.name));}).forEach(function(d){var opt=document.createElement('option');opt.value=d.nodeid;opt.textContent=d.name;devSel.appendChild(opt);});
   // Re-aplica filtro se ativo
-  var fvd=(document.getElementById('filterDevXref')||{}).value;if(fvd)filterSel('xrefDev',fvd);
+  cdSync('xrefDev');
+  var fvd=(document.getElementById('cdSearchDev')||{}).value;if(fvd)cdFilter('xrefDev',fvd);
 }
-function gotoDev(nid){document.getElementById('xrefDev').value=nid;loadXrefDev();}
+function gotoDev(nid){document.getElementById('xrefDev').value=nid;cdUpdateDisplay('xrefDev');loadXrefDev();}
 function gotoUser(displayUser){
   var sel=document.getElementById('xrefUser');
-  for(var i=0;i<sel.options.length;i++){if(sel.options[i].textContent===displayUser||sel.options[i].value===displayUser){sel.selectedIndex=i;loadXrefUser();return;}}
+  for(var i=0;i<sel.options.length;i++){if(sel.options[i].textContent===displayUser||sel.options[i].value===displayUser){sel.selectedIndex=i;cdUpdateDisplay('xrefUser');loadXrefUser();return;}}
 }
 function resetUserFilter(){
   _viewRange=null;_eventsCache=[];
   document.getElementById('xrefUser').value='';document.getElementById('xrefUserResult').innerHTML='<div class="empty">Selecione um usuário.</div>';
-  var fu=document.getElementById('filterUserXref');if(fu){fu.value='';}
-  filterSel('xrefUser','');
+  var su=document.getElementById('cdSearchUser');if(su){su.value='';}cdFilter('xrefUser','');
   document.getElementById('hintUser').textContent='';_populateXrefDevs(_allDevices);
   document.getElementById('xrefDevResult').innerHTML='<div class="empty">Selecione um dispositivo.</div>';document.getElementById('hintDev').textContent='';
   document.getElementById('tlFilter').textContent='';document.getElementById('tlFilter').removeAttribute('data-base');document.getElementById('gantt').innerHTML='<div class="empty">Selecione um usuário ou dispositivo.</div>';
@@ -375,13 +450,13 @@ function resetUserFilter(){
 function resetDevFilter(){
   _viewRange=null;_eventsCache=[];
   document.getElementById('xrefDev').value='';document.getElementById('xrefDevResult').innerHTML='<div class="empty">Selecione um dispositivo.</div>';
-  var fd=document.getElementById('filterDevXref');if(fd){fd.value='';}
-  filterSel('xrefDev','');
+  var sd=document.getElementById('cdSearchDev');if(sd){sd.value='';}cdFilter('xrefDev','');
   document.getElementById('hintDev').textContent='';_populateXrefDevs(_allDevices);
   document.getElementById('xrefUserResult').innerHTML='<div class="empty">Selecione um usuário.</div>';document.getElementById('hintUser').textContent='';
   var sel=document.getElementById('xrefUser');sel.innerHTML='<option value="">— Selecione um usuário —</option>';
   _allUsers.forEach(function(u){var opt=document.createElement('option');opt.value=(u.username||u.displayUser);opt.textContent=(u.displayUser||u.username);sel.appendChild(opt);});
-  var fvd2=(document.getElementById('filterUserXref')||{}).value;if(fvd2)filterSel('xrefUser',fvd2);
+  cdSync('xrefUser');
+  var fvd2=(document.getElementById('cdSearchUser')||{}).value;if(fvd2)cdFilter('xrefUser',fvd2);
   document.getElementById('tlFilter').textContent='';document.getElementById('tlFilter').removeAttribute('data-base');document.getElementById('gantt').innerHTML='<div class="empty">Selecione um usuário ou dispositivo.</div>';
 }
 function loadXrefUser(){
@@ -415,7 +490,8 @@ function renderXrefUser(e){e=e||[];document.getElementById('sEvents').textConten
     var opts=[];names.forEach(function(n){var d=by[n];opts.push(d);});opts.sort(function(a,b){return String(a.name).localeCompare(String(b.name));});
     opts.forEach(function(d){var opt=document.createElement('option');opt.value=d.nodeid;opt.textContent=d.name;if(d.nodeid===curVal)opt.selected=true;devSel.appendChild(opt);});
     // Re-aplica filtro se ativo
-    var fv=(document.getElementById('filterDevXref')||{}).value;if(fv)filterSel('xrefDev',fv);
+    cdSync('xrefDev');
+    var fv=(document.getElementById('cdSearchDev')||{}).value;if(fv)cdFilter('xrefDev',fv);
   }
 }
 function renderXrefDev(e){e=e||[];document.getElementById('sEvents').textContent=e.length;if(!e.length){document.getElementById('xrefDevResult').innerHTML='<div class="empty">Nenhum evento encontrado.</div>';return;}
@@ -429,7 +505,8 @@ function renderXrefDev(e){e=e||[];document.getElementById('sEvents').textContent
     var usrSel=document.getElementById('xrefUser');var curVal=usrSel.value;usrSel.innerHTML='<option value="">— Relacionados —</option>';
     names.forEach(function(u){var g=by[u];var un=splitUser(g.user);var opt=document.createElement('option');opt.value=(un.user||g.user);opt.textContent=g.user;if((un.user||g.user)===curVal||g.user===curVal)opt.selected=true;usrSel.appendChild(opt);});
     // Re-aplica filtro se ativo
-    var fv=(document.getElementById('filterUserXref')||{}).value;if(fv)filterSel('xrefUser',fv);
+    cdSync('xrefUser');
+    var fv=(document.getElementById('cdSearchUser')||{}).value;if(fv)cdFilter('xrefUser',fv);
   }
 }
 (function(){
