@@ -2,6 +2,11 @@
 
 
 
+## 3.5.52 (2026-07-27)
+
+### Fixes
+- Race condition: `_reqUser`/`_reqDev` ignoram respostas obsoletas de requisições anteriores
+
 ## 3.5.51 (2026-07-27)
 
 ### Fixes

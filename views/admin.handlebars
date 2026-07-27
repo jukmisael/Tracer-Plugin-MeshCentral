@@ -102,7 +102,7 @@ body{font-family:"Trebuchet MS",Arial,Helvetica,sans-serif;background:#d3d9d6;co
 
 <script>
 var D=[],ms=(typeof top!=='undefined'&&top.meshserver)||(typeof parent!=='undefined'&&parent.meshserver)||window.meshserver;
-var _allDevices=[],_allUsers=[],_xrefPending='',_selectedRange=null,_fullRange=null,selectedDevs={};
+var _allDevices=[],_allUsers=[],_xrefPending='',_selectedRange=null,_fullRange=null,_reqUser='',_reqDev='',selectedDevs={};
 var _savedEvents=[],_savedRange={rs:0,re:0};
 function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 function segColor(st,op){return st==='lock'?'#e65100':st==='logout'?'#888':'#2e7d32';}
@@ -286,21 +286,22 @@ function resetDevFilter(){
 }
 function loadXrefUser(){
   var u=document.getElementById('xrefUser').value;if(!u){document.getElementById('xrefUserResult').innerHTML='<div class="empty">Selecione um usuário.</div>';return;}
-  document.getElementById('xrefUserResult').innerHTML='<div class="loading">Buscando...</div>';document.getElementById('hintUser').textContent='';
+  _reqUser=u;document.getElementById('xrefUserResult').innerHTML='<div class="loading">Buscando...</div>';document.getElementById('hintUser').textContent='';
   _xrefPending='user';document.getElementById('gantt').innerHTML='<div class="loading">Carregando...</div>';
   document.getElementById('tlFilter').textContent='Usuário: '+esc(u);
   var sd=_selectedRange||{},rs=sd.rs||(new Date(document.getElementById('dStart').value+'T00:00:00').getTime()),re=sd.re||(new Date(document.getElementById('dEnd').value+'T23:59:59.999').getTime());
-  if(ms)ms.send({action:'plugin',plugin:'usertracer',pluginaction:'getTimeline',username:u,startDate:new Date(rs).toISOString(),endDate:new Date(re).toISOString(),limit:8000});
+  if(ms)ms.send({action:'plugin',plugin:'usertracer',pluginaction:'getTimeline',_seq:seq,username:u,startDate:new Date(rs).toISOString(),endDate:new Date(re).toISOString(),limit:8000});
 }
 function loadXrefDev(){
   var n=document.getElementById('xrefDev').value;if(!n){document.getElementById('xrefDevResult').innerHTML='<div class="empty">Selecione um dispositivo.</div>';return;}
-  document.getElementById('xrefDevResult').innerHTML='<div class="loading">Buscando...</div>';document.getElementById('hintDev').textContent='';
+  _reqDev=n;document.getElementById('xrefDevResult').innerHTML='<div class="loading">Buscando...</div>';document.getElementById('hintDev').textContent='';
   _xrefPending='dev';document.getElementById('gantt').innerHTML='<div class="loading">Carregando...</div>';
   document.getElementById('tlFilter').textContent='Dispositivo: '+esc(document.getElementById('xrefDev').options[document.getElementById('xrefDev').selectedIndex].text);
   var sd=_selectedRange||{},rs=sd.rs||(new Date(document.getElementById('dStart').value+'T00:00:00').getTime()),re=sd.re||(new Date(document.getElementById('dEnd').value+'T23:59:59.999').getTime());
   if(ms)ms.send({action:'plugin',plugin:'usertracer',pluginaction:'getTimeline',nodeid:n,startDate:new Date(rs).toISOString(),endDate:new Date(re).toISOString(),limit:8000});
 }
 function renderXrefUser(e){e=e||[];document.getElementById('sEvents').textContent=e.length;if(!e.length){document.getElementById('xrefUserResult').innerHTML='<div class="empty">Nenhum evento encontrado.</div>';return;}
+  if(document.getElementById('xrefUser').value!==_reqUser){dlog('STALE','user response ignored');return;}
   var by={};e.forEach(function(v){var n=v.nodeName||v.nodeid||'?';if(!by[n])by[n]={name:n,nodeid:v.nodeid,events:[]};by[n].events.push(v);});
   var names=Object.keys(by).sort();document.getElementById('hintUser').textContent=e.length+' eventos em '+names.length+' dispositivos';
   var h='<div class="stacked">';names.forEach(function(n){var evs=by[n].events.sort(function(a,b){return new Date(b.detectedAt)-new Date(a.detectedAt);}),last=evs[0],first=evs[evs.length-1],em=eventMeta(last.eventType);h+='<div class="scard" style="cursor:pointer" onclick="gotoDev(\''+esc(by[n].nodeid)+'\')"><div style="flex:1"><div class="tag">'+esc(n)+'</div><div class="tagl">'+evs.length+' eventos · '+fmtDate(first.detectedAt)+' → '+(em.endLabel||fmtDate(last.detectedAt))+'</div></div><span class="badge" style="color:'+em.color+'">'+em.label+'</span></div>';});
@@ -312,6 +313,7 @@ function renderXrefUser(e){e=e||[];document.getElementById('sEvents').textConten
   }
 }
 function renderXrefDev(e){e=e||[];document.getElementById('sEvents').textContent=e.length;if(!e.length){document.getElementById('xrefDevResult').innerHTML='<div class="empty">Nenhum evento encontrado.</div>';return;}
+  if(document.getElementById('xrefDev').value!==_reqDev){dlog('STALE','dev response ignored');return;}
   var by={};e.forEach(function(v){var u=v.displayUser||v.username||'?';if(!by[u])by[u]={user:u,domain:v.domain,events:[]};by[u].events.push(v);});
   var names=Object.keys(by).sort();document.getElementById('hintDev').textContent=e.length+' eventos de '+names.length+' usuários';
   var h='<div class="stacked">';names.forEach(function(u){var g=by[u],evs=g.events.sort(function(a,b){return new Date(b.detectedAt)-new Date(a.detectedAt);}),last=evs[0],first=evs[evs.length-1],un=splitUser(g.user),em=eventMeta(last.eventType);var _gud=esc((un.user||g.user).replace(/\\/g,'\\\\'));h+='<div class="scard" style="cursor:pointer" onclick="gotoUser(\''+_gud+'\')"><div style="flex:1"><div class="tag">'+esc(un.user||g.user)+'</div><div class="tagl">'+(g.domain?esc(g.domain)+' · ':'')+evs.length+' eventos · '+fmtDate(first.detectedAt)+' → '+(em.endLabel||fmtDate(last.detectedAt))+'</div></div><span class="badge" style="color:'+em.color+'">'+em.label+'</span></div>';});
