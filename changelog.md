@@ -2,6 +2,11 @@
 
 
 
+## 3.5.48 (2026-07-27)
+
+### Fixes
+- getPct: usa scrollWidth e subtrai coluna 110px para precisão no drag
+
 ## 3.5.47 (2026-07-27)
 
 ### Ajustes

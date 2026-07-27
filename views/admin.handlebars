@@ -225,12 +225,12 @@ function setupGanttDrag(){
   var wrap=document.querySelector('.gantt-wrap');if(!wrap)return;
   var sel=null,ov=null;
   function getPct(e){
-    var wrap=document.querySelector('.gantt-wrap');
-    if(!wrap)return 0;
+    var wrap=document.querySelector('.gantt-wrap');if(!wrap)return 0;
     var rect=wrap.getBoundingClientRect();
-    var content=wrap.firstElementChild;// inner flex container
-    var cw=content?content.scrollWidth:rect.width;
-    return Math.max(0,Math.min(100,((e.clientX-rect.left+wrap.scrollLeft)/cw)*100));
+    var tickArea=wrap.querySelector('[style*="min-width"]');
+    var cw=tickArea?tickArea.scrollWidth:(rect.width-110);
+    var x=e.clientX-rect.left+wrap.scrollLeft-110;
+    return Math.max(0,Math.min(100,(x/cw)*100));
   }
   function stopDrag(){
     if(ov){ov.remove();ov=null;}
