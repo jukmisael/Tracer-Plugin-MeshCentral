@@ -2,6 +2,12 @@
 
 
 
+## 3.5.17 (2026-07-27)
+
+### Ajustes
+- Coluna SESSÃO: 90px → 160px para caber nomes completos
+- Removido label do usuário sobre a barra do Gantt
+
 ## 3.5.16 (2026-07-27)
 
 ### Fixes

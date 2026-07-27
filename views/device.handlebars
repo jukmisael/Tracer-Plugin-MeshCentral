@@ -133,7 +133,7 @@ function _renderGantt(events,rs,re){
   var ticks=[],t0=Math.ceil(rs/step)*step;
   for(var t=t0;t<=re;t+=step){var d=new Date(t);ticks.push({pct:((t-rs)/total)*100,label:step<dayMs?((d.getHours()<10?'0':'')+d.getHours()+':00'):((d.getDate()<10?'0':'')+d.getDate()+'/'+(d.getMonth()+1<10?'0':'')+(d.getMonth()+1))});}
   var mw=Math.max(520,Math.min(2400,Math.floor(span*100)));
-  var h='<div class="gantt-wrap"><div style="display:flex;border-bottom:1px solid #aaa;background:#e4e9e7;position:sticky;top:0;z-index:2"><div style="width:90px;flex-shrink:0;padding:6px 7px;font-size:9px;color:#333;font-weight:700;border-right:1px solid #aaa">SESSÃO</div><div style="flex:1;position:relative;height:28px;min-width:'+mw+'px">';
+  var h='<div class="gantt-wrap"><div style="display:flex;border-bottom:1px solid #aaa;background:#e4e9e7;position:sticky;top:0;z-index:2"><div style="width:160px;flex-shrink:0;padding:6px 7px;font-size:9px;color:#333;font-weight:700;border-right:1px solid #aaa">SESSÃO</div><div style="flex:1;position:relative;height:28px;min-width:'+mw+'px">';
   ticks.forEach(function(tk){h+='<div style="position:absolute;top:0;bottom:0;border-left:1px dashed #ccc;left:'+tk.pct+'%"><span style="position:absolute;top:6px;left:3px;font-size:8px;color:#666;white-space:nowrap">'+esc(tk.label)+'</span></div>';});
   h+='</div></div>';
   var byUser={};sessions.forEach(function(s){var k=s.display||s.user||'?';if(!byUser[k])byUser[k]=[];byUser[k].push(s);});
@@ -144,7 +144,7 @@ function _renderGantt(events,rs,re){
     var fst=segs[0],lst=segs[segs.length-1];
     var barLeft=Math.max(0,((fst.start-rs)/total)*100),barRight=Math.min(100,((lst.end-rs)/total)*100);if(barRight<=barLeft)barRight=barLeft+0.2;
     var barW=barRight-barLeft,isOpen=segs.some(function(s){return s.open;});
-    h+='<div style="display:flex;min-height:40px;border-bottom:1px solid #e0e0e0"><div style="width:90px;flex-shrink:0;padding:7px;border-right:1px solid #ccc;font-size:10px;color:#003366;font-weight:700;display:flex;align-items:center;background:#fff">'+esc(u)+'</div><div style="flex:1;position:relative;min-width:'+mw+'px;min-height:40px">';
+    h+='<div style="display:flex;min-height:40px;border-bottom:1px solid #e0e0e0"><div style="width:160px;flex-shrink:0;padding:7px;border-right:1px solid #ccc;font-size:10px;color:#003366;font-weight:700;display:flex;align-items:center;background:#fff">'+esc(u)+'</div><div style="flex:1;position:relative;min-width:'+mw+'px;min-height:40px">';
     ticks.forEach(function(tk){h+='<div style="position:absolute;top:0;bottom:0;border-left:1px dashed #ccc;left:'+tk.pct+'%"></div>';});
     // Barra continua com segmentos coloridos
     h+='<div style="position:absolute;top:9px;height:20px;left:'+barLeft+'%;width:'+barW+'%;border-radius:2px;overflow:hidden;cursor:pointer;display:flex;border:'+(isOpen?'2px dashed':'1px solid')+' rgba(0,0,0,.2)" onclick="top.location.href=\'/?viewmode=10&gotonode='+(nodeid||'').replace(/^node\/\//,'')+'\'">';
@@ -155,7 +155,6 @@ function _renderGantt(events,rs,re){
       var tt='Usuário: '+esc(s.user||s.display)+'\nDe: '+fmtDate(s.start)+'\nAté: '+fmtDate(s.end)+'\nEstado: '+em.label+'\nDuração: '+fmtDur(s.end-s.start);
       h+='<div style="height:100%;width:'+pct+'%;background:'+segColor(s.state,s.open)+';border-right:1px solid rgba(0,0,0,.15);min-width:2px" title="'+esc(tt)+'"></div>';
     });
-    h+='<span style="position:absolute;top:2px;left:4px;font-size:9px;font-weight:700;color:#fff;text-shadow:0 0 2px rgba(0,0,0,.6);pointer-events:none;white-space:nowrap">'+esc(segs[0].user||'')+'</span>';
     h+='</div></div></div>';
   });
   h+='</div>';document.getElementById('gantt').innerHTML=h;
