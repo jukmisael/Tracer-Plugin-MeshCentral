@@ -2,6 +2,12 @@
 
 
 
+## 3.5.46 (2026-07-27)
+
+### Ajustes
+- Navegação ao node removida do clique na barra
+- Duplo clique no segmento agora funciona (não conflita com onclick)
+
 ## 3.5.45 (2026-07-27)
 
 ### Features
