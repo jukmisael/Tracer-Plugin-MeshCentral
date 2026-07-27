@@ -121,7 +121,7 @@ function buildSessions(events,rs,re){
     });if(start!=null)out.push({user:g.user,display:g.display,start:start,end:Math.min(re,Date.now()),state:state,open:true});
   });return out;
 }
-function _renderGantt(events,rs,re){
+function _renderGantt(events,rs,re,pwrMap){
   dlog('GR','enter events',events.length,'range',new Date(rs).toISOString(),new Date(re).toISOString());
   _savedEvents=events;
   var total=re-rs;if(total<=0){dlog('GR','total zero');total=86400000;}
@@ -164,10 +164,11 @@ function _renderGantt(events,rs,re){
   var names=Object.keys(byName).sort();
   if(!names.length){document.getElementById('userList').innerHTML='<div class="empty">Nenhum usuário.</div>';return;}
   var ul='<table class="tbl"><thead><tr><th>Usuário</th><th>Domínio</th><th>Eventos</th><th>Primeiro</th><th>Último</th><th>Status</th></tr></thead><tbody>';
-  names.forEach(function(k){var g=byName[k],evs=g.events.sort(function(a,b){return new Date(b.detectedAt)-new Date(a.detectedAt);});var last=evs[0],first=evs[evs.length-1],em=eventMeta(last.eventType);ul+='<tr><td><b>'+esc(g.username||g.user)+'</b></td><td class="tt">'+esc(g.domain||'—')+'</td><td>'+evs.length+'</td><td class="tt">'+fmtShort(first.detectedAt)+'</td><td class="tt">'+(em.endLabel||fmtShort(last.detectedAt))+'</td><td style="font-weight:700;color:'+em.color+'">'+em.label+'</td></tr>';});
+  var devOff=pwrMap&&pwrMap[nodeid]&&pwrMap[nodeid].pwr===0;
+  names.forEach(function(k){var g=byName[k],evs=g.events.sort(function(a,b){return new Date(b.detectedAt)-new Date(a.detectedAt);});var last=evs[0],first=evs[evs.length-1],em=devOff?{color:'#888',label:'Offline'}:eventMeta(last.eventType);ul+='<tr><td><b>'+esc(g.username||g.user)+'</b></td><td class="tt">'+esc(g.domain||'—')+'</td><td>'+evs.length+'</td><td class="tt">'+fmtShort(first.detectedAt)+'</td><td class="tt">'+(em.endLabel||fmtShort(last.detectedAt))+'</td><td style="font-weight:700;color:'+em.color+'">'+em.label+'</td></tr>';});
   ul+='</tbody></table>';document.getElementById('userList').innerHTML=ul;
 }
-function renderGantt(events){
+function renderGantt(events,pwrMap){
   dlog('RG','enter',events?'n='+events.length:'no events');
   events=events||[];
   if(!events.length){dlog('RG','empty');document.getElementById('gantt').innerHTML='<div class="empty">Nenhum evento no período selecionado.</div>';document.getElementById('userList').innerHTML='<div class="empty">Nenhum evento.</div>';return;}
@@ -179,14 +180,14 @@ function renderGantt(events){
     rs=Infinity;re=-Infinity;events.forEach(function(e){var t=new Date(e.detectedAt).getTime();if(t<rs)rs=t;if(t>re)re=t;});if(re<=rs)re=rs+86400000;
     dlog('RG','recalc rs',rs,'re',re);
   }
-  try{_renderGantt(events,rs,re);dlog('RG','_renderGantt OK');}catch(ex){dlog('RGERR',ex.message);}
+  try{_renderGantt(events,rs,re,pwrMap);dlog('RG','_renderGantt OK');}catch(ex){dlog('RGERR',ex.message);}
 }
 (function(){
   // Registra no pluginHandler (pode ser chamado na inicialização, mas ignora se for meshserver)
   try{
     var ph=(top&&top.pluginHandler&&top.pluginHandler.usertracer)||(parent&&parent.pluginHandler&&parent.pluginHandler.usertracer);
     if(ph){
-      var _rt=function(m){if(m&&m.data&&Array.isArray(m.data)){renderGantt(m.data);dlog('PHOK','timeline n='+m.data.length);}else dlog('PHSKIP',typeof m);};
+      var _rt=function(m){if(m&&m.data&&Array.isArray(m.data)){renderGantt(m.data,m._pwrMap);dlog('PHOK','timeline n='+m.data.length);}else dlog('PHSKIP',typeof m);};
       ph.timeline=_rt;
       dlog('PH','registered');
     }
@@ -200,7 +201,7 @@ function renderGantt(events){
         var d=JSON.parse(e.data);
         if(d.action==='plugin'&&d.plugin==='usertracer'&&d.method==='timeline'){
           dlog('WS','got timeline n='+(d.data?d.data.length:'?'));
-          renderGantt(d.data||[]);
+          renderGantt(d.data||[],d._pwrMap);
         }
       }catch(ex){dlog('WSE',ex.message);}
     };

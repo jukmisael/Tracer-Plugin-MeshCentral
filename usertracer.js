@@ -122,6 +122,10 @@ module.exports.usertracer = function (parent) {
                 console.log('UT CHECKNODE: doc.lusers RAW=' + JSON.stringify(doc.lusers));
                 console.log('UT CHECKNODE: doc.keys=' + Object.keys(doc).sort().join(','));
 
+                // Cache device power state for frontend
+                if(!obj.devicePwr)obj.devicePwr={};
+                obj.devicePwr[nodeid]={pwr:doc.pwr,conn:doc.conn,lastconnect:doc.lastconnect,time:Date.now()};
+
                 var currentUsers = (Array.isArray(doc.users) ? doc.users : []).sort();
                 var currentLusers = (Array.isArray(doc.lusers) ? doc.lusers : []).sort();
                 // Encode both active and locked users in cache key
@@ -423,7 +427,13 @@ module.exports.usertracer = function (parent) {
                 if (command.username) query.$or = [{ username: command.username }, { displayUser: command.username }];
                 obj.db.getEvents(query, opts, function (docs) {
                     if (!docs) { console.log('UT CMD: getEvents returned null docs. opts=' + JSON.stringify(opts)); }
-                    obj.send(sid, { action:'plugin', plugin:'usertracer', method:'timeline', data: docs || [] });
+                    // Attach current device power state
+                    var pwrMap={};
+                    if(obj.devicePwr){
+                        var ids={};(docs||[]).forEach(function(e){if(e.nodeid)ids[e.nodeid]=1;});
+                        Object.keys(ids).forEach(function(id){if(obj.devicePwr[id])pwrMap[id]=obj.devicePwr[id];});
+                    }
+                    obj.send(sid, { action:'plugin', plugin:'usertracer', method:'timeline', data: docs || [], _pwrMap: pwrMap });
                 });
                 return;
             }

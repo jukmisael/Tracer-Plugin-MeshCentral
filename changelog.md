@@ -2,6 +2,13 @@
 
 
 
+## 3.5.22 (2026-07-27)
+
+### Fixes
+- Device offline detectado via `doc.pwr`: se dispositivo desligou, usuário mostra Offline
+- Servidor envia `_pwrMap` junto com events
+- Frontend usa pwrMap para sobrescrever status no user list
+
 ## 3.5.21 (2026-07-27)
 
 ### Ajustes
