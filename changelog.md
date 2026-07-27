@@ -2,6 +2,12 @@
 
 
 
+## 3.5.19 (2026-07-27)
+
+### Ajustes
+- Admin: barras unificadas por usuário com segmentos coloridos empilhados
+- Admin: altura da linha ajustada dinamicamente por número de usuários
+
 ## 3.5.18 (2026-07-27)
 
 ### Ajustes
