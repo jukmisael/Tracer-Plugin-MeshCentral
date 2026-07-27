@@ -2,6 +2,11 @@
 
 
 
+## 3.5.56 (2026-07-27)
+
+### Changed
+- **Barra de pesquisa integrada ao dropdown**: input de filtro agora fica visualmente DENTRO do componente (borda compartilhada com o select, sem gap). Mesma largura, input em cima + select embaixo formando um box único.
+
 ## 3.5.55 (2026-07-27)
 
 ### Fixed

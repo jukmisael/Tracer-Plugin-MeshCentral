@@ -87,9 +87,9 @@ body{font-family:"Trebuchet MS",Arial,Helvetica,sans-serif;background:#d3d9d6;co
     <div class="panel">
       <div class="panel-title">Usuário → Dispositivos</div>
       <div class="toolbar">
-        <div style="flex:1;display:flex;flex-direction:column;gap:2px">
-        <input type="text" id="filterUserXref" placeholder="Filtrar usuário..." style="font-size:11px;padding:2px 4px;border:1px solid #aaa;border-radius:2px" oninput="filterSel('xrefUser',this.value)">
-        <select id="xrefUser" onchange="loadXrefUser()"><option value="">— Selecione um usuário —</option></select>
+        <div style="flex:1;display:flex;flex-direction:column">
+        <input type="text" id="filterUserXref" placeholder="Filtrar usuário..." style="font-size:11px;padding:3px 4px;border:1px solid #aaa;border-bottom:none;border-radius:2px 2px 0 0" oninput="filterSel('xrefUser',this.value)">
+        <select id="xrefUser" onchange="loadXrefUser()" style="border:1px solid #aaa;border-top:none;border-radius:0 0 2px 2px"><option value="">— Selecione um usuário —</option></select>
         </div>
         <button class="btn btn-primary" onclick="loadXrefUser()">Buscar</button><button class="btn btn-sm" onclick="resetUserFilter()" title="Limpar filtro" style="margin-left:2px;font-weight:700;color:#c62828">✕</button><button class="btn btn-sm" onclick="loadUserNames()" title="Atualizar lista" style="margin-left:2px">↻</button><span class="muted" id="hintUser"></span>
       </div>
@@ -100,9 +100,9 @@ body{font-family:"Trebuchet MS",Arial,Helvetica,sans-serif;background:#d3d9d6;co
     <div class="panel">
       <div class="panel-title">Dispositivo → Usuários</div>
       <div class="toolbar">
-        <div style="flex:1;display:flex;flex-direction:column;gap:2px">
-        <input type="text" id="filterDevXref" placeholder="Filtrar dispositivo..." style="font-size:11px;padding:2px 4px;border:1px solid #aaa;border-radius:2px" oninput="filterSel('xrefDev',this.value)">
-        <select id="xrefDev" onchange="loadXrefDev()"><option value="">— Selecione um dispositivo —</option></select>
+        <div style="flex:1;display:flex;flex-direction:column">
+        <input type="text" id="filterDevXref" placeholder="Filtrar dispositivo..." style="font-size:11px;padding:3px 4px;border:1px solid #aaa;border-bottom:none;border-radius:2px 2px 0 0" oninput="filterSel('xrefDev',this.value)">
+        <select id="xrefDev" onchange="loadXrefDev()" style="border:1px solid #aaa;border-top:none;border-radius:0 0 2px 2px"><option value="">— Selecione um dispositivo —</option></select>
         </div>
         <button class="btn btn-primary" onclick="loadXrefDev()">Buscar</button><button class="btn btn-sm" onclick="resetDevFilter()" title="Limpar filtro" style="margin-left:2px;font-weight:700;color:#c62828">✕</button><button class="btn btn-sm" onclick="loadDeviceNames()" title="Atualizar lista" style="margin-left:2px">↻</button><span class="muted" id="hintDev"></span>
       </div>
