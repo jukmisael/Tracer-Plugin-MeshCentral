@@ -2,6 +2,11 @@
 
 
 
+## 3.5.58 (2026-07-27)
+
+### Changed
+- **Dropdown substituído por <input> + <datalist> nativo**: filtro de usuário/dispositivo agora usa `<input list="datalist-...">` com `<datalist>` — sem JS complexo, sem painel customizado. Digita para filtrar, clica na sugestão para selecionar, compatível com todos os navegadores.
+
 ## 3.5.57 (2026-07-27)
 
 ### Changed
