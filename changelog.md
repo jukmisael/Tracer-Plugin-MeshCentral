@@ -2,6 +2,15 @@
 
 
 
+## 3.5.55 (2026-07-27)
+
+### Fixed
+- **Domínio duplicado no dropdown**: `renderXrefDev` usava `g.domain + '\\' + un.user` para texto, que podia duplicar quando `displayUser` já inclui o domínio. Agora usa `g.user` (o `displayUser` original) diretamente.
+- **Value do select**: usa `splitUser(g.user).user` (apenas username, sem domínio) — consistente com `renderUserNames`.
+
+### Added
+- **Barra de pesquisa nos dropdowns**: inputs de texto "Filtrar usuário..." e "Filtrar dispositivo..." acima de cada `<select>`. Filtra opções por texto em tempo real via `filterSel()`. Filtro reaplicado automaticamente após rebuild dos dropdowns.
+
 ## 3.5.54 (2026-07-27)
 
 ### Fixed
