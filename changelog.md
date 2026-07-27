@@ -2,6 +2,12 @@
 
 
 
+## 3.5.33 (2026-07-27)
+
+### Fixes
+- `getUserNames` agora inclui usuários do scanner cache (não só events DB)
+- Botões refresh (↻) nos selects de usuário e dispositivo
+
 ## 3.5.32 (2026-07-27)
 
 ### Ajustes

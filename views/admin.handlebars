@@ -85,7 +85,7 @@ body{font-family:"Trebuchet MS",Arial,Helvetica,sans-serif;background:#d3d9d6;co
       <div class="panel-title">Usuário → Dispositivos</div>
       <div class="toolbar">
         <select id="xrefUser" style="flex:1" onchange="loadXrefUser()"><option value="">— Selecione um usuário —</option></select>
-        <button class="btn btn-primary" onclick="loadXrefUser()">Buscar</button><button class="btn btn-sm" onclick="resetUserFilter()" title="Limpar filtro" style="margin-left:2px;font-weight:700;color:#c62828">✕</button><span class="muted" id="hintUser"></span>
+        <button class="btn btn-primary" onclick="loadXrefUser()">Buscar</button><button class="btn btn-sm" onclick="resetUserFilter()" title="Limpar filtro" style="margin-left:2px;font-weight:700;color:#c62828">✕</button><button class="btn btn-sm" onclick="loadUserNames()" title="Atualizar lista" style="margin-left:2px">↻</button><span class="muted" id="hintUser"></span>
       </div>
       <div id="xrefUserResult"><div class="empty">Selecione um usuário.</div></div>
     </div>
@@ -95,7 +95,7 @@ body{font-family:"Trebuchet MS",Arial,Helvetica,sans-serif;background:#d3d9d6;co
       <div class="panel-title">Dispositivo → Usuários</div>
       <div class="toolbar">
         <select id="xrefDev" style="flex:1" onchange="loadXrefDev()"><option value="">— Selecione um dispositivo —</option></select>
-        <button class="btn btn-primary" onclick="loadXrefDev()">Buscar</button><button class="btn btn-sm" onclick="resetDevFilter()" title="Limpar filtro" style="margin-left:2px;font-weight:700;color:#c62828">✕</button><span class="muted" id="hintDev"></span>
+        <button class="btn btn-primary" onclick="loadXrefDev()">Buscar</button><button class="btn btn-sm" onclick="resetDevFilter()" title="Limpar filtro" style="margin-left:2px;font-weight:700;color:#c62828">✕</button><button class="btn btn-sm" onclick="loadDeviceNames()" title="Atualizar lista" style="margin-left:2px">↻</button><span class="muted" id="hintDev"></span>
       </div>
       <div id="xrefDevResult"><div class="empty">Selecione um dispositivo.</div></div>
     </div>

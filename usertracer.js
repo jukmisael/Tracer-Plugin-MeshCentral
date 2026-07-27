@@ -453,9 +453,23 @@ module.exports.usertracer = function (parent) {
 
             // --- getUserNames ---
             if (command.pluginaction === 'getUserNames') {
-                if (obj.db && obj.db.getUserNames) {
-                    obj.db.getUserNames(function(d) {
-                        obj.send(sid, { action:'plugin', plugin:'usertracer', method:'userNames', data: d || [] });
+                var mergeUser=function(list,username,displayUser,domain){
+                    if(!displayUser)return;
+                    for(var i=0;i<list.length;i++){if(list[i].displayUser===displayUser)return;}
+                    list.push({username:username||displayUser.split('\\').pop(),displayUser:displayUser,domain:domain||''});
+                };
+                var collect=[];
+                // From events DB
+                if(obj.db && obj.db.getUserNames){
+                    obj.db.getUserNames(function(d){
+                        (d||[]).forEach(function(u){mergeUser(collect,u.username,u.displayUser,u.domain);});
+                        // From scanner cache (userCache)
+                        if(obj.userCache){
+                            Object.keys(obj.userCache).forEach(function(nid){
+                                try{var st=JSON.parse(obj.userCache[nid]);(st.users||[]).forEach(function(u){mergeUser(collect,u.split('\\').pop(),u,'');});(st.lusers||[]).forEach(function(u){mergeUser(collect,u.split('\\').pop(),u,'');});}catch(ex){}
+                            });
+                        }
+                        obj.send(sid, { action:'plugin', plugin:'usertracer', method:'userNames', data: collect });
                     });
                 } else {
                     console.log('UT CMD: getUserNames not available');
