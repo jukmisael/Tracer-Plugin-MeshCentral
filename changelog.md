@@ -2,6 +2,11 @@
 
 
 
+## 3.5.12 (2026-07-27)
+
+### Fixes
+- Device tab: `w` e `c` undefined no `_renderGantt` — `ReferenceError` engolia renderização
+
 ## 3.5.11 (2026-07-27)
 
 ### Fixes
