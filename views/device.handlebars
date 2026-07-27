@@ -125,8 +125,7 @@ function _renderGantt(events,rs,re){
     ticks.forEach(function(tk){h+='<div style="position:absolute;top:0;bottom:0;border-left:1px dashed #ccc;left:'+tk.pct+'%"></div>';});
     (byUser[u]||[]).forEach(function(s){
       var left=Math.max(0,((s.start-rs)/total)*100),right=Math.min(100,((s.end-rs)/total)*100);if(right<=left)right=left+0.2;
-      var w=Math.max(0.25,right-left),c=colorFor(s.display||s.user);
-      h+='<div style="position:absolute;top:9px;height:20px;border-radius:2px;min-width:3px;font-size:9px;font-weight:700;color:#fff;padding:0 4px;display:flex;align-items:center;overflow:hidden;white-space:nowrap;border:'+(s.open?'2px dashed':'1px solid')+' rgba(0,0,0,.2);cursor:pointer;left:'+left+'%;width:'+w+'%;background:'+c+'">'+esc(s.user||'')+'</div>';
+      h+='<div style="position:absolute;top:9px;height:20px;border-radius:2px;min-width:3px;font-size:9px;font-weight:700;color:#fff;padding:0 4px;display:flex;align-items:center;overflow:hidden;white-space:nowrap;border:'+(s.open?'2px dashed':'1px solid')+' rgba(0,0,0,.2);cursor:pointer;left:'+left+'%;width:'+w+'%;background:'+c+'" onclick="parent.location.href=\'?viewmode=10&gotonode='+nodeid+'\'">'+esc(s.user||'')+'</div>';
     });
     h+='</div></div>';
   });
