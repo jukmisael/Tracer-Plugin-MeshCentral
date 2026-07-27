@@ -46,38 +46,26 @@ table.tbl tr:nth-child(even) td{background:#f4f6f5}table.tbl tr:hover td{backgro
 </head>
 <body>
 <h2>User Tracer</h2><div class="sub">{{nodeName}}</div>
-<div class="tabs">
-  <button class="active" id="tNow" onclick="switchTab('now')">Agora</button>
-  <button id="tHist" onclick="switchTab('history')">Timeline</button>
+<div class="panel">
+  <div class="panel-title">Período</div>
+  <div class="toolbar">
+    <button class="btn btn-chip" data-r="today" onclick="setRange('today',this)">Hoje</button>
+    <button class="btn btn-chip active" data-r="7d" onclick="setRange('7d',this)">7 dias</button>
+    <button class="btn btn-chip" data-r="30d" onclick="setRange('30d',this)">30 dias</button>
+    <input type="date" id="dStart"><input type="date" id="dEnd">
+    <button class="btn btn-primary" onclick="loadHistory()">Aplicar</button>
+  </div>
 </div>
-<div id="pane-now" class="pane active">
-  <div class="panel"><div class="panel-title">Usuário ativo</div><div id="info"><div class="loading">Carregando...</div></div></div>
+<div class="panel" style="padding:0;overflow:hidden">
+  <div class="panel-title" style="margin:0;display:flex;justify-content:space-between;align-items:center">
+    <span>Sessões</span>
+    <span style="font-size:10px;color:#666;font-weight:400">clique na barra = ir para o dispositivo</span>
+  </div>
+  <div id="gantt"><div class="empty">Selecione o período.</div></div>
 </div>
-<div id="pane-history" class="pane">
-  <div class="panel">
-    <div class="panel-title">Período</div>
-    <div class="toolbar">
-      <button class="btn btn-chip" data-r="today" onclick="setRange('today',this)">Hoje</button>
-      <button class="btn btn-chip active" data-r="7d" onclick="setRange('7d',this)">7 dias</button>
-      <button class="btn btn-chip" data-r="30d" onclick="setRange('30d',this)">30 dias</button>
-      <input type="date" id="dStart"><input type="date" id="dEnd">
-      <button class="btn btn-primary" onclick="loadHistory()">Aplicar</button>
-      <button class="btn btn-live" id="liveBtn" onclick="toggleLive()">🔴 Ao Vivo</button>
-      <span class="muted" id="liveHint"></span>
-    </div>
-  </div>
-  <div class="panel" style="padding:0;overflow:hidden">
-    <div class="panel-title" style="margin:0;display:flex;justify-content:space-between;align-items:center">
-      <span>Sessões</span>
-      <span style="font-size:10px;color:#666;font-weight:400">roda-mouse=zoom · barra=clique · linha vermelha=agora</span>
-    </div>
-    <div id="gantt"><div class="empty">Selecione o período.</div></div>
-    <div id="detailPanel" class="detail-panel"></div>
-  </div>
-  <div class="panel">
-    <div class="panel-title">Usuários que já usaram este dispositivo</div>
-    <div id="userList"><div class="empty">Selecione o período primeiro.</div></div>
-  </div>
+<div class="panel">
+  <div class="panel-title">Usuários que já usaram este dispositivo</div>
+  <div id="userList"><div class="empty">Selecione o período primeiro.</div></div>
 </div>
 <div class="dbg" onclick="var d=document.getElementById('debug');d.style.display=d.style.display==='none'?'block':'none'">Debug</div>
 <div id="debug">aguardando...</div>
@@ -85,9 +73,9 @@ table.tbl tr:nth-child(even) td{background:#f4f6f5}table.tbl tr:hover td{backgro
 var D=[], nodeid='{{nodeid}}', nodeName='{{nodeName}}';
 var ms=(typeof parent!=='undefined'&&parent.meshserver)||window.meshserver;
 var COLORS=['#003366','#1565c0','#2e7d32','#6a1b9a','#00838f','#ef6c00','#c62828','#455a64'];
-var _live=false,_refreshTimer=null,_zoomLevel=0,_savedEvents=[],_savedRange={rs:0,re:0},_hbTime=null;
-function dlog(){var a=Array.prototype.slice.call(arguments);D.push(new Date().toLocaleTimeString()+' '+a.join(' '));var e=document.getElementById('debug');if(e)e.innerHTML=D.slice(-60).join('\n');}
+var _savedEvents=[];function dlog(){var a=Array.prototype.slice.call(arguments);D.push(new Date().toLocaleTimeString()+' '+a.join(' '));var e=document.getElementById('debug');if(e)e.innerHTML=D.slice(-60).join('\n');}
 function eventMeta(t){return{color:t==='userLogin'?'#2e7d32':t==='userLock'?'#e65100':t==='userUnlock'?'#ff8f00':'#888',label:t==='userLogin'?'Online':t==='userLock'?'Bloqueado':t==='userUnlock'?'Desbloqueado':'Offline',endLabel:t==='userLogin'?'<b>Agora</b>':t==='userUnlock'?'<b>Desbloqueado</b>':null};}
+function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 function colorFor(k){var h=0,s=String(k||'');for(var i=0;i<s.length;i++)h=((h<<5)-h)+s.charCodeAt(i)|0;return COLORS[Math.abs(h)%COLORS.length];}
 function splitUser(u){var p=String(u||'').split('\\');return p.length>1?{d:p[0],u:p[1]}:{d:'',u:u||''};}
 function ymd(d){var x=new Date(d),m=x.getMonth()+1,day=x.getDate();return x.getFullYear()+'-'+(m<10?'0':'')+m+'-'+(day<10?'0':'')+day;}
@@ -96,39 +84,16 @@ function fmtShort(d){var x=new Date(d);if(isNaN(x))return'—';return (x.getDate
 function fmtDur(ms){if(ms<0)ms=0;var m=Math.floor(ms/60000),h=Math.floor(m/60),d=Math.floor(h/24);m%=60;h%=24;if(d>0)return d+'d '+h+'h';if(h>0)return h+'h '+m+'m';return m+'m';}
 function setRange(kind,btn){
   document.querySelectorAll('.btn-chip[data-r]').forEach(function(b){b.classList.remove('active');});
-  if(btn)btn.classList.add('active');
-  var end=new Date(),start=new Date();
+  if(btn)btn.classList.add('active');var end=new Date(),start=new Date();
   if(kind==='today')start=new Date(end.getFullYear(),end.getMonth(),end.getDate());
-  else if(kind==='7d')start.setDate(end.getDate()-6);
-  else if(kind==='30d')start.setDate(end.getDate()-29);
-  document.getElementById('dStart').value=ymd(start);document.getElementById('dEnd').value=ymd(end);_zoomLevel=0;
+  else if(kind==='7d')start.setDate(end.getDate()-6);else if(kind==='30d')start.setDate(end.getDate()-29);
+  document.getElementById('dStart').value=ymd(start);document.getElementById('dEnd').value=ymd(end);
 }
-function toggleLive(){
-  _live=!_live;var btn=document.getElementById('liveBtn');
-  if(_live){btn.textContent='🟢 Ao Vivo';btn.classList.add('active');setRange('today',document.querySelector('.btn-chip[data-r="today"]'));loadHistory();_refreshTimer=setInterval(loadHistory,30000);document.getElementById('liveHint').textContent='atualizando a cada 30s';}
-  else{btn.textContent='🔴 Ao Vivo';btn.classList.remove('active');if(_refreshTimer){clearInterval(_refreshTimer);_refreshTimer=null;}document.getElementById('liveHint').textContent='';}
-}
-function switchTab(n){
-  document.getElementById('tNow').classList.toggle('active',n==='now');document.getElementById('tHist').classList.toggle('active',n==='history');
-  document.getElementById('pane-now').classList.toggle('active',n==='now');document.getElementById('pane-history').classList.toggle('active',n==='history');
-  if(n==='now'){if(_live)toggleLive();loadNow();}else if(_live&&!_refreshTimer){setRange('today',document.querySelector('.btn-chip[data-r="today"]'));loadHistory();_refreshTimer=setInterval(loadHistory,30000);}
-}
-function loadNow(){if(ms)ms.send({action:'plugin',plugin:'usertracer',pluginaction:'getCurrentUsers'});}
 function loadHistory(){
   var s=document.getElementById('dStart').value,e=document.getElementById('dEnd').value;
   if(!s||!e){document.getElementById('gantt').innerHTML='<div class="empty">Selecione datas.</div>';document.getElementById('userList').innerHTML='<div class="empty">Selecione datas.</div>';return;}
   document.getElementById('gantt').innerHTML='<div class="loading">Carregando...</div>';
   if(ms)ms.send({action:'plugin',plugin:'usertracer',pluginaction:'getTimeline',nodeid:nodeid,startDate:s+'T00:00:00',endDate:e+'T23:59:59.999',limit:2000});
-  _hbTime=Date.now();
-}
-function renderNow(list){
-  var found=null;
-  for(var i=0;i<(list||[]).length;i++){if(list[i].nodeid===nodeid){found=list[i];break;}}
-  var el=document.getElementById('info');
-  if(!found||!found.users||!found.users.length){el.innerHTML='<div class="empty">Nenhum usuário ativo neste dispositivo.</div>';return;}
-  var h='';
-  found.users.forEach(function(u){var s=splitUser(u),c=colorFor(u);h+='<div class="ucard"><div class="uav" style="background:'+c+'">'+esc(initials(s.u))+'</div><div><div class="uname">'+esc(s.u)+'</div><div class="udev">'+esc(nodeName)+'</div>'+(s.d?'<span class="ubadge">'+esc(s.d)+'</span>':'')+'</div><div class="online"></div></div>';});
-  el.innerHTML=h;
 }
 function buildSessions(events,rs,re){
   var by={};
@@ -143,64 +108,16 @@ function buildSessions(events,rs,re){
     });if(open!=null)out.push({user:g.user,display:g.display,start:open,end:Math.min(re,Date.now()),open:true});
   });return out;
 }
-function onNowClick(){
-  var p=document.getElementById('detailPanel');
-  p.innerHTML='<div class="dp-title">Heartbeat — Scanner</div><table>'
-    +'<tr><td class="lbl">Último scan</td><td>'+(D.length?D[D.length-1]:'—')+'</td></tr>'
-    +'<tr><td class="lbl">Timer</td><td>30s (automático)</td></tr>'
-    +'<tr><td class="lbl">Status</td><td style="color:#2e7d32;font-weight:700">🟢 Ativo</td></tr>'
-    +'</table><div style="margin-top:6px"><button class="btn" onclick="document.getElementById(\'detailPanel\').style.display=\'none\'">Fechar</button></div>';
-  p.style.display='block';
-}
-function onSessClick(display,user,events,sstart,oend,open,clickNodeid){
-  var p=document.getElementById('detailPanel');
-  var h='<div class="dp-title">'+esc(display||user)+'</div><table>';
-  h+='<tr><td class="lbl">Início</td><td>'+fmtDate(sstart)+'</td></tr>';
-  h+='<tr><td class="lbl">Término</td><td>'+(open?'<b style="color:#2e7d32">Agora</b>':fmtDate(oend))+'</td></tr>';
-  h+='<tr><td class="lbl">Duração</td><td>'+fmtDur(oend-sstart)+'</td></tr>';
-  h+='<tr><td class="lbl">Eventos</td><td>'+(events||[]).length+'</td></tr>';
-  h+='<tr><td class="lbl">Dispositivo</td><td id="detailNodeName">'+(clickNodeid||nodeid).substring(0,25)+'…</td></tr>';
-  h+='</table><div id="detailEvents"></div>';
-  h+='<div style="margin-top:6px"><button class="btn" onclick="document.getElementById(\'detailPanel\').style.display=\'none\'">Fechar</button></div>';
-  p.innerHTML=h;p.style.display='block';
-  // fetch node details
-  if(clickNodeid&&ms)ms.send({action:'plugin',plugin:'usertracer',pluginaction:'getNodeDetails',nodeid:clickNodeid});
-}
-function renderNodeDetails(data){
-  if(!data||!data.name)return;
-  var el=document.getElementById('detailNodeName');if(el)el.textContent=data.name;
-  var tbl=document.getElementById('detailPanel').querySelector('table');
-  if(!tbl)return;
-  var h=tbl.innerHTML;
-  h+='<tr><td class="lbl">IP</td><td>'+(data.ip||'—')+'</td></tr>';
-  h+='<tr><td class="lbl">SO</td><td>'+(data.osdesc||'—')+'</td></tr>';
-  h+='<tr><td class="lbl">Agente</td><td>'+(data.agent||'—')+'</td></tr>';
-  h+='<tr><td class="lbl">Domínio</td><td>'+(data.domain||'—')+'</td></tr>';
-  h+='<tr><td class="lbl">Tipo</td><td>'+(data.mtype===2?'Windows':data.mtype===1?'Linux/Mac':'?')+'</td></tr>';
-  h+='<tr><td class="lbl">Idle</td><td>'+(data.idletime?data.idletime+'s':'—')+'</td></tr>';
-  tbl.innerHTML=h;
-}
-function onGanttWheel(ev){
-  if(!_savedEvents.length)return;ev.preventDefault();
-  var dir=ev.deltaY<0?-1:1;_zoomLevel+=dir;if(_zoomLevel<-10)_zoomLevel=-10;if(_zoomLevel>10)_zoomLevel=10;
-  var factor=1+_zoomLevel*0.15;if(factor<0.15)factor=0.15;
-  var mid=(_savedRange.rs+_savedRange.re)/2,half=(_savedRange.re-_savedRange.rs)/(2*factor);
-  var nrs=Math.max(mid-half,0),nre=Math.min(mid+half,Date.now());
-  if(nre-nrs<60000)return;_savedRange.rs=nrs;_savedRange.re=nre;
-  document.getElementById('dStart').value=ymd(new Date(nrs));document.getElementById('dEnd').value=ymd(new Date(nre));
-  _renderGantt(_savedEvents,nrs,nre);
-}
 function _renderGantt(events,rs,re){
-  _savedEvents=events;_savedRange={rs:rs,re:re};
+  _savedEvents=events;
   var total=re-rs,sessions=buildSessions(events,rs,re),dayMs=86400000,hourMs=3600000,span=total/dayMs;
   var step=span<=1?hourMs:(span<=7?hourMs*3:(span<=14?dayMs:dayMs*2));
   var ticks=[],t0=Math.ceil(rs/step)*step;
   for(var t=t0;t<=re;t+=step){var d=new Date(t);ticks.push({pct:((t-rs)/total)*100,label:step<dayMs?((d.getHours()<10?'0':'')+d.getHours()+':00'):((d.getDate()<10?'0':'')+d.getDate()+'/'+(d.getMonth()+1<10?'0':'')+(d.getMonth()+1))});}
-  var mw=Math.max(520,Math.min(2400,Math.floor(span*100))),now=Date.now(),nowPct=((now-rs)/total)*100;
-  var h='<div class="gantt-wrap" onwheel="onGanttWheel(event)"><div style="display:flex;border-bottom:1px solid #aaa;background:#e4e9e7;position:sticky;top:0;z-index:2"><div style="width:90px;flex-shrink:0;padding:6px 7px;font-size:9px;color:#333;font-weight:700;border-right:1px solid #aaa">SESSÃO</div><div style="flex:1;position:relative;height:28px;min-width:'+mw+'px">';
+  var mw=Math.max(520,Math.min(2400,Math.floor(span*100)));
+  var h='<div class="gantt-wrap"><div style="display:flex;border-bottom:1px solid #aaa;background:#e4e9e7;position:sticky;top:0;z-index:2"><div style="width:90px;flex-shrink:0;padding:6px 7px;font-size:9px;color:#333;font-weight:700;border-right:1px solid #aaa">SESSÃO</div><div style="flex:1;position:relative;height:28px;min-width:'+mw+'px">';
   ticks.forEach(function(tk){h+='<div style="position:absolute;top:0;bottom:0;border-left:1px dashed #ccc;left:'+tk.pct+'%"><span style="position:absolute;top:6px;left:3px;font-size:8px;color:#666;white-space:nowrap">'+esc(tk.label)+'</span></div>';});
   h+='</div></div>';
-  if(nowPct>=0&&nowPct<=100)h+='<div class="gantt-now" style="left:'+nowPct+'%" title="Agora · clique para heartbeat" onclick="onNowClick()"></div>';
   var byUser={};sessions.forEach(function(s){var k=s.display||s.user||'?';if(!byUser[k])byUser[k]=[];byUser[k].push(s);});
   var users=Object.keys(byUser).sort();if(!users.length)users=['—'];
   users.forEach(function(u){
@@ -209,7 +126,7 @@ function _renderGantt(events,rs,re){
     (byUser[u]||[]).forEach(function(s){
       var left=Math.max(0,((s.start-rs)/total)*100),right=Math.min(100,((s.end-rs)/total)*100);if(right<=left)right=left+0.2;
       var w=Math.max(0.25,right-left),c=colorFor(s.display||s.user);
-      h+='<div class="sess-click" style="position:absolute;top:9px;height:20px;border-radius:2px;min-width:3px;font-size:9px;font-weight:700;color:#fff;padding:0 4px;display:flex;align-items:center;overflow:hidden;white-space:nowrap;border:'+(s.open?'2px dashed':'1px solid')+' rgba(0,0,0,.2);cursor:pointer;left:'+left+'%;width:'+w+'%;background:'+c+'" onclick="onSessClick(\''+esc(s.display||s.user)+'\',\''+esc(s.user||'')+'\',[],'+s.start+','+s.end+','+s.open+',null)">'+esc(s.user||'')+'</div>';
+      h+='<div style="position:absolute;top:9px;height:20px;border-radius:2px;min-width:3px;font-size:9px;font-weight:700;color:#fff;padding:0 4px;display:flex;align-items:center;overflow:hidden;white-space:nowrap;border:'+(s.open?'2px dashed':'1px solid')+' rgba(0,0,0,.2);cursor:pointer;left:'+left+'%;width:'+w+'%;background:'+c+'">'+esc(s.user||'')+'</div>';
     });
     h+='</div></div>';
   });
@@ -222,7 +139,7 @@ function _renderGantt(events,rs,re){
   names.forEach(function(k){var g=byName[k],evs=g.events.sort(function(a,b){return new Date(b.detectedAt)-new Date(a.detectedAt);});var last=evs[0],first=evs[evs.length-1],em=eventMeta(last.eventType);ul+='<tr><td><b>'+esc(g.username||g.user)+'</b></td><td class="tt">'+esc(g.domain||'—')+'</td><td>'+evs.length+'</td><td class="tt">'+fmtShort(first.detectedAt)+'</td><td class="tt">'+(em.endLabel||fmtShort(last.detectedAt))+'</td><td style="font-weight:700;color:'+em.color+'">'+em.label+'</td></tr>';});
   ul+='</tbody></table>';document.getElementById('userList').innerHTML=ul;
 }
-function renderGantt(events,isDevice){
+function renderGantt(events){
   events=events||[];
   if(!events.length){document.getElementById('gantt').innerHTML='<div class="empty">Nenhum evento no período selecionado.</div>';document.getElementById('userList').innerHTML='<div class="empty">Nenhum evento.</div>';return;}
   var rs=new Date(document.getElementById('dStart').value+'T00:00:00').getTime(),re=new Date(document.getElementById('dEnd').value+'T23:59:59.999').getTime();
@@ -235,9 +152,7 @@ if(ms&&ms.socket){
     try{
       var d=JSON.parse(event.data);
       if(d.action==='plugin'&&d.plugin==='usertracer'){
-        if(d.method==='currentUsers')renderNow(d.data||[]);
-        else if(d.method==='timeline')renderGantt(d.data||[]);
-        else if(d.method==='nodeDetails')renderNodeDetails(d.data);
+        if(d.method==='timeline')renderGantt(d.data||[]);
         return;
       }
     }catch(e){}
@@ -245,7 +160,7 @@ if(ms&&ms.socket){
   };
 }
 setRange('7d',document.querySelector('.btn-chip[data-r="7d"]'));
-document.addEventListener('DOMContentLoaded',function(){loadNow();});
+loadHistory();
 </script>
 </body>
 </html>
