@@ -2,6 +2,11 @@
 
 
 
+## 3.5.23 (2026-07-27)
+
+### Ajustes
+- Label na barra: `text-overflow:ellipsis` + `title` para barras estreitas
+
 ## 3.5.22 (2026-07-27)
 
 ### Fixes

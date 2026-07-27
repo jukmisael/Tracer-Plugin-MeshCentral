@@ -155,7 +155,7 @@ function _renderGantt(events,rs,re,pwrMap){
       var tt='Usuário: '+esc(s.user||s.display)+'\nDe: '+fmtDate(s.start)+'\nAté: '+fmtDate(s.end)+'\nEstado: '+em.label+'\nDuração: '+fmtDur(s.end-s.start);
       h+='<div style="height:100%;width:'+pct+'%;background:'+segColor(s.state,s.open)+';border-right:1px solid rgba(0,0,0,.15);min-width:2px" title="'+esc(tt)+'"></div>';
     });
-    h+='<span style="position:absolute;top:1px;left:3px;font-size:8px;font-weight:700;color:#fff;text-shadow:0 0 2px rgba(0,0,0,.6);pointer-events:none;white-space:nowrap">'+esc(segs[0].user||'')+'</span>';
+    h+='<span style="position:absolute;top:1px;left:3px;font-size:8px;font-weight:700;color:#fff;text-shadow:0 0 2px rgba(0,0,0,.6);pointer-events:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:calc(100% - 6px)" title="'+esc(segs[0].user||'')+'">'+esc(segs[0].user||'')+'</span>';
     h+='</div></div></div>';
   });
   h+='</div>';document.getElementById('gantt').innerHTML=h;
