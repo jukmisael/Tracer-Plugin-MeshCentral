@@ -66,17 +66,6 @@ body{font-family:"Trebuchet MS",Arial,Helvetica,sans-serif;background:#d3d9d6;co
 <div class="panel">
   <div class="panel-title">Timeline</div>
   <div class="toolbar">
-    <button class="btn btn-chip" data-r="today" onclick="setRange('today',this)">Hoje</button>
-    <button class="btn btn-chip active" data-r="8h" onclick="setRange('8h',this)">8h</button>
-    <button class="btn btn-chip" data-r="7d" onclick="setRange('7d',this)">7 dias</button>
-    <button class="btn btn-chip" data-r="30d" onclick="setRange('30d',this)">30 dias</button>
-    <button class="btn btn-chip" data-r="month" onclick="setRange('month',this)">Este mês</button>
-    <span class="tbsep"></span>
-    <button class="btn btn-chip" data-r="1h" onclick="setRange('1h',this)">1h</button>
-    <button class="btn btn-chip" data-r="2h" onclick="setRange('2h',this)">2h</button>
-    <button class="btn btn-chip" data-r="4h" onclick="setRange('4h',this)">4h</button>
-    <button class="btn btn-chip" data-r="6h" onclick="setRange('6h',this)">6h</button>
-    <span class="tbsep"></span>
     <label>De</label><input type="date" id="dStart" onchange="loadTimeline()">
     <label>Até</label><input type="date" id="dEnd" onchange="loadTimeline()">
     <span class="muted" style="margin-left:6px" id="tlFilter"></span>
@@ -217,12 +206,38 @@ function _renderGantt(events,rs,re,pwrMap){
     h+='</div></div>';
   });
   h+='</div>';document.getElementById('gantt').innerHTML=h;
+  setupGanttDrag();
 }
 function renderTimeline(events,pwrMap){events=events||[];
   if(!events.length){document.getElementById('gantt').innerHTML='<div class="empty">Nenhum evento no período.</div>';return;}
   var rs=new Date(document.getElementById('dStart').value+'T00:00:00').getTime(),re=new Date(document.getElementById('dEnd').value+'T23:59:59.999').getTime();
   if(isNaN(rs)||isNaN(re)||re<=rs){rs=Infinity;re=-Infinity;events.forEach(function(e){var t=new Date(e.detectedAt).getTime();if(t<rs)rs=t;if(t>re)re=t;});if(re<=rs)re=rs+86400000;}
   _renderGantt(events,rs,re,pwrMap);
+}
+function setupGanttDrag(){
+  var wrap=document.querySelector('.gantt-wrap');if(!wrap)return;
+  var sel=null,ov=null;
+  function getPct(e){
+    var rect=wrap.getBoundingClientRect();
+    return Math.max(0,Math.min(100,((e.clientX-rect.left)/rect.width)*100));
+  }
+  function stopDrag(){
+    if(ov){ov.remove();ov=null;}
+    if(sel&&_savedRange){
+      var total=_savedRange.re-_savedRange.rs,pctStart=Math.min(sel.s,sel.e),pctEnd=Math.max(sel.s,sel.e);
+      if(pctEnd-pctStart>0.5){
+        var newRs=_savedRange.rs+total*pctStart/100,newRe=_savedRange.rs+total*pctEnd/100;
+        document.getElementById('dStart').value=new Date(newRs).toISOString().slice(0,10);
+        document.getElementById('dEnd').value=new Date(newRe).toISOString().slice(0,10);
+        loadTimeline();
+      }
+    }
+    sel=null;
+  }
+  wrap.addEventListener('mousedown',function(e){if(e.button!==0)return;var p=getPct(e);sel={s:p,e:p};if(!ov){ov=document.createElement('div');ov.style.cssText='position:absolute;top:0;bottom:0;background:rgba(0,51,102,.15);pointer-events:none;z-index:5';wrap.appendChild(ov);}});
+  wrap.addEventListener('mousemove',function(e){if(!sel)return;sel.e=getPct(e);var l=Math.min(sel.s,sel.e),r=Math.max(sel.s,sel.e);if(ov){ov.style.left=l+'%';ov.style.width=(r-l)+'%';}});
+  wrap.addEventListener('mouseup',stopDrag);
+  wrap.addEventListener('mouseleave',stopDrag);
 }
 function loadUserNames(){if(ms)ms.send({action:'plugin',plugin:'usertracer',pluginaction:'getUserNames'});}
 function renderUserNames(list){
@@ -310,8 +325,8 @@ function renderXrefDev(e){e=e||[];document.getElementById('sEvents').textContent
     if(!did||ws.onmessage!==handler){var old=ws.onmessage;ws.onmessage=function(ev){handler(ev);if(typeof old==='function')old.call(ws,ev);};}dlog('WS','installed');
   } else {dlog('WS','no socket');}
 })();
-setRange('8h',document.querySelector('.btn-chip[data-r="8h"]'));
-document.addEventListener('DOMContentLoaded',function(){loadDeviceNames();loadUserNames();});
+var _d=new Date();document.getElementById('dStart').value=ymd(new Date(_d.getTime()-28800000));document.getElementById('dEnd').value=ymd(_d);
+loadDeviceNames();loadUserNames();
 </script>
 </body>
 </html>

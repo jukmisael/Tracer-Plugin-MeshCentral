@@ -2,6 +2,12 @@
 
 
 
+## 3.5.40 (2026-07-27)
+
+### Features
+- Gantt com seleção por arrasto: clique e arraste no timeline para definir período
+- Botões de preset removidos — apenas datepickers + drag
+
 ## 3.5.39 (2026-07-27)
 
 ### Features
