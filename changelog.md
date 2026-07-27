@@ -2,6 +2,12 @@
 
 
 
+## 3.5.20 (2026-07-27)
+
+### Ajustes
+- Device: label do usuário na barra (como no admin)
+- Gantt com scroll vertical: `max-height: calc(100vh - 280px)`
+
 ## 3.5.19 (2026-07-27)
 
 ### Ajustes
