@@ -88,7 +88,8 @@ body{font-family:"Trebuchet MS",Arial,Helvetica,sans-serif;background:#d3d9d6;co
       <div class="panel-title">Usuário → Dispositivos</div>
       <div class="toolbar">
         <div style="flex:1;position:relative">
-          <input type="text" id="input-xrefUser" placeholder="— Selecione um usuário —" list="datalist-xrefUser" style="width:100%;box-sizing:border-box;padding:4px 6px;border:1px solid #808080;border-radius:2px;font-size:12px;font-family:inherit" onchange="cdPick('xrefUser',this.value)" onclick="this.select()">
+          <input type="text" id="input-xrefUser" placeholder="— Selecione um usuário —" list="datalist-xrefUser" style="width:100%;box-sizing:border-box;padding:4px 18px 4px 6px;border:1px solid #808080;border-radius:2px;font-size:12px;font-family:inherit" onchange="cdPick('xrefUser',this.value)" onblur="cdUpdateDisplay('xrefUser')">
+          <span style="position:absolute;right:3px;top:3px;cursor:pointer;font-size:11px;color:#666;padding:0 2px;line-height:18px" onclick="cdShowAll('xrefUser')" title="Mostrar todos">▾</span>
           <datalist id="datalist-xrefUser"></datalist>
           <select id="xrefUser" style="display:none" onchange="loadXrefUser()"><option value="">— Selecione um usuário —</option></select>
         </div>
@@ -102,7 +103,8 @@ body{font-family:"Trebuchet MS",Arial,Helvetica,sans-serif;background:#d3d9d6;co
       <div class="panel-title">Dispositivo → Usuários</div>
       <div class="toolbar">
         <div style="flex:1;position:relative">
-          <input type="text" id="input-xrefDev" placeholder="— Selecione um dispositivo —" list="datalist-xrefDev" style="width:100%;box-sizing:border-box;padding:4px 6px;border:1px solid #808080;border-radius:2px;font-size:12px;font-family:inherit" onchange="cdPick('xrefDev',this.value)" onclick="this.select()">
+          <input type="text" id="input-xrefDev" placeholder="— Selecione um dispositivo —" list="datalist-xrefDev" style="width:100%;box-sizing:border-box;padding:4px 18px 4px 6px;border:1px solid #808080;border-radius:2px;font-size:12px;font-family:inherit" onchange="cdPick('xrefDev',this.value)" onblur="cdUpdateDisplay('xrefDev')">>
+          <span style="position:absolute;right:3px;top:3px;cursor:pointer;font-size:11px;color:#666;padding:0 2px;line-height:18px" onclick="cdShowAll('xrefDev')" title="Mostrar todos">▾</span>
           <datalist id="datalist-xrefDev"></datalist>
           <select id="xrefDev" style="display:none" onchange="loadXrefDev()"><option value="">— Selecione um dispositivo —</option></select>
         </div>
@@ -131,6 +133,12 @@ function ymd(d){var x=new Date(d),m=x.getMonth()+1,day=x.getDate();return x.getF
 function colorFor(k){var h=0,s=String(k||'');for(var i=0;i<s.length;i++)h=((h<<5)-h)+s.charCodeAt(i)|0;return ['#003366','#1565c0','#2e7d32','#6a1b9a','#00838f','#ef6c00','#c62828','#455a64','#5d4037','#283593'][Math.abs(h)%10];}
 function splitUser(u){var p=String(u||'').split('\\');return p.length>1?{d:p[0],u:p[1]}:{d:'',u:u||''};}
 /* --- Searchable dropdown (native <datalist>) --- */
+function cdShowAll(id){
+  var inp=document.getElementById('input-'+id);
+  if(!inp)return;
+  inp.value='';           // limpa para mostrar TODAS as opções
+  inp.focus();            // foco dispara o popup do datalist
+}
 function cdPick(id,val){
   var sel=document.getElementById(id);
   if(!sel)return;
