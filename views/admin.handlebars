@@ -99,7 +99,7 @@ body{font-family:"Trebuchet MS",Arial,Helvetica,sans-serif;background:#d3d9d6;co
         <div class="sd-wrap" id="sdWrap-xrefUser">
           <div class="sd-sel" onclick="sdToggle('xrefUser')">— Selecione um usuário —</div>
           <div class="sd-drop" id="sdDrop-xrefUser">
-            <input type="text" class="sd-search" id="sdSearch-xrefUser" placeholder="Filtrar..." oninput="sdFilter('xrefUser',this.value)" onclick="event.stopPropagation()">
+            <input type="text" class="sd-search" id="sdSearch-xrefUser" oninput="sdFilter('xrefUser',this.value)" onclick="event.stopPropagation()">
             <div class="sd-opts" id="sdOpts-xrefUser"></div>
           </div>
           <select id="xrefUser" style="display:none" onchange="loadXrefUser()"><option value="">— Selecione um usuário —</option></select>
@@ -116,7 +116,7 @@ body{font-family:"Trebuchet MS",Arial,Helvetica,sans-serif;background:#d3d9d6;co
         <div class="sd-wrap" id="sdWrap-xrefDev">
           <div class="sd-sel" onclick="sdToggle('xrefDev')">— Selecione um dispositivo —</div>
           <div class="sd-drop" id="sdDrop-xrefDev">
-            <input type="text" class="sd-search" id="sdSearch-xrefDev" placeholder="Filtrar..." oninput="sdFilter('xrefDev',this.value)" onclick="event.stopPropagation()">
+            <input type="text" class="sd-search" id="sdSearch-xrefDev" oninput="sdFilter('xrefDev',this.value)" onclick="event.stopPropagation()">
             <div class="sd-opts" id="sdOpts-xrefDev"></div>
           </div>
           <select id="xrefDev" style="display:none" onchange="loadXrefDev()"><option value="">— Selecione um dispositivo —</option></select>

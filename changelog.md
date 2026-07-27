@@ -8,6 +8,11 @@
 - **Seta ▾** ao lado do input: clica para limpar o campo e mostrar TODAS as opções do datalist de uma vez, sem precisar digitar.
 - **Restore on blur**: se clicar fora sem selecionar, o input volta a exibir a seleção anterior.
 
+## 3.5.61 (2026-07-27)
+
+### Fixed
+- **Removido placeholder duplicado**: removido "Filtrar..." do input de busca — o cursor piscante já indica campo de busca. Sem mais texto redundante com o "Selecione" da barra.
+
 ## 3.5.60 (2026-07-27)
 
 ### Changed
