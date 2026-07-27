@@ -218,15 +218,30 @@ function renderXrefDev(e){e=e||[];document.getElementById('sEvents').textContent
   h+='</div>';document.getElementById('xrefDevResult').innerHTML=h;
 }
 (function(){
+  // pluginHandler registration (MeshCentral chama na inicialização, ignoramos se for meshserver obj)
   try{
     var ph=(top&&top.pluginHandler&&top.pluginHandler.usertracer)||(parent&&parent.pluginHandler&&parent.pluginHandler.usertracer);
     if(ph){
-      ph.timeline=function(m){dlog('PH','timeline',Array.isArray(m.data)?('n='+m.data.length):typeof m.data);if(_xrefPending==='user'){renderXrefUser(m.data||[]);_xrefPending='';}else if(_xrefPending==='dev'){renderXrefDev(m.data||[]);_xrefPending='';}else renderTimeline(m.data||[]);};
-      ph.deviceNames=function(m){dlog('PH','deviceNames',Array.isArray(m.data)?('n='+m.data.length):typeof m.data);renderDeviceNames(m.data||[]);};
-      ph.userNames=function(m){dlog('PH','userNames',Array.isArray(m.data)?('n='+m.data.length):typeof m.data);renderUserNames(m.data||[]);};
-      dlog('PH','handlers registered (timeline,deviceNames,userNames)');
-    } else {dlog('PH','pluginHandler not found');if(ms&&ms.socket){ms.socket.addEventListener('message',function(e){try{var d=JSON.parse(e.data);if(d.action==='plugin'&&d.plugin==='usertracer'){dlog('WS',d.method);if(d.method==='deviceNames')renderDeviceNames(d.data||[]);else if(d.method==='userNames')renderUserNames(d.data||[]);else if(d.method==='timeline'){if(_xrefPending==='user'){renderXrefUser(d.data||[]);_xrefPending='';}else if(_xrefPending==='dev'){renderXrefDev(d.data||[]);_xrefPending='';}else renderTimeline(d.data||[]);}}}catch(ex){}});}}
-  }catch(e){dlog('PH','err',e.message);}
+      ph.timeline=function(m){if(m&&m.data&&Array.isArray(m.data)){dlog('PHOK','timeline n='+m.data.length);if(_xrefPending==='user'){renderXrefUser(m.data);_xrefPending='';}else if(_xrefPending==='dev'){renderXrefDev(m.data);_xrefPending='';}else renderTimeline(m.data);}else dlog('PHSKIP','timeline',typeof m);};
+      ph.deviceNames=function(m){if(m&&m.data&&Array.isArray(m.data)){dlog('PHOK','deviceNames n='+m.data.length);renderDeviceNames(m.data);}else dlog('PHSKIP','deviceNames',typeof m);};
+      ph.userNames=function(m){if(m&&m.data&&Array.isArray(m.data)){dlog('PHOK','userNames n='+m.data.length);renderUserNames(m.data);}else dlog('PHSKIP','userNames',typeof m);};
+      dlog('PH','registered');
+    }
+  }catch(e){dlog('PHE','err',e.message);}
+  // WebSocket handler robusto
+  if(ms&&ms.socket){
+    var ws=ms.socket,did=false;
+    var handler=function(e){
+      try{var d=JSON.parse(e.data);if(d.action==='plugin'&&d.plugin==='usertracer'){
+        dlog('WS',d.method,Array.isArray(d.data)?('n='+d.data.length):typeof d.data);
+        if(d.method==='deviceNames')renderDeviceNames(d.data||[]);
+        else if(d.method==='userNames')renderUserNames(d.data||[]);
+        else if(d.method==='timeline'){if(_xrefPending==='user'){renderXrefUser(d.data||[]);_xrefPending='';}else if(_xrefPending==='dev'){renderXrefDev(d.data||[]);_xrefPending='';}else renderTimeline(d.data||[]);}
+      }}catch(ex){}
+    };
+    try{ws.addEventListener('message',handler);did=true;}catch(ex){dlog('WSE','addEventListener',ex.message);}
+    if(!did||ws.onmessage!==handler){var old=ws.onmessage;ws.onmessage=function(ev){handler(ev);if(typeof old==='function')old.call(ws,ev);};}dlog('WS','installed');
+  } else {dlog('WS','no socket');}
 })();
 setRange('7d',document.querySelector('.btn-chip[data-r="7d"]'));
 document.addEventListener('DOMContentLoaded',function(){loadDeviceNames();loadUserNames();});

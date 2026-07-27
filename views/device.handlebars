@@ -146,11 +146,42 @@ function renderGantt(events){
   _renderGantt(events,rs,re);
 }
 (function(){
+  // Registra no pluginHandler (pode ser chamado na inicialização, mas ignora se for meshserver)
   try{
     var ph=(top&&top.pluginHandler&&top.pluginHandler.usertracer)||(parent&&parent.pluginHandler&&parent.pluginHandler.usertracer);
-    if(ph){ph.timeline=function(m){dlog('PH','timeline CALLED','data=',typeof m,Array.isArray(m&&m.data)?('arr['+m.data.length+']'):JSON.stringify(m).slice(0,100));renderGantt((m&&m.data)||[]);};dlog('PH','timeline handler registered');}
-    else {dlog('PH','pluginHandler not found');if(ms&&ms.socket){ms.socket.addEventListener('message',function(e){try{var d=JSON.parse(e.data);if(d.action==='plugin'&&d.plugin==='usertracer'&&d.method==='timeline')renderGantt(d.data||[]);}catch(ex){}});}}
-  }catch(e){dlog('PH','err',e.message);}
+    if(ph){
+      var _rt=function(m){if(m&&m.data&&Array.isArray(m.data)){renderGantt(m.data);dlog('PHOK','timeline n='+m.data.length);}else dlog('PHSKIP',typeof m);};
+      ph.timeline=_rt;
+      dlog('PH','registered');
+    }
+  }catch(e){dlog('PHE','err',e.message);}
+  // WebSocket handler robusto - captura TODAS as mensagens
+  if(ms&&ms.socket){
+    var ws=ms.socket;
+    dlog('WS','installing handler, ws.type='+ws.constructor.name);
+    var handler=function(e){
+      try{
+        var d=JSON.parse(e.data);
+        if(d.action==='plugin'&&d.plugin==='usertracer'&&d.method==='timeline'){
+          dlog('WS','got timeline n='+(d.data?d.data.length:'?'));
+          renderGantt(d.data||[]);
+        }
+      }catch(ex){}
+    };
+    // Tenta addEventListener primeiro
+    try{ws.addEventListener('message',handler);dlog('WS','addEventListener OK');}catch(ex){dlog('WS','addEventListener fail',ex.message);}
+    // Tenta onmessage (com proxy pra evitar sobrescrita)
+    try{
+      if(ws.onmessage&&ws.onmessage!==handler){
+        dlog('WS','existing onmessage, chaining');
+        var old=ws.onmessage;
+        ws.onmessage=function(ev){handler(ev);old.call(ws,ev);};
+      }else{
+        ws.onmessage=handler;
+      }
+      dlog('WS','onmessage set');
+    }catch(ex){dlog('WS','onmessage fail',ex.message);}
+  } else {dlog('WS','no socket');}
 })();
 setRange('7d',document.querySelector('.btn-chip[data-r="7d"]'));
 loadHistory();

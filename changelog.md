@@ -2,6 +2,12 @@
 
 
 
+## 3.5.11 (2026-07-27)
+
+### Fixes
+- Handler duplo: pluginHandler + WebSocket addEventListener + onmessage
+- Debug raw do objeto recebido
+
 ## 3.5.10 (2026-07-27)
 
 ### Debug
