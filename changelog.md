@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.5.71 (2026-07-28)
+### Fixed
+- **Gantt segment widths**: bars and segments now use pixel-based widths instead of percentages. Minimum 4px per segment. Bars no longer appear too small/short when zoomed in.
+
 ## 3.5.70 (2026-07-28)
 ### Fixed
 - **Locked users no longer shown as Online**: `_activeUsers` override now only fixes stale 'offline' state. Sessions with `userLock` as last event correctly show "Bloqueado" (orange). Gantt bars and status badges respect the event type.
