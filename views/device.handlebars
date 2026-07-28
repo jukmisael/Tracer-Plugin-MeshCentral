@@ -139,6 +139,8 @@ function _renderGantt(events,rs,re,pwrMap){
   _savedEvents=events;
   var total=re-rs;if(total<=0){dlog('GR','total zero');total=86400000;}
   var sessions=buildSessions(events,rs,re);dlog('GR','sessions',sessions.length);
+  // Override open session state: if user is active on device (from MeshCentral db.Get), force 'login'
+  sessions.forEach(function(s){if(s.open){var da=_activeUsers[nodeid]||[];var sUser=splitUser(s.display||s.user||'').u||s.display||s.user;for(var si=0;si<da.length;si++){var daShort=splitUser(da[si]).u||da[si];if(daShort===sUser||da[si]===s.display||daShort===(s.user||'')||da[si]===(s.user||'')){s.state='login';break;}}}});
   if(!sessions.length){dlog('GR','no sessions');document.getElementById('gantt').innerHTML='<div class="empty">Nenhuma sessão.</div>';return;}
   dlog('GR','first session',JSON.stringify(sessions[0]).slice(0,200));
   var dayMs=86400000,span=total/dayMs;

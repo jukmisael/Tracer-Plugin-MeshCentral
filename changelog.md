@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.5.69 (2026-07-28)
+### Fixed
+- **Gantt bar "Bloqueado" when device is online**: open sessions now check `_activeUsers` (from `db.Get`). If user is active on the device, session state overridden to 'login' (green) regardless of last event type.
+
 ## 3.5.68 (2026-07-28)
 ### Fixed
 - **User format mismatch**: `_activeUsers` from `doc.users` stores `DOMAIN\user` but events store plain `username`. Status comparison now normalizes both sides via `splitUser()` to match either format.

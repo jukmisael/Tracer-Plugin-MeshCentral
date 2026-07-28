@@ -225,6 +225,8 @@ function _renderGantt(events,rs,re,pwrMap){
   document.getElementById('sEvents').textContent=events.length;
   var total=re-rs;if(total<=0)total=1;
   var sessions=buildSessions(events,rs,re),dayMs=86400000,span=total/dayMs;
+  // Override open session state: if user is active on device (from MeshCentral db.Get), force 'login'
+  sessions.forEach(function(s){if(s.open){var da=_activeUsers[s.nodeid]||[];var sUser=splitUser(s.display||s.user||'').u||s.display||s.user;for(var si=0;si<da.length;si++){var daShort=splitUser(da[si]).u||da[si];if(daShort===sUser||da[si]===s.display||daShort===(s.user||'')||da[si]===(s.user||'')){s.state='login';break;}}}});
   var step=span<=0.02?60000:(span<=0.08?300000:(span<=0.25?900000:(span<=0.5?1800000:(span<=1?3600000:(span<=7?10800000:(span<=14?21600000:43200000))))));
   var ticks=[],t0=Math.ceil(rs/step)*step;
   for(var t=t0;t<=re;t+=step){
