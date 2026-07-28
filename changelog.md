@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.5.76 (2026-07-28)
+### Added
+- Debug logging in WS timeline handler and renderTimeline to trace Gantt rendering flow
+
 ## 3.5.75 (2026-07-28)
 ### Fixed
 - **Timeline overwrite**: WS handler now skips `renderTimeline` when xref already rendered the response. Prevents Gantt being overwritten by stale/auto-triggered responses.

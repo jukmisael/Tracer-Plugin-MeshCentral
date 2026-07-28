@@ -274,6 +274,7 @@ function _renderGantt(events,rs,re,pwrMap){
   setupGanttDrag();
 }
 function renderTimeline(events,pwrMap){
+  dlog('RTL','enter n='+(events?events.length:0));
   events=events||[];
   _eventsCache=events;
   _pwrMap=pwrMap||null;
@@ -281,14 +282,16 @@ function renderTimeline(events,pwrMap){
   if(!events.length){document.getElementById('gantt').innerHTML='<div class="empty">Nenhum evento no período.</div>';return;}
   var r=activeRange();
   var rs=r.rs,re=r.re;
+  dlog('RTL','range',new Date(rs).toISOString(),new Date(re).toISOString());
   if(isNaN(rs)||isNaN(re)||re<=rs){
     rs=Infinity;re=-Infinity;
     events.forEach(function(e){var t=new Date(e.detectedAt).getTime();if(t<rs)rs=t;if(t>re)re=t;});
     if(re<=rs)re=rs+86400000;
     _baseRange={rs:rs,re:re};
   }
+  dlog('RTL','final',new Date(rs).toISOString(),new Date(re).toISOString());
   setViewHint();
-  _renderGantt(events,rs,re,pwrMap);
+  try{_renderGantt(events,rs,re,pwrMap);dlog('RTL','done');}catch(ex){dlog('RTL_ERR',ex.message,ex.stack);}
 }
 function setupGanttDrag(){
   var wrap=document.querySelector('.gantt-wrap');if(!wrap)return;
@@ -468,6 +471,7 @@ function renderXrefDev(e){e=e||[];document.getElementById('sEvents').textContent
             if(_xrefPending==='user'){renderXrefUser(d.data||[]);_xrefPending='';routed=true;}
             else if(_xrefPending==='dev'){renderXrefDev(d.data||[]);_xrefPending='';routed=true;}else{_xrefPending='';}
           }catch(ex2){dlog('WS_XREF_ERR',ex2.message);_xrefPending='';}
+          dlog('WS_TL','routed='+routed,'xref='+_xrefPending,'n='+(d.data?d.data.length:0));
           if(!routed)renderTimeline(d.data||[],d._pwrMap);
         }
       }}catch(ex){}
