@@ -8,6 +8,11 @@
 - **Seta ▾** ao lado do input: clica para limpar o campo e mostrar TODAS as opções do datalist de uma vez, sem precisar digitar.
 - **Restore on blur**: se clicar fora sem selecionar, o input volta a exibir a seleção anterior.
 
+## 3.5.64 (2026-07-27)
+
+### Fixed
+- **Sessões recortadas ao período visível**: `buildSessions` agora clipa `start`/`end` ao range `rs`/`re`. Sessão lock de 27/07 21:04 até 28/07 08:43 agora mostra de 00:00 até 08:43 quando consultado28/07.
+
 ## 3.5.63 (2026-07-27)
 
 ### Fixed

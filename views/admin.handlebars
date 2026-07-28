@@ -184,19 +184,19 @@ function buildSessions(events,rs,re){
     g.events.forEach(function(e){
       var t=new Date(e.detectedAt).getTime();
       if(e.eventType==='userLogin'){
-        if(start!=null)out.push({nodeName:g.nodeName,nodeid:g.nodeid,user:g.user,display:g.display,start:start,end:t,state:state});
+        if(start!=null)out.push({nodeName:g.nodeName,nodeid:g.nodeid,user:g.user,display:g.display,start:Math.max(rs,start),end:Math.min(re,t),state:state});
         start=t;state='login';
       }else if(e.eventType==='userLock'){
-        if(start!=null){out.push({nodeName:g.nodeName,nodeid:g.nodeid,user:g.user,display:g.display,start:start,end:t,state:state});}
+        if(start!=null){out.push({nodeName:g.nodeName,nodeid:g.nodeid,user:g.user,display:g.display,start:Math.max(rs,start),end:Math.min(re,t),state:state});}
         start=t;state='lock';
       }else if(e.eventType==='userUnlock'){
-        if(start!=null){out.push({nodeName:g.nodeName,nodeid:g.nodeid,user:g.user,display:g.display,start:start,end:t,state:state});}
+        if(start!=null){out.push({nodeName:g.nodeName,nodeid:g.nodeid,user:g.user,display:g.display,start:Math.max(rs,start),end:Math.min(re,t),state:state});}
         start=t;state='unlock';
       }else if(e.eventType==='userLogout'){
-        if(start!=null){out.push({nodeName:g.nodeName,nodeid:g.nodeid,user:g.user,display:g.display,start:start,end:t,state:state});start=null;}
-        else out.push({nodeName:g.nodeName,nodeid:g.nodeid,user:g.user,display:g.display,start:Math.max(rs,t-30*60000),end:t,state:'logout'});
+        if(start!=null){out.push({nodeName:g.nodeName,nodeid:g.nodeid,user:g.user,display:g.display,start:Math.max(rs,start),end:Math.min(re,t),state:state});start=null;}
+        else out.push({nodeName:g.nodeName,nodeid:g.nodeid,user:g.user,display:g.display,start:Math.max(rs,t-30*60000),end:Math.min(re,t),state:'logout'});
       }
-    });if(start!=null)out.push({nodeName:g.nodeName,nodeid:g.nodeid,user:g.user,display:g.display,start:start,end:Math.min(re,Date.now()),state:state,open:true});
+    });if(start!=null){var segEnd=Math.min(re,Date.now());if(segEnd>rs)out.push({nodeName:g.nodeName,nodeid:g.nodeid,user:g.user,display:g.display,start:Math.max(rs,start),end:segEnd,state:state,open:true});}
   });return out;
 }
 function pickerRange(){
