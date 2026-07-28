@@ -419,7 +419,11 @@ module.exports.usertracer = function (parent) {
                     return;
                 }
                 var opts = { limit: command.limit || 5000 };
-                if (command.startDate) opts.startDate = command.startDate;
+                if (command.startDate) {
+                    var sd = new Date(command.startDate);
+                    sd.setDate(sd.getDate() - 1);
+                    opts.startDate = sd.toISOString();
+                }
                 if (command.endDate) opts.endDate = command.endDate;
                 if (command.nodeids && command.nodeids.length > 0) opts.nodeids = command.nodeids;
                 else if (command.nodeid) opts.nodeids = [command.nodeid];

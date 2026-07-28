@@ -8,6 +8,11 @@
 - **Seta ▾** ao lado do input: clica para limpar o campo e mostrar TODAS as opções do datalist de uma vez, sem precisar digitar.
 - **Restore on blur**: se clicar fora sem selecionar, o input volta a exibir a seleção anterior.
 
+## 3.5.63 (2026-07-27)
+
+### Fixed
+- **Timeline vazio para período sem eventos detectados**: `getTimeline` agora busca eventos 1 dia antes do `startDate` para capturar sessões que começam antes mas se sobrepõem ao período consultado. Ex: sessão lock de 27/07 21:04 até 28/07 08:43 agora aparece ao consultar 28/07.
+
 ## 3.5.62 (2026-07-27)
 
 ### Changed
