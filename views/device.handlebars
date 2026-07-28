@@ -183,7 +183,7 @@ function _renderGantt(events,rs,re,pwrMap){
   var em;
   if(devOff||(!devActive.length&&!evs.some(function(e){return e.eventType==='userLogin';})))em={color:'#888',label:'Offline'};
   else{var _isOn=false;for(var _ai=0;_ai<devActive.length;_ai++){var _aShort=splitUser(devActive[_ai]).u||devActive[_ai];if(_aShort===g.username||devActive[_ai]===g.user||_aShort===g.user||devActive[_ai]===g.username){_isOn=true;break;}}if(_isOn)em={color:'#2e7d32',label:'Online'};else em=eventMeta(last.eventType);}
-  else em=eventMeta(last.eventType);ul+='<tr><td><b>'+esc(g.username||g.user)+'</b></td><td class="tt">'+esc(g.domain||'—')+'</td><td>'+evs.length+'</td><td class="tt">'+fmtShort(first.detectedAt)+'</td><td class="tt">'+(em.endLabel||fmtShort(last.detectedAt))+'</td><td style="font-weight:700;color:'+em.color+'">'+em.label+'</td></tr>';});
+  ul+='<tr><td><b>'+esc(g.username||g.user)+'</b></td><td class="tt">'+esc(g.domain||'—')+'</td><td>'+evs.length+'</td><td class="tt">'+fmtShort(first.detectedAt)+'</td><td class="tt">'+(em.endLabel||fmtShort(last.detectedAt))+'</td><td style="font-weight:700;color:'+em.color+'">'+em.label+'</td></tr>';});
   ul+='</tbody></table>';document.getElementById('userList').innerHTML=ul;
 }
 function renderGantt(events,pwrMap){
