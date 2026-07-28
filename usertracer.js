@@ -416,6 +416,7 @@ module.exports.usertracer = function (parent) {
                 if (!obj.db || !obj.db.getEvents) {
                     console.log('UT CMD: db.getEvents not available, db=' + typeof obj.db + ' getEvents=' + (obj.db ? typeof obj.db.getEvents : 'N/A'));
                     obj.send(sid, { action:'plugin', plugin:'usertracer', method:'timeline', data: [], _reqSeq: command._reqSeq });
+                    console.log('UT RESP: timeline sent (empty, db unavailable) reqSeq=' + command._reqSeq);
                     return;
                 }
                 var opts = { limit: command.limit || 5000 };
@@ -431,6 +432,7 @@ module.exports.usertracer = function (parent) {
                 if (command.username) query.$or = [{ username: command.username }, { displayUser: command.username }];
                 obj.db.getEvents(query, opts, function (docs) {
                     if (!docs) { console.log('UT CMD: getEvents returned null docs. opts=' + JSON.stringify(opts)); }
+                    console.log('UT CMD: getEvents returned ' + (docs ? docs.length : 0) + ' events, query=' + JSON.stringify(query));
                     // Attach current device power state
                     var pwrMap={};
                     if(obj.devicePwr){
@@ -445,6 +447,7 @@ module.exports.usertracer = function (parent) {
                         var resp = { action:'plugin', plugin:'usertracer', method:'timeline', data: docs || [], _pwrMap: pwrMap, _activeUsers: {} };
                         if (command._reqSeq) resp._reqSeq = command._reqSeq;
                         obj.send(sid, resp);
+                        console.log('UT RESP: timeline sent n=' + (docs ? docs.length : 0) + ' activeUsers=0 reqSeq=' + command._reqSeq);
                         return;
                     }
                     var pending=nids.length;
@@ -454,15 +457,19 @@ module.exports.usertracer = function (parent) {
                                 try{
                                     if(!err&&doc&&doc.users&&doc.users.length>0){
                                         activeUsers[nid]=doc.users.slice();
+                                        console.log('UT CMD: db.Get ' + nid + ' users=' + doc.users.length);
                                     } else if(obj.userCache&&obj.userCache[nid]){
                                         // Fallback to scanner cache
-                                        try{var st=JSON.parse(obj.userCache[nid]);activeUsers[nid]=st.users||[];}catch(ex2){}
+                                        try{var st=JSON.parse(obj.userCache[nid]);activeUsers[nid]=st.users||[];console.log('UT CMD: db.Get ' + nid + ' fallback cache users=' + (st.users?st.users.length:0));}catch(ex2){}
+                                    } else {
+                                        console.log('UT CMD: db.Get ' + nid + ' no users (err=' + err + ' hasDoc=' + !!(doc) + ' hasUsers=' + !!(doc&&doc.users) + ')');
                                     }
-                                }catch(ex){}
+                                }catch(ex){console.log('UT CMD: db.Get ' + nid + ' exception: ' + ex.message);}
                                 if(--pending===0){
                                     var resp = { action:'plugin', plugin:'usertracer', method:'timeline', data: docs || [], _pwrMap: pwrMap, _activeUsers: activeUsers };
                                     if (command._reqSeq) resp._reqSeq = command._reqSeq;
                                     obj.send(sid, resp);
+                                    console.log('UT RESP: timeline sent n=' + (docs ? docs.length : 0) + ' activeUsers=' + Object.keys(activeUsers).length + ' reqSeq=' + command._reqSeq);
                                 }
                             });
                         }catch(ex){
@@ -474,6 +481,7 @@ module.exports.usertracer = function (parent) {
                                 var resp = { action:'plugin', plugin:'usertracer', method:'timeline', data: docs || [], _pwrMap: pwrMap, _activeUsers: activeUsers };
                                 if (command._reqSeq) resp._reqSeq = command._reqSeq;
                                 obj.send(sid, resp);
+                                console.log('UT RESP: timeline sent (fallback) n=' + (docs ? docs.length : 0) + ' activeUsers=' + Object.keys(activeUsers).length + ' reqSeq=' + command._reqSeq);
                             }
                         }
                     });

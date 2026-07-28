@@ -1,5 +1,12 @@
 # Changelog
 
+## 3.5.78 (2026-07-28)
+### Fixed
+- **Gantt fix**: removed `routed` flag that was blocking renderTimeline on initial load; WS handler now always calls renderTimeline (matching v3.5.70 behavior)
+### Added
+- Comprehensive debug tracing at every step: WS handler entry, renderTimeline entry/exit, buildSessions entry/exit, _renderGantt entry, page init, loadTimeline, onDateChange, loadXrefUser/Dev
+- Backend logging: UT RESP logs for all timeline send paths, db.Get results for activeUsers, getEvents result count
+
 ## 3.5.77 (2026-07-28)
 ### Fixed
 - **Gantt not rendering**: PH callback was processing timeline before WS handler, consuming _xrefPending and rendering with stale state. PH timeline callback now only logs; WS handler owns all rendering.
