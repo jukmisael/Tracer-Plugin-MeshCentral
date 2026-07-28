@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.5.66 (2026-07-28)
+### Fixed
+- **Status "Bloqueado" incorreto**: device tab e cross-reference cards agora usam `_activeUsers` (scanner cache) para determinar status real. Se o usuário está ativo no dispositivo, mostra "Online" mesmo que o último evento seja `userLock`. Server agora envia `_activeUsers` map no response do `getTimeline`.
+
 ## 3.5.65 (2026-07-28)
 ### Added
 - **WS_RAW diagnostic logging**: WebSocket handler now logs ALL incoming messages (action, plugin, method, data type) BEFORE the plugin filter, to diagnose unexpected Gantt refresh triggers.

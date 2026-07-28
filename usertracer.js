@@ -437,7 +437,8 @@ module.exports.usertracer = function (parent) {
                         var ids={};(docs||[]).forEach(function(e){if(e.nodeid)ids[e.nodeid]=1;});
                         Object.keys(ids).forEach(function(id){if(obj.devicePwr[id])pwrMap[id]=obj.devicePwr[id];});
                     }
-                    var resp = { action:'plugin', plugin:'usertracer', method:'timeline', data: docs || [], _pwrMap: pwrMap };
+                    var activeUsers={};if(obj.userCache){Object.keys(obj.userCache).forEach(function(nid){try{var st=JSON.parse(obj.userCache[nid]);activeUsers[nid]=st.users||[];}catch(ex){}});}
+                    var resp = { action:'plugin', plugin:'usertracer', method:'timeline', data: docs || [], _pwrMap: pwrMap, _activeUsers: activeUsers };
                     if (command._reqSeq) resp._reqSeq = command._reqSeq;
                     obj.send(sid, resp);
                 });
