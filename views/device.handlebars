@@ -161,7 +161,7 @@ function _renderGantt(events,rs,re,pwrMap){
     var barW=barRight-barLeft,isOpen=segs.some(function(s){return s.open;});
     h+='<div style="display:flex;min-height:40px;border-bottom:1px solid #e0e0e0"><div style="width:160px;flex-shrink:0;padding:7px;border-right:1px solid #ccc;font-size:10px;color:#003366;font-weight:700;display:flex;align-items:center;background:#fff">'+esc(u)+'</div><div style="flex:1;position:relative;min-width:'+mw+'px;min-height:40px">';
     ticks.forEach(function(tk){h+='<div style="position:absolute;top:0;bottom:0;border-left:1px dashed #ccc;left:'+tk.pct+'%"></div>';});
-    h+='<div style="position:absolute;top:9px;height:20px;left:'+barLeft+'%;width:'+barW+'%;border-radius:2px;overflow:hidden;display:flex;border:'+(isOpen?'2px dashed':'1px solid')+' rgba(0,0,0,.2)">';
+    h+='<div style="position:absolute;top:9px;height:20px;left:'+barLeft+'%;width:'+barW+'%;border-radius:2px;overflow:hidden;display:flex;border:1px solid rgba(0,0,0,.2)">';
     segs.forEach(function(s,i){
       var sPct=Math.max(0.3,((s.end-s.start)/total)*100);
       var em=eventMeta(s.state==='lock'?'userLock':s.state==='unlock'?'userUnlock':s.state==='login'?'userLogin':'userLogout');
