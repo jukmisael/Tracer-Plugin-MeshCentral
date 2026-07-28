@@ -1,6 +1,10 @@
 # Changelog
 
-
+## 3.5.65 (2026-07-28)
+### Added
+- **WS_RAW diagnostic logging**: WebSocket handler now logs ALL incoming messages (action, plugin, method, data type) BEFORE the plugin filter, to diagnose unexpected Gantt refresh triggers.
+### Removed
+- Dead code: `setRange()` function, `.btn-live` and `.btn-chip` CSS (unused since drag-to-select replaced preset buttons).
 
 ## 3.5.59 (2026-07-27)
 
