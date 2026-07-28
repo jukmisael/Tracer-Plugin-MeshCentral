@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.5.72 (2026-07-28)
+### Fixed
+- **Gantt zoom broken**: reverted to percentage-based bar positioning with `flex:0 0 X%` + `min-width:4px` for segments. Bars now scale correctly at any zoom level.
+
 ## 3.5.71 (2026-07-28)
 ### Fixed
 - **Gantt segment widths**: bars and segments now use pixel-based widths instead of percentages. Minimum 4px per segment. Bars no longer appear too small/short when zoomed in.
