@@ -185,7 +185,6 @@ function buildSessions(events,rs,re){
       }
     });if(activeStart!=null){var segEnd=Math.min(re,Date.now());if(segEnd>rs)out.push({nodeName:g.nodeName,nodeid:g.nodeid,user:g.user,display:g.display,start:Math.max(rs,activeStart),end:segEnd,state:activeState,open:true});}
   });dlog('BS','exit sessions='+out.length);return out;}
-}
 function pickerRange(){
   var rs=new Date(document.getElementById('dStart').value+'T00:00:00').getTime();
   var re=new Date(document.getElementById('dEnd').value+'T23:59:59.999').getTime();

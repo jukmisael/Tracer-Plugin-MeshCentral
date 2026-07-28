@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.5.79 (2026-07-28)
+### Fixed
+- **Syntax error**: removed extra `}` after buildSessions function that caused `Unexpected token '}'` on page load
+
 ## 3.5.78 (2026-07-28)
 ### Fixed
 - **Gantt fix**: removed `routed` flag that was blocking renderTimeline on initial load; WS handler now always calls renderTimeline (matching v3.5.70 behavior)
