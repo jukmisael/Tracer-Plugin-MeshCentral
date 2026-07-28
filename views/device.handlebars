@@ -115,23 +115,23 @@ function buildSessions(events,rs,re){
     var k=e.displayUser||e.username||'?';if(!by[k])by[k]={user:e.username,display:k,events:[]};by[k].events.push(e);
   });
   var out=[];Object.keys(by).forEach(function(k){
-    var g=by[k],start=null,state='offline';
+    var g=by[k],activeStart=null,activeState='login';
     g.events.forEach(function(e){
       var t=new Date(e.detectedAt).getTime();
       if(e.eventType==='userLogin'){
-        if(start!=null)out.push({user:g.user,display:g.display,start:start,end:t,state:state});
-        start=t;state='login';
-      }else if(e.eventType==='userLock'){
-        if(start!=null){out.push({user:g.user,display:g.display,start:start,end:t,state:state});}
-        start=t;state='lock';
-      }else if(e.eventType==='userUnlock'){
-        if(start!=null){out.push({user:g.user,display:g.display,start:start,end:t,state:state});}
-        start=t;state='unlock';
+        if(activeStart!=null)out.push({user:g.user,display:g.display,start:activeStart,end:t,state:activeState});
+        activeStart=t;activeState='login';
       }else if(e.eventType==='userLogout'){
-        if(start!=null){out.push({user:g.user,display:g.display,start:start,end:t,state:state});start=null;}
+        if(activeStart!=null){out.push({user:g.user,display:g.display,start:activeStart,end:t,state:activeState});activeStart=null;}
         else out.push({user:g.user,display:g.display,start:Math.max(rs,t-30*60000),end:t,state:'logout'});
+      }else if(e.eventType==='userLock'){
+        if(activeStart!=null){out.push({user:g.user,display:g.display,start:activeStart,end:t,state:activeState});}
+        activeStart=t;activeState='lock';
+      }else if(e.eventType==='userUnlock'){
+        if(activeStart!=null){out.push({user:g.user,display:g.display,start:activeStart,end:t,state:activeState});}
+        activeStart=t;activeState='login';
       }
-    });if(start!=null)out.push({user:g.user,display:g.display,start:start,end:Math.min(re,Date.now()),state:state,open:true});
+    });if(activeStart!=null)out.push({user:g.user,display:g.display,start:activeStart,end:Math.min(re,Date.now()),state:activeState,open:true});
   });return out;
 }
 function _renderGantt(events,rs,re,pwrMap){

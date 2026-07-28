@@ -165,23 +165,23 @@ function buildSessions(events,rs,re){
     if(!by[k])by[k]={nodeid:e.nodeid,nodeName:e.nodeName,user:e.username,display:e.displayUser||e.username,events:[]};by[k].events.push(e);
   });
   var out=[];Object.keys(by).forEach(function(k){
-    var g=by[k],start=null,state='offline';
+    var g=by[k],activeStart=null,activeState='login';
     g.events.forEach(function(e){
       var t=new Date(e.detectedAt).getTime();
       if(e.eventType==='userLogin'){
-        if(start!=null)out.push({nodeName:g.nodeName,nodeid:g.nodeid,user:g.user,display:g.display,start:Math.max(rs,start),end:Math.min(re,t),state:state});
-        start=t;state='login';
-      }else if(e.eventType==='userLock'){
-        if(start!=null){out.push({nodeName:g.nodeName,nodeid:g.nodeid,user:g.user,display:g.display,start:Math.max(rs,start),end:Math.min(re,t),state:state});}
-        start=t;state='lock';
-      }else if(e.eventType==='userUnlock'){
-        if(start!=null){out.push({nodeName:g.nodeName,nodeid:g.nodeid,user:g.user,display:g.display,start:Math.max(rs,start),end:Math.min(re,t),state:state});}
-        start=t;state='unlock';
+        if(activeStart!=null)out.push({nodeName:g.nodeName,nodeid:g.nodeid,user:g.user,display:g.display,start:Math.max(rs,activeStart),end:Math.min(re,t),state:activeState});
+        activeStart=t;activeState='login';
       }else if(e.eventType==='userLogout'){
-        if(start!=null){out.push({nodeName:g.nodeName,nodeid:g.nodeid,user:g.user,display:g.display,start:Math.max(rs,start),end:Math.min(re,t),state:state});start=null;}
+        if(activeStart!=null){out.push({nodeName:g.nodeName,nodeid:g.nodeid,user:g.user,display:g.display,start:Math.max(rs,activeStart),end:Math.min(re,t),state:activeState});activeStart=null;}
         else out.push({nodeName:g.nodeName,nodeid:g.nodeid,user:g.user,display:g.display,start:Math.max(rs,t-30*60000),end:Math.min(re,t),state:'logout'});
+      }else if(e.eventType==='userLock'){
+        if(activeStart!=null){out.push({nodeName:g.nodeName,nodeid:g.nodeid,user:g.user,display:g.display,start:Math.max(rs,activeStart),end:Math.min(re,t),state:activeState});}
+        activeStart=t;activeState='lock';
+      }else if(e.eventType==='userUnlock'){
+        if(activeStart!=null){out.push({nodeName:g.nodeName,nodeid:g.nodeid,user:g.user,display:g.display,start:Math.max(rs,activeStart),end:Math.min(re,t),state:activeState});}
+        activeStart=t;activeState='login';
       }
-    });if(start!=null){var segEnd=Math.min(re,Date.now());if(segEnd>rs)out.push({nodeName:g.nodeName,nodeid:g.nodeid,user:g.user,display:g.display,start:Math.max(rs,start),end:segEnd,state:state,open:true});}
+    });if(activeStart!=null){var segEnd=Math.min(re,Date.now());if(segEnd>rs)out.push({nodeName:g.nodeName,nodeid:g.nodeid,user:g.user,display:g.display,start:Math.max(rs,activeStart),end:segEnd,state:activeState,open:true});}
   });return out;
 }
 function pickerRange(){
@@ -462,10 +462,13 @@ function renderXrefDev(e){e=e||[];document.getElementById('sEvents').textContent
         else if(d.method==='timeline'){
           try{
             if(d._activeUsers)_activeUsers=d._activeUsers;
-            if(_xrefPending==='user'){renderXrefUser(d.data||[]);_xrefPending='';}
-            else if(_xrefPending==='dev'){renderXrefDev(d.data||[]);_xrefPending='';}else _xrefPending='';
+          }catch(exAU){}
+          var routed=false;
+          try{
+            if(_xrefPending==='user'){renderXrefUser(d.data||[]);_xrefPending='';routed=true;}
+            else if(_xrefPending==='dev'){renderXrefDev(d.data||[]);_xrefPending='';routed=true;}else{_xrefPending='';}
           }catch(ex2){dlog('WS_XREF_ERR',ex2.message);_xrefPending='';}
-          renderTimeline(d.data||[],d._pwrMap);
+          if(!routed)renderTimeline(d.data||[],d._pwrMap);
         }
       }}catch(ex){}
     };

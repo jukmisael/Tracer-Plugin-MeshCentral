@@ -1,5 +1,10 @@
 # Changelog
 
+## 3.5.75 (2026-07-28)
+### Fixed
+- **Timeline overwrite**: WS handler now skips `renderTimeline` when xref already rendered the response. Prevents Gantt being overwritten by stale/auto-triggered responses.
+- **buildSessions merge**: lock/unlock events now create sub-segments within a session instead of separate bars. Consecutive online segments are merged.
+
 ## 3.5.74 (2026-07-28)
 ### Fixed
 - **Gantt segment sizing**: segments now use % of bar duration instead of track duration. Bars fill correctly.
