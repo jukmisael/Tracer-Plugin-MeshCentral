@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.5.68 (2026-07-28)
+### Fixed
+- **User format mismatch**: `_activeUsers` from `doc.users` stores `DOMAIN\user` but events store plain `username`. Status comparison now normalizes both sides via `splitUser()` to match either format.
+
 ## 3.5.67 (2026-07-28)
 ### Changed
 - **`_activeUsers` agora usa `db.Get(nodeId)`** do MeshCentral (fonte autoritativa) em vez do scanner cache. Fallback para `obj.userCache` se `db.Get` falhar.

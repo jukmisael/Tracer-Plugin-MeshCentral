@@ -410,10 +410,11 @@ function renderXrefUser(e){e=e||[];document.getElementById('sEvents').textConten
   var by={};e.forEach(function(v){var n=v.nodeName||v.nodeid||'?';if(!by[n])by[n]={name:n,nodeid:v.nodeid,events:[]};by[n].events.push(v);});
   var names=Object.keys(by).sort();document.getElementById('hintUser').textContent=e.length+' eventos em '+names.length+' dispositivos';
   var selUser=document.getElementById('xrefUser').value||'';
+  var selShort=splitUser(selUser).u||selUser;
   var h='<div class="stacked">';names.forEach(function(n){var evs=by[n].events.sort(function(a,b){return new Date(b.detectedAt)-new Date(a.detectedAt);}),last=evs[0],first=evs[evs.length-1];
-  var da=_activeUsers[by[n].nodeid]||[];var em;
-  if(da.indexOf(selUser)>=0)em={color:'#2e7d32',label:'Online'};
-  else em=eventMeta(last.eventType);
+  var da=_activeUsers[by[n].nodeid]||[];var isOn=false;
+  for(var ai=0;ai<da.length;ai++){var aShort=splitUser(da[ai]).u||da[ai];if(aShort===selShort||da[ai]===selUser||aShort===selUser||da[ai]===selShort){isOn=true;break;}}
+  var em=isOn?{color:'#2e7d32',label:'Online'}:eventMeta(last.eventType);
   h+='<div class="scard" style="cursor:pointer" onclick="gotoDev(\''+esc(by[n].nodeid)+'\')"><div style="flex:1"><div class="tag">'+esc(n)+'</div><div class="tagl">'+evs.length+' eventos · '+fmtDate(first.detectedAt)+' → '+(em.endLabel||fmtDate(last.detectedAt))+'</div></div><span class="badge" style="color:'+em.color+'">'+em.label+'</span></div>';});
   h+='</div>';document.getElementById('xrefUserResult').innerHTML=h;
   // Se usuario selecionado, filtra dispositivos relacionados
@@ -431,7 +432,8 @@ function renderXrefDev(e){e=e||[];document.getElementById('sEvents').textContent
   var names=Object.keys(by).sort();document.getElementById('hintDev').textContent=e.length+' eventos de '+names.length+' usuários';
   var devId=document.getElementById('xrefDev').value||'';var da=_activeUsers[devId]||[];
   var h='<div class="stacked">';names.forEach(function(u){var g=by[u],evs=g.events.sort(function(a,b){return new Date(b.detectedAt)-new Date(a.detectedAt);}),last=evs[0],first=evs[evs.length-1],un=splitUser(g.user);
-  var em=(da.indexOf(un.u)>=0||da.indexOf(g.user)>=0)?{color:'#2e7d32',label:'Online'}:eventMeta(last.eventType);var _gud=esc((un.user||g.user).replace(/\\/g,'\\\\'));h+='<div class="scard" style="cursor:pointer" onclick="gotoUser(\''+_gud+'\')"><div style="flex:1"><div class="tag">'+esc(un.user||g.user)+'</div><div class="tagl">'+(g.domain?esc(g.domain)+' · ':'')+evs.length+' eventos · '+fmtDate(first.detectedAt)+' → '+(em.endLabel||fmtDate(last.detectedAt))+'</div></div><span class="badge" style="color:'+em.color+'">'+em.label+'</span></div>';});
+  var isOn2=false;for(var ai2=0;ai2<da.length;ai2++){var aShort2=splitUser(da[ai2]).u||da[ai2];if(aShort2===un.u||da[ai2]===g.user||aShort2===g.user||da[ai2]===un.u){isOn2=true;break;}}
+  var em=isOn2?{color:'#2e7d32',label:'Online'}:eventMeta(last.eventType);var _gud=esc((un.user||g.user).replace(/\\/g,'\\\\'));h+='<div class="scard" style="cursor:pointer" onclick="gotoUser(\''+_gud+'\')"><div style="flex:1"><div class="tag">'+esc(un.user||g.user)+'</div><div class="tagl">'+(g.domain?esc(g.domain)+' · ':'')+evs.length+' eventos · '+fmtDate(first.detectedAt)+' → '+(em.endLabel||fmtDate(last.detectedAt))+'</div></div><span class="badge" style="color:'+em.color+'">'+em.label+'</span></div>';});
   h+='</div>';document.getElementById('xrefDevResult').innerHTML=h;
   // Se dispositivo selecionado, filtra usuarios relacionados (usa g.user = displayUser, sem reconstruir dominio)
   if(document.getElementById('xrefDev').value){
