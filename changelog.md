@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.5.67 (2026-07-28)
+### Changed
+- **`_activeUsers` agora usa `db.Get(nodeId)`** do MeshCentral (fonte autoritativa) em vez do scanner cache. Fallback para `obj.userCache` se `db.Get` falhar.
+
 ## 3.5.66 (2026-07-28)
 ### Fixed
 - **Status "Bloqueado" incorreto**: device tab e cross-reference cards agora usam `_activeUsers` (scanner cache) para determinar status real. Se o usuário está ativo no dispositivo, mostra "Online" mesmo que o último evento seja `userLock`. Server agora envia `_activeUsers` map no response do `getTimeline`.

@@ -437,10 +437,46 @@ module.exports.usertracer = function (parent) {
                         var ids={};(docs||[]).forEach(function(e){if(e.nodeid)ids[e.nodeid]=1;});
                         Object.keys(ids).forEach(function(id){if(obj.devicePwr[id])pwrMap[id]=obj.devicePwr[id];});
                     }
-                    var activeUsers={};if(obj.userCache){Object.keys(obj.userCache).forEach(function(nid){try{var st=JSON.parse(obj.userCache[nid]);activeUsers[nid]=st.users||[];}catch(ex){}});}
-                    var resp = { action:'plugin', plugin:'usertracer', method:'timeline', data: docs || [], _pwrMap: pwrMap, _activeUsers: activeUsers };
-                    if (command._reqSeq) resp._reqSeq = command._reqSeq;
-                    obj.send(sid, resp);
+                    // Build activeUsers from MeshCentral db.Get (authoritative) with userCache fallback
+                    var activeUsers={};
+                    var nodeIds={};(docs||[]).forEach(function(e){if(e.nodeid)nodeIds[e.nodeid]=1;});
+                    var nids=Object.keys(nodeIds);
+                    if(nids.length===0){
+                        var resp = { action:'plugin', plugin:'usertracer', method:'timeline', data: docs || [], _pwrMap: pwrMap, _activeUsers: {} };
+                        if (command._reqSeq) resp._reqSeq = command._reqSeq;
+                        obj.send(sid, resp);
+                        return;
+                    }
+                    var pending=nids.length;
+                    nids.forEach(function(nid){
+                        try{
+                            obj.meshServer.db.Get(nid,function(err,doc){
+                                try{
+                                    if(!err&&doc&&doc.users&&doc.users.length>0){
+                                        activeUsers[nid]=doc.users.slice();
+                                    } else if(obj.userCache&&obj.userCache[nid]){
+                                        // Fallback to scanner cache
+                                        try{var st=JSON.parse(obj.userCache[nid]);activeUsers[nid]=st.users||[];}catch(ex2){}
+                                    }
+                                }catch(ex){}
+                                if(--pending===0){
+                                    var resp = { action:'plugin', plugin:'usertracer', method:'timeline', data: docs || [], _pwrMap: pwrMap, _activeUsers: activeUsers };
+                                    if (command._reqSeq) resp._reqSeq = command._reqSeq;
+                                    obj.send(sid, resp);
+                                }
+                            });
+                        }catch(ex){
+                            // db.Get failed, try fallback
+                            if(obj.userCache&&obj.userCache[nid]){
+                                try{var st=JSON.parse(obj.userCache[nid]);activeUsers[nid]=st.users||[];}catch(ex2){}
+                            }
+                            if(--pending===0){
+                                var resp = { action:'plugin', plugin:'usertracer', method:'timeline', data: docs || [], _pwrMap: pwrMap, _activeUsers: activeUsers };
+                                if (command._reqSeq) resp._reqSeq = command._reqSeq;
+                                obj.send(sid, resp);
+                            }
+                        }
+                    });
                 });
                 return;
             }
