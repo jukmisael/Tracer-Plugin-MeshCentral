@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.5.77 (2026-07-28)
+### Fixed
+- **Gantt not rendering**: PH callback was processing timeline before WS handler, consuming _xrefPending and rendering with stale state. PH timeline callback now only logs; WS handler owns all rendering.
+
 ## 3.5.76 (2026-07-28)
 ### Added
 - Debug logging in WS timeline handler and renderTimeline to trace Gantt rendering flow

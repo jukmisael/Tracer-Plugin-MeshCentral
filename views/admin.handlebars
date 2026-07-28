@@ -447,7 +447,7 @@ function renderXrefDev(e){e=e||[];document.getElementById('sEvents').textContent
   try{
     var ph=(top&&top.pluginHandler&&top.pluginHandler.usertracer)||(parent&&parent.pluginHandler&&parent.pluginHandler.usertracer);
     if(ph){
-      ph.timeline=function(m){if(m&&m.data&&Array.isArray(m.data)){dlog('PHOK','timeline n='+m.data.length);if(m._reqSeq&&m._reqSeq!==_reqSeq){dlog('PH_STALE','timeline',m._reqSeq,'!=',_reqSeq);return;}try{if(_xrefPending==='user'){renderXrefUser(m.data);_xrefPending='';}else if(_xrefPending==='dev'){renderXrefDev(m.data);_xrefPending='';}else _xrefPending='';}catch(ex2){dlog('PH_XREF_ERR',ex2.message);_xrefPending='';}renderTimeline(m.data,m._pwrMap);}else dlog('PHSKIP','timeline',typeof m);};
+      ph.timeline=function(m){if(m&&m.data&&Array.isArray(m.data)){dlog('PHOK','timeline n='+m.data.length);}else dlog('PHSKIP','timeline',typeof m);};
       ph.deviceNames=function(m){if(m&&m.data&&Array.isArray(m.data)){dlog('PHOK','deviceNames n='+m.data.length);renderDeviceNames(m.data);}else dlog('PHSKIP','deviceNames',typeof m);};
       ph.userNames=function(m){if(m&&m.data&&Array.isArray(m.data)){dlog('PHOK','userNames n='+m.data.length);renderUserNames(m.data);}else dlog('PHSKIP','userNames',typeof m);};
       dlog('PH','registered');
