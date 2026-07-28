@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.5.74 (2026-07-28)
+### Fixed
+- **Gantt segment sizing**: segments now use % of bar duration instead of track duration. Bars fill correctly.
+
 ## 3.5.73 (2026-07-28)
 ### Fixed
 - **Removed dashed border** on open session Gantt bars. All bars now use solid border consistently.
