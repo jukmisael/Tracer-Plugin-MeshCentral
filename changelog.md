@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.5.70 (2026-07-28)
+### Fixed
+- **Locked users no longer shown as Online**: `_activeUsers` override now only fixes stale 'offline' state. Sessions with `userLock` as last event correctly show "Bloqueado" (orange). Gantt bars and status badges respect the event type.
+
 ## 3.5.69 (2026-07-28)
 ### Fixed
 - **Gantt bar "Bloqueado" when device is online**: open sessions now check `_activeUsers` (from `db.Get`). If user is active on the device, session state overridden to 'login' (green) regardless of last event type.
