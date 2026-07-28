@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.5.80 (2026-07-28)
+### Fixed
+- **Syntax error**: removed extra `}` from loadUserNames function (double closing brace)
+
 ## 3.5.79 (2026-07-28)
 ### Fixed
 - **Syntax error**: removed extra `}` after buildSessions function that caused `Unexpected token '}'` on page load

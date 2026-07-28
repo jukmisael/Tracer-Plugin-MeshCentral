@@ -355,7 +355,7 @@ function setupGanttDrag(){
     document.addEventListener('mouseup',onUp,true);
   });
 }
-function loadUserNames(){dlog('LOAD','loadUserNames');if(ms)ms.send({action:'plugin',plugin:'usertracer',pluginaction:'getUserNames'});}}
+function loadUserNames(){dlog('LOAD','loadUserNames');if(ms)ms.send({action:'plugin',plugin:'usertracer',pluginaction:'getUserNames'});}
 function renderUserNames(list){
   _allUsers=(list||[]).slice().sort(function(a,b){return String(a.displayUser||a.username).localeCompare(String(b.displayUser||b.username));});
   document.getElementById('sUsers').textContent=_allUsers.length;
