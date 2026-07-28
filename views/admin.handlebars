@@ -93,7 +93,7 @@ body{font-family:"Trebuchet MS",Arial,Helvetica,sans-serif;background:#d3d9d6;co
       <div class="panel-title">Usuário → Dispositivos</div>
       <div class="toolbar">
         <div class="sd-wrap" id="sdWrap-xrefUser">
-          <input type="text" class="sd-sel" id="sdSel-xrefUser" value="— Selecione um usuário —" readonly onclick="sdToggle('xrefUser')" oninput="sdFilter('xrefUser',this.value)">
+          <input type="text" class="sd-sel" id="sdSel-xrefUser" value="— Selecione um usuário —" readonly onclick="sdToggle('xrefUser',event)" oninput="sdFilter('xrefUser',this.value)">
           <div class="sd-drop" id="sdDrop-xrefUser"><div class="sd-opts" id="sdOpts-xrefUser"></div></div>
           <select id="xrefUser" style="display:none" onchange="loadXrefUser()"><option value="">— Selecione um usuário —</option></select>
         </div>
@@ -107,7 +107,7 @@ body{font-family:"Trebuchet MS",Arial,Helvetica,sans-serif;background:#d3d9d6;co
       <div class="panel-title">Dispositivo → Usuários</div>
       <div class="toolbar">
         <div class="sd-wrap" id="sdWrap-xrefDev">
-          <input type="text" class="sd-sel" id="sdSel-xrefDev" value="— Selecione um dispositivo —" readonly onclick="sdToggle('xrefDev')" oninput="sdFilter('xrefDev',this.value)">
+          <input type="text" class="sd-sel" id="sdSel-xrefDev" value="— Selecione um dispositivo —" readonly onclick="sdToggle('xrefDev',event)" oninput="sdFilter('xrefDev',this.value)">
           <div class="sd-drop" id="sdDrop-xrefDev"><div class="sd-opts" id="sdOpts-xrefDev"></div></div>
           <select id="xrefDev" style="display:none" onchange="loadXrefDev()"><option value="">— Selecione um dispositivo —</option></select>
         </div>
@@ -137,8 +137,8 @@ function colorFor(k){var h=0,s=String(k||'');for(var i=0;i<s.length;i++)h=((h<<5
 function splitUser(u){var p=String(u||'').split('\\');return p.length>1?{d:p[0],u:p[1]}:{d:'',u:u||''};}
 /* --- Searchable dropdown (input that transforms into search) --- */
 var _sdOpen=null;
-document.addEventListener('click',function(e){if(_sdOpen){var w=document.getElementById('sdWrap-'+_sdOpen);if(w&&!w.contains(e.target))sdClose(_sdOpen);}});
-function sdToggle(id){if(_sdOpen&&_sdOpen!==id)sdClose(_sdOpen);var d=document.getElementById('sdDrop-'+id);var inp=document.getElementById('sdSel-'+id);if(!d||!inp)return;if(d.style.display==='block'){sdClose(id);}else{d.style.display='block';_sdOpen=id;inp.readOnly=false;inp.value='';inp.focus();sdFilter(id,'');}}
+document.addEventListener('click',function(e){if(_sdOpen){if(e.target.classList&&e.target.classList.contains('sd-sel'))return;var w=document.getElementById('sdWrap-'+_sdOpen);if(w&&!w.contains(e.target))sdClose(_sdOpen);}});
+function sdToggle(id,e){if(e)e.stopPropagation();if(_sdOpen&&_sdOpen!==id)sdClose(_sdOpen);var d=document.getElementById('sdDrop-'+id);var inp=document.getElementById('sdSel-'+id);if(!d||!inp)return;if(d.style.display==='block'){sdClose(id);}else{d.style.display='block';_sdOpen=id;inp.readOnly=false;inp.value='';inp.focus();sdFilter(id,'');}}
 function sdClose(id){var d=document.getElementById('sdDrop-'+id);var inp=document.getElementById('sdSel-'+id);if(d)d.style.display='none';if(_sdOpen===id)_sdOpen=null;if(inp){inp.readOnly=true;sdDisplay(id);}}
 function sdFilter(id,q){var list=document.getElementById('sdOpts-'+id);if(!list)return;q=String(q||'').toLowerCase();Array.from(list.children).forEach(function(el){el.style.display=(!q||el.textContent.toLowerCase().indexOf(q)>=0)?'':'none';});}
 function sdSelect(id,val){var sel=document.getElementById(id);if(!sel)return;for(var i=0;i<sel.options.length;i++){if(sel.options[i].value===val){sel.selectedIndex=i;break;}}sdClose(id);if(typeof sel.onchange==='function')sel.onchange();}
