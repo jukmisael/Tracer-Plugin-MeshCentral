@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.5.73 (2026-07-28)
+### Fixed
+- **Removed dashed border** on open session Gantt bars. All bars now use solid border consistently.
+
 ## 3.5.72 (2026-07-28)
 ### Fixed
 - **Gantt zoom broken**: reverted to percentage-based bar positioning with `flex:0 0 X%` + `min-width:4px` for segments. Bars now scale correctly at any zoom level.
