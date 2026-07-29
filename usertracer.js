@@ -497,13 +497,16 @@ module.exports.usertracer = function (parent) {
                 UT_LOG.raw('serveraction: no sid — command=' + JSON.stringify(command));
                 return;
             }
-            UT_LOG.raw('serveraction: dispatching sid=' + (sid ? sid.substring(0,40) : 'null') + ' pluginaction=' + command.pluginaction + ' raw=' + JSON.stringify(command));
+            // Extrair user diretamente do myparent (mais confiável que wssessions2)
+            var userFromParent = null;
+            try { userFromParent = myparent && myparent.user; } catch (_) {}
+            UT_LOG.raw('serveraction: dispatching sid=' + (sid ? sid.substring(0,40) : 'null') + ' pluginaction=' + command.pluginaction + ' raw=' + JSON.stringify(command) + ' userFromParent=' + (userFromParent ? userFromParent._id : 'null'));
 
-            if (command.pluginaction === 'getCurrentUsers')     return obj._actionGetCurrentUsers(command, sid);
-            if (command.pluginaction === 'getTimeline')         return obj._actionGetTimeline(command, sid);
-            if (command.pluginaction === 'getDeviceNames')      return obj._actionGetDeviceNames(command, sid);
-            if (command.pluginaction === 'getUserNames')        return obj._actionGetUserNames(command, sid);
-            if (command.pluginaction === 'getNodeDetails')      return obj._actionGetNodeDetails(command, sid);
+            if (command.pluginaction === 'getCurrentUsers')     return obj._actionGetCurrentUsers(command, sid, userFromParent);
+            if (command.pluginaction === 'getTimeline')         return obj._actionGetTimeline(command, sid, userFromParent);
+            if (command.pluginaction === 'getDeviceNames')      return obj._actionGetDeviceNames(command, sid, userFromParent);
+            if (command.pluginaction === 'getUserNames')        return obj._actionGetUserNames(command, sid, userFromParent);
+            if (command.pluginaction === 'getNodeDetails')      return obj._actionGetNodeDetails(command, sid, userFromParent);
             if (command.pluginaction === 'purgeHistory')        return obj._actionPurgeHistory(command, myparent, sid);
             UT_LOG.raw('serveraction: unknown action=' + command.pluginaction + ' raw=' + JSON.stringify(command));
         } catch (e) {
@@ -512,9 +515,9 @@ module.exports.usertracer = function (parent) {
     };
 
     // --- getCurrentUsers: ACL filter via GetNodeWithRights (v3.5.83 security fix) ---
-    obj._actionGetCurrentUsers = function (command, sid) {
+    obj._actionGetCurrentUsers = function (command, sid, parentUser) {
         UT_LOG.raw('getCurrentUsers: entry sid=' + (sid ? sid.substring(0,40) : 'null'));
-        var user = obj._getSessionUser(sid);
+        var user = obj._getSessionUser(sid, parentUser);
         if (!user) { UT_LOG.raw('getCurrentUsers: no user — sending empty'); obj._send(sid, { action:'plugin', plugin:'usertracer', method:'currentUsers', data: [] }); return; }
         if (!obj.mdb || typeof obj.mdb.Get !== 'function') {
             UT_LOG.raw('getCurrentUsers: no mdb.Get — sending empty');
@@ -571,9 +574,9 @@ module.exports.usertracer = function (parent) {
     };
 
     // --- getTimeline: ACL filter via GetNodeWithRights (v3.5.83 security fix) ---
-    obj._actionGetTimeline = function (command, sid) {
-        UT_LOG.raw('getTimeline: entry sid=' + (sid ? sid.substring(0,40) : 'null') + ' startDate=' + command.startDate + ' endDate=' + command.endDate + ' nodeid=' + command.nodeid + ' nodeids=' + JSON.stringify(command.nodeids) + ' username=' + command.username + ' _reqSeq=' + command._reqSeq);
-        var user = obj._getSessionUser(sid);
+    obj._actionGetTimeline = function (command, sid, parentUser) {
+        UT_LOG.raw('getTimeline: entry sid=' + (sid ? sid.substring(0,40) : 'null') + ' startDate=' + command.startDate + ' endDate=' + command.endDate + ' nodeid=' + command.nodeid + ' nodeids=' + command.nodeids + ' username=' + command.username + ' _reqSeq=' + command._reqSeq);
+        var user = obj._getSessionUser(sid, parentUser);
         if (!user) { UT_LOG.raw('getTimeline: no user — sending empty'); obj._send(sid, { action:'plugin', plugin:'usertracer', method:'timeline', data: [], _pwrMap: {}, _activeUsers: {}, _reqSeq: command._reqSeq }); return; }
         if (!obj.db || typeof obj.db.getEvents !== 'function') {
             UT_LOG.raw('getTimeline: no db.getEvents — sending empty');
@@ -647,7 +650,7 @@ module.exports.usertracer = function (parent) {
         });
     };
 
-    obj._actionGetDeviceNames = function (command, sid) {
+    obj._actionGetDeviceNames = function (command, sid, parentUser) {
         UT_LOG.raw('getDeviceNames: entry sid=' + (sid ? sid.substring(0,40) : 'null'));
         var cb = function (d) {
             UT_LOG.raw('getDeviceNames: result count=' + (d ? d.length : 0) + ' sample=' + (d && d.length > 0 ? JSON.stringify(d.slice(0, 3)) : '[]'));
@@ -662,7 +665,7 @@ module.exports.usertracer = function (parent) {
         }
     };
 
-    obj._actionGetUserNames = function (command, sid) {
+    obj._actionGetUserNames = function (command, sid, parentUser) {
         UT_LOG.raw('getUserNames: entry sid=' + (sid ? sid.substring(0,40) : 'null'));
         if (!obj.db || !obj.db.getUserNames) {
             UT_LOG.raw('getUserNames: no db.getUserNames — sending empty');
@@ -675,9 +678,9 @@ module.exports.usertracer = function (parent) {
         });
     };
 
-    obj._actionGetNodeDetails = function (command, sid) {
+    obj._actionGetNodeDetails = function (command, sid, parentUser) {
         UT_LOG.raw('getNodeDetails: entry sid=' + (sid ? sid.substring(0,40) : 'null') + ' nodeid=' + command.nodeid);
-        var user = obj._getSessionUser(sid);
+        var user = obj._getSessionUser(sid, parentUser);
         var nid = command.nodeid;
         if (!user || !nid) {
             UT_LOG.raw('getNodeDetails: no user or nid — sending null user=' + (!!user) + ' nid=' + nid);
@@ -754,16 +757,24 @@ module.exports.usertracer = function (parent) {
     // -----------------------------------------------------------------------
     // ACL helpers — usando APIs nativas do MeshCentral (v3.5.83 security fix)
     // -----------------------------------------------------------------------
-    obj._getSessionUser = function (sid) {
+    obj._getSessionUser = function (sid, fallback) {
         try {
             var wss2 = obj.meshServer && obj.meshServer.webserver && obj.meshServer.webserver.wssessions2;
-            if (!wss2 || !wss2[sid] || !wss2[sid].user) {
-                UT_LOG.raw('_getSessionUser: no session for sid=' + (sid ? sid.substring(0,40) : 'null') + ' wss2=' + (!!wss2) + ' wss2[sid]=' + (wss2 && !!wss2[sid]) + ' user=' + (wss2 && wss2[sid] && !!wss2[sid].user));
-                return null;
+            if (wss2 && wss2[sid] && wss2[sid].user) {
+                var user = wss2[sid].user;
+                UT_LOG.raw('_getSessionUser: found sid=' + (sid ? sid.substring(0,40) : 'null') + ' user=' + JSON.stringify({ _id: user._id, name: user.name, siteadmin: user.siteadmin }));
+                return user;
             }
-            var user = wss2[sid].user;
-            UT_LOG.raw('_getSessionUser: found sid=' + (sid ? sid.substring(0,40) : 'null') + ' user=' + JSON.stringify({ _id: user._id, name: user.name, siteadmin: user.siteadmin }));
-            return user;
+            // Sid pode ser userID, não sessionID — tentar fallback direto do myparent
+            if (fallback) {
+                UT_LOG.raw('_getSessionUser: using fallback user for sid=' + (sid ? sid.substring(0,40) : 'null') + ' user=' + JSON.stringify({ _id: fallback._id, name: fallback.name, siteadmin: fallback.siteadmin }));
+                return fallback;
+            }
+            if (wss2 && wss2[sid]) {
+                UT_LOG.raw('_getSessionUser: wss2[sid] keys=' + JSON.stringify(Object.keys(wss2[sid])) + ' hasUser=' + ('user' in wss2[sid]) + ' userVal=' + JSON.stringify(wss2[sid].user) + ' typeofUser=' + typeof wss2[sid].user);
+            }
+            UT_LOG.raw('_getSessionUser: no session for sid=' + (sid ? sid.substring(0,40) : 'null') + ' wss2=' + (!!wss2) + ' wss2[sid]=' + (wss2 && !!wss2[sid]) + ' user=' + (wss2 && wss2[sid] && !!wss2[sid].user));
+            return null;
         } catch (_) { return null; }
     };
 
