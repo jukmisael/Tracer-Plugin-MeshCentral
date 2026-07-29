@@ -898,17 +898,14 @@ module.exports.usertracer = function (parent) {
             if (typeof currentNode === 'undefined' || !currentNode) return;
             if (currentNode.osdesc && currentNode.osdesc.toLowerCase().indexOf('windows') === -1) return;
             if (typeof pluginHandler === 'undefined') return;
-            // Aceitar a tab somente se o usuário puder visualizar (permissão RBAC)
-            // Sem user instance aqui (estamos no frontend global); checagem fina é feita no iframe via server-side
-            if (typeof user === 'undefined' || !user) return;
-            if (user.siteadmin !== 0xFFFFFFFF && (user.siteadmin & 1) === 0 && (user.siteadmin & 8) === 0) {
-                // Usuário sem direito de agent console ou siteadmin → não mostrar tab
-                return;
-            }
+            // Sem guard 'user' — alinhado com RegEdit. Permissões finas no iframe via handleAdminReq (server-side).
             pluginHandler.registerPluginTab({ tabTitle: 'User Tracer', tabId: 'pluginUserTracer' });
             var nid = currentNode._id;
             QA('pluginUserTracer', '<iframe id="pluginIframeUserTracer" style="width:100%;height:80vh;overflow:auto;border:none" scrolling="yes" frameBorder=0 src="/pluginadmin.ashx?pin=usertracer&user=1&nodeid=' + encodeURIComponent(nid) + '" />');
-        } catch (e) { UT_LOG.error('onDeviceRefreshEnd', e); }
+        } catch (e) {
+            // NÃO usar UT_LOG — server-side only; ReferenceError no browser cascateia pelo callHook
+            if (typeof console !== 'undefined' && console.error) console.error('[usertracer] onDeviceRefreshEnd', e);
+        }
     };
 
     return obj;
