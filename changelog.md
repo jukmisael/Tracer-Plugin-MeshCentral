@@ -1,4 +1,10 @@
+## 3.5.86 (2026-07-29)
+
+### Added
+- **Testes para `hook_agentCoreIsStable` e `hook_processAgentData`** (14 testes): cobrem debounce de 2s, normalização de `nodeid` (string/object/nodeid/_id), idempotência (múltiplas chamadas = 1 checkNode), error handling (exceções em mdb.Get são capturadas sem crash), e no-op quando `_stopped=true`. Estes hooks são os triggers principais do scanner e estavam sem cobertura.
+
 ## 3.5.85 (2026-07-29)
+
 
 ### Changed
 - **DRY applied to shared frontend utilities** (`esc`, `splitUser`, `ymd`, `fmtDur`, `eventMeta`): confirmed byte-identical between `views/admin.handlebars` and `views/device.handlebars`. Added comment block above each section documenting the convention ("When modifying, mirror to both files"). MeshCentral upstream does not implement `?include=1` for plugin views, so files are inlined rather than extracted to a shared asset.
