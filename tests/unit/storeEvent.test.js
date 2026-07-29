@@ -168,31 +168,33 @@ test('exports: exposes onDeviceRefreshEnd', () => {
     assert.ok(obj.exports.indexOf('onDeviceRefreshEnd') >= 0);
 });
 
-test('exports: exposes WS message stubs (currentUsers, nodeDetails, purgeResult)', () => {
+test('exports: exposes WS message stubs (currentUsers, nodeDetails, purgeResult, timeline, deviceNames, userNames)', () => {
     const { parent } = buildMock({});
     const obj = factory(parent);
     // These exist so the upstream pluginHandler dispatch
     // (default.handlebars:4172 — pluginHandler[plugin][method])
     // doesn't throw TypeError when our server-side _send broadcasts
-    // currentUsers/nodeDetails/purgeResult messages to non-admin
-    // MeshCentral pages (devices list, device details). The admin
-    // page intercepts these via ms.socket.addEventListener directly.
-    assert.ok(obj.exports.indexOf('currentUsers') >= 0, 'currentUsers in exports');
-    assert.ok(obj.exports.indexOf('nodeDetails')  >= 0, 'nodeDetails in exports');
-    assert.ok(obj.exports.indexOf('purgeResult')  >= 0, 'purgeResult in exports');
-    assert.equal(typeof obj.currentUsers, 'function');
-    assert.equal(typeof obj.nodeDetails,  'function');
-    assert.equal(typeof obj.purgeResult,  'function');
+    // these messages to non-admin MeshCentral pages (devices list,
+    // device details). The admin page intercepts these via
+    // ms.socket.addEventListener directly. ALL 6 broadcast methods
+    // must be in exports — admin.handlebars only handles 3 of them
+    // (timeline, deviceNames, userNames) and 3 are never rendered
+    // anywhere (currentUsers, nodeDetails, purgeResult).
+    var expected = ['currentUsers', 'nodeDetails', 'purgeResult', 'timeline', 'deviceNames', 'userNames'];
+    expected.forEach(function (m) {
+        assert.ok(obj.exports.indexOf(m) >= 0, m + ' in exports');
+        assert.equal(typeof obj[m], 'function', m + ' is a function');
+    });
 });
 
 test('WS message stubs: are no-ops (no crash when called)', () => {
     const { parent } = buildMock({});
     const obj = factory(parent);
-    // Stubs must not throw when called with arbitrary args
-    assert.doesNotThrow(function () { obj.currentUsers(); });
-    assert.doesNotThrow(function () { obj.currentUsers({ action:'plugin', plugin:'usertracer', method:'currentUsers', data:[] }); });
-    assert.doesNotThrow(function () { obj.nodeDetails(); });
-    assert.doesNotThrow(function () { obj.nodeDetails({ action:'plugin', plugin:'usertracer', method:'nodeDetails', data:null }); });
-    assert.doesNotThrow(function () { obj.purgeResult(); });
-    assert.doesNotThrow(function () { obj.purgeResult({ action:'plugin', plugin:'usertracer', method:'purgeResult', data:{} }); });
+    var methods = ['currentUsers', 'nodeDetails', 'purgeResult', 'timeline', 'deviceNames', 'userNames'];
+    methods.forEach(function (m) {
+        assert.doesNotThrow(function () { obj[m](); }, m + '() with no args');
+        assert.doesNotThrow(function () {
+            obj[m]({ action: 'plugin', plugin: 'usertracer', method: m, data: {} });
+        }, m + '() with WS payload');
+    });
 });

@@ -71,7 +71,7 @@ module.exports.usertracer = function (parent) {
     obj.parent = parent;
     obj.meshServer = parent.parent;
     obj.debug = obj.meshServer.debug;
-    obj.exports = ['onDeviceRefreshEnd', 'currentUsers', 'nodeDetails', 'purgeResult'];
+    obj.exports = ['onDeviceRefreshEnd', 'currentUsers', 'nodeDetails', 'purgeResult', 'timeline', 'deviceNames', 'userNames'];
     obj.db = null;
     obj.mdb = obj.meshServer.db;
     obj.scanTimer = null;
@@ -657,6 +657,9 @@ module.exports.usertracer = function (parent) {
     obj.currentUsers = function () {};
     obj.nodeDetails  = function () {};
     obj.purgeResult  = function () {};
+    obj.timeline     = function () {};
+    obj.deviceNames  = function () {};
+    obj.userNames    = function () {};
     obj.onDeviceRefreshEnd = function () {
         try {
             if (typeof currentNode === 'undefined' || !currentNode) return;
