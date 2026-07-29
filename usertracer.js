@@ -298,18 +298,27 @@ module.exports.usertracer = function (parent) {
     // -----------------------------------------------------------------------
     obj.handleAdminReq = function (req, res, user) {
         try {
+            // Admin full bypass antes de qualquer ACL check
+            if (user && (user.siteadmin === 0xFFFFFFFF || user.siteadmin === -1)) {
+                if (req.query.user == 1) {
+                    var adminNid = req.query.nodeid;
+                    if (!adminNid) { res.sendStatus(400); return; }
+                    res.render('device', { nodeid: adminNid, nodeName: obj.getNodeName(adminNid) });
+                    return;
+                }
+                res.render('admin', {});
+                return;
+            }
             // #1, #22 — ACL para device tab (não confiar em ?user=1)
             if (req.query.user == 1) {
                 var nid = req.query.nodeid;
                 if (!nid) { res.sendStatus(400); return; }
                 var domain = (user && user.domain) || '';
-
-                // Verificar ACL no nó
                 var webserver = obj.meshServer.webserver;
                 if (webserver && typeof webserver.GetNodeWithRights === 'function') {
-                    webserver.GetNodeWithRights(domain, user, nid, function (node, rights) {
-                        if (!node || rights === 0) { res.sendStatus(401); return; }
-                        // Verificar RBAC do plugin
+                    webserver.GetNodeWithRights(domain, user, nid, function (node, rights, visible) {
+                        // visible=false → user não tem access; rights=0 → sem rights
+                        if (!visible || !rights || (rights & 0xFFFFFFFF) === 0) { res.sendStatus(401); return; }
                         if (obj.parent && typeof obj.parent.getAccessPermissions === 'function') {
                             obj.parent.getAccessPermissions('usertracer', user, { nodeid: nid }).then(function (has) {
                                 if (!has('can_view_history')) { res.sendStatus(403); return; }
@@ -562,20 +571,13 @@ module.exports.usertracer = function (parent) {
     };
 
     obj._isAdminFull = function (user) {
-        return user && (user.siteadmin & 0xFFFFFFFF) === 0xFFFFFFFF;
+        return user && (user.siteadmin === 0xFFFFFFFF || user.siteadmin === -1);
     };
 
     obj._filterAccessibleNodeIds = function (user, nodeIds, cb) {
         if (!user) { cb([]); return; }
-        // Admin full + manageAllDeviceGroups → acesso total
-        if (obj._isAdminFull(user)) {
-            var cfg = obj.meshServer && obj.meshServer.parent && obj.meshServer.parent.config;
-            var mg = cfg && cfg.settings && cfg.settings.managealldevicegroups;
-            if (mg && (mg.indexOf(user._id) >= 0 ||
-                (user.links && Object.keys(user.links).some(function (k) { return mg.indexOf(k) >= 0; })))) {
-                cb(nodeIds); return;
-            }
-        }
+        // Admin full bypass total — mais seguro, alinhado com MeshCentral siteadmin
+        if (obj._isAdminFull(user)) { cb(nodeIds); return; }
         if (!nodeIds || nodeIds.length === 0) {
             // Sem filtro explícito: retornar nodes visíveis via user.links
             cb(user.links ? Object.keys(user.links).filter(function (k) { return k.indexOf('node/') === 0; }) : []);
