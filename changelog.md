@@ -1,3 +1,16 @@
+## 3.5.85 (2026-07-29)
+
+### Changed
+- **DRY applied to shared frontend utilities** (`esc`, `splitUser`, `ymd`, `fmtDur`, `eventMeta`): confirmed byte-identical between `views/admin.handlebars` and `views/device.handlebars`. Added comment block above each section documenting the convention ("When modifying, mirror to both files"). MeshCentral upstream does not implement `?include=1` for plugin views, so files are inlined rather than extracted to a shared asset.
+- **`eventMeta` endLabel standardizado para `null`** (era `''` em admin.handlebars, `null` em device.handlebars). Comportamento idêntico via `|| fmtDate()` em ambos callers (linhas 402 e 419 admin). `null` é o "fix" pós-v3.5.x mais limpo.
+- **`fmtDate` variants preservados** (admin: `dd/mm HH:MM`, device: `toLocaleString()`): UX intencional, não consolidados.
+- **`dlog` mantém `max` diferente** (admin: 80, device: 60): preservado como variação intencional.
+
+### Notes
+- Análise completa em análise DRY feita anteriormente (não publicada). Conclusão: **5 funções já são 100% DRY**, `_renderGantt` e CSS têm divergências intencionais (admin agrupa por device, device por user; CSS tem border-radius 3px vs 2px). `_renderGantt` não foi unificado porque tem mudanças recentes em v3.5.82/v3.5.84 e merece estabilidade.
+- Adicionar `_shared.js` / `_base.css` como assets do plugin exigiria suporte a `?include=1` no upstream, que **não existe** (verificado em `pluginHandler.js` e `webserver.js`). A escolha foi inlinear nos templates.
+
+
 ## 3.5.84 (2026-07-29)
 
 ### Fixed

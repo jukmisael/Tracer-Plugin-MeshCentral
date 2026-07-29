@@ -119,11 +119,17 @@ var _allDevices=[],_allUsers=[],_xrefPending='',_reqUser='',_reqDev='',selectedD
 var _eventsCache=[],_viewRange=null,_baseRange={rs:0,re:0},_pwrMap=null,_reqSeq=0,_activeUsers={};
 var _unmounted = false; // #3,#12 - flag de cleanup
 var _wsHandler = null;
-
+// =====================================================================
+// Shared utilities (esc, splitUser, ymd, fmtDur, eventMeta, dlog).
+// These are byte-identical in admin.handlebars and device.handlebars.
+// When modifying, mirror to both files. (No build step — MeshCentral
+// upstream does not implement ?include=1 for plugin views; see
+// analysis/STUDY-user-online-state.md for the DRY study.)
+// =====================================================================
 function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 function segColor(st){return st==='lock'?'#e65100':st==='logout'?'#888':'#2e7d32';}
 function dlog(){var a=Array.prototype.slice.call(arguments);D.push(new Date().toLocaleTimeString()+' '+a.join(' '));var e=document.getElementById('debug');if(e)e.innerHTML=D.slice(-80).join('\n');}
-function eventMeta(t){return{color:t==='userLock'?'#e65100':t==='userLogout'?'#888':'#2e7d32',label:t==='userLock'?'Bloqueado':t==='userLogout'?'Offline':'Online',endLabel:t==='userLogin'?'<b>Agora</b>':t==='userUnlock'?'<b>Agora</b>':''};}
+function eventMeta(t){return{color:t==='userLock'?'#e65100':t==='userLogout'?'#888':'#2e7d32',label:t==='userLock'?'Bloqueado':t==='userLogout'?'Offline':'Online',endLabel:t==='userLogin'?'<b>Agora</b>':t==='userUnlock'?'<b>Agora</b>':null};}
 function fmtDate(d){var x=new Date(d);if(isNaN(x))return'—';var m=x.getMonth()+1,day=x.getDate();return (day<10?'0':'')+day+'/'+(m<10?'0':'')+m+' '+x.getHours()+':'+(x.getMinutes()<10?'0':'')+x.getMinutes();}
 function fmtDur(ms){if(ms<0)ms=0;var m=Math.floor(ms/60000),h=Math.floor(m/60),d=Math.floor(h/24);m%=60;h%=24;if(d>0)return d+'d '+h+'h';if(h>0)return h+'h '+m+'m';return m+'m';}
 function ymd(d){var x=new Date(d),m=x.getMonth()+1,day=x.getDate();return x.getFullYear()+'-'+(m<10?'0':'')+m+'-'+(day<10?'0':'')+day;}
