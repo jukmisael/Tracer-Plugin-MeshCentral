@@ -1,8 +1,9 @@
 # ADR-001: Source-of-truth para "Live User State"
 
-> **Status**: Proposta — aguardando validação
+> **Status**: ✅ **Aceito** — implementação imediata
 > **Contexto**: precisamos decidir se confiamos em dados server-side (`wsagents`, `agentInfo.users` populado no connect) ou se fazemos round-trip ao agent em cada request.
-> **Decisão proposta**: **Server-side, sem polling de agent** — usar `wsagents` runtime + cache derivado do `agentInfo` que o agent já envia no connect.
+> **Decisão**: **Server-side, sem polling de agent** — usar `wsagents` runtime + cache derivado do `agentInfo` que o agent já envia no connect.
+> **Migração**: zero. Projeto ainda em dev (v3.5.x); quando v4.0 for para prod, migrations serão necessárias (vide §10).
 
 ---
 
@@ -337,3 +338,76 @@ Se essas métricas não baterem, rever.
 **Confiar no server é a abordagem correta e mais performática.** O MeshCentral já coleta os dados do agent no connect (`agentInfo.users`) e mantém runtime em `wsagents`. Round-trips adicionais ao agent para User-Device Tracer são **desnecessários e contraproducentes**.
 
 A escolha B (poll agent) só faria sentido se precisássemos de dados que NÃO estão em `agentInfo` — o que não é o caso aqui.
+
+---
+
+## 10. Migrations futuras (quando v4.0 for para prod)
+
+Atualmente projeto em **dev (v3.5.x)** — mudanças de shape podem ser livre. Quando v4.0 for para **produção**, será indispensável:
+
+### 10.1 Schema DB (NeDB `tracerEvents`)
+
+| v3.5.x | v4.0 | Migration |
+|---|---|---|
+| sem campo `nodeState` | `nodeState: 'online'\|'offline'\|'unknown'` | backfill com default 'unknown' |
+| `_pwrMap`/`_activeUsers` no response WS | `_live` | sem migration DB; só WS contract |
+| sem TTL em `tracerEvents` | `expireAfterSeconds: 2592000` (30d) | `obj.db.compact()` + script que set TTL em docs existentes |
+
+### 10.2 Plugin manifest (`config.json`)
+
+| v3.5.x | v4.0 | Migration |
+|---|---|---|
+| `version: "3.5.82"` | `version: "4.0.0"` | bump major; cliente recebe notification de update |
+| `meshCentralCompat: ">=1.0.0"` | mantém (mesma compat) | nada |
+
+### 10.3 Cache in-memory (`obj._liveCache`)
+
+Não persiste — se reiniciar server, cache reconstrói via hooks ao agent reconnect. **Não precisa migration**.
+
+### 10.4 Frontend JS cacheado no browser
+
+> "Reload" não dispara update do JS no browser. Usuário precisa F5.
+
+Quando v4.0 for para prod:
+1. **Forçar reload**: WebSocket message especial no login que avisa "plugin updated, please F5"
+2. **Cache-busting**: appendar `?v=4.0.0` na URL do plugin JS
+3. **Documentar no changelog**: "se badge Online/Offline não aparecer, F5"
+
+### 10.5 Hooks requeridos (`hook_agentCoreIsStable`, etc.)
+
+Disponibilidade depende do MeshCentral:
+- v1.0+: `hook_agentCoreIsStable` nativo
+- v1.2+: `hook_afterNotifyUserOfDeviceStateChange` (talvez precise `wrapFunctionCall` via PluginHookScheduler)
+- v1.2+: `hook_agentWebSocketDisconnected` nativo
+
+**Verificar em produção**: se hook não dispara, fazer fallback para polling via `scanNow` em TTL longo (5min).
+
+### 10.6 Rollout strategy
+
+```
+v4.0.0-rc.1 → deploy em staging, smoke test
+v4.0.0-rc.2 → fix bugs encontrados
+v4.0.0     → deploy prod com changelog avisando F5 necessário
+              (usuários com F5 pendente verão "_live=undefined" → fallback silencioso)
+```
+
+### 10.7 Rollback strategy
+
+Se v4.0 falhar em prod:
+1. Revert commit → servidor carrega v3.5.x do cache
+2. Usuários com cache JS v4.0 verão contrato `_live` ausente → tratar com fallback no frontend:
+```js
+// Frontend v4.0 deve ser defensivo
+var live = d._live || {
+    [nid]: { online: null, currentUsers: d._activeUsers?.[nid] || [] }
+};
+```
+**Esse fallback já é o que está no §3.1 do study doc.**
+
+---
+
+## 11. TL;DR
+
+**Agora (dev)**: implementar v4.0 sem se preocupar com compat. Cortar tudo que é velho, refator limpo.
+
+**Depois (prod)**: o frontend precisa saber lidar com `d._live === undefined` (cliente com JS antigo servindo junto com backend novo, ou vice-versa). Backend v4.0 sempre envia `_live`. Frontend v4.0 deve ter fallback para `_activeUsers` apenas como transitional safety net.

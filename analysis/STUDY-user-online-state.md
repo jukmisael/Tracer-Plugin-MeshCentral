@@ -409,7 +409,7 @@ obj.server_startup = function() {
 1. **Backend é fonte de verdade para "live state"**. Frontend renderer puro.
 2. **Join devicePower+activeUsers server-side**. Frontend recebe "sessão resolvida" ou recebe pwrMap+activeUsers **consistentes** com o mesmo timestamp.
 3. **Reativo, sem polling**. Usar `hook_afterNotifyUserOfDeviceStateChange` para atualizar cache interno.
-4. **Manter compatibilidade**: contratos WS existentes continuam funcionando; novo endpoint é aditivo.
+4. **Refator limpo, sem compatibilidade**: estamos em dev. Cortar tudo que é velho, reescrever do zero. Migrations só importam quando v4.0 for para prod (vide ADR-001 §10).
 
 ### 4.2 Nova API backend
 
@@ -514,12 +514,16 @@ No lugar de `_activeUsers[nodeid] || []`, usar `_live[nodeid]?.currentUsers || [
 | Frontend `_activeUsers` global | cacheado em `_activeUsers` | `_live[nodeid].currentUsers` |
 | WS scan loop | setInterval 30s | hooks reativos + fallback 5min |
 
-### 4.5 Compatibilidade
+### 4.5 Limpeza (dev mode)
 
-- `_reqSeq` mantido (já existe)
-- `data` array mantido (events brutos)
-- Novo `_live` é **aditivo** — frontend antigo ignora, novo frontend consome
-- Frontend pode fazer **migração gradual**: ler `_live` se presente, fallback para `_pwrMap`+`_activeUsers` se não
+Projeto em dev — pode cortar sem deprecation:
+- **Remover** `_pwrMap` do response WS
+- **Remover** `_activeUsers` do response WS
+- **Remover** `obj.devicePower`, `obj.userCache`, `obj.scanNow` (substituídos por `_live` calculado on-demand)
+- **Remover** fallback de compatibilidade no frontend
+- **Remover** heurística em `admin.handlebars:254` que override state para login
+
+Quando v4.0 for para prod, vide ADR-001 §10 para estratégia de migrations/rollback.
 
 ### 4.6 Riscos
 
@@ -534,14 +538,13 @@ No lugar de `_activeUsers[nodeid] || []`, usar `_live[nodeid]?.currentUsers || [
 | Pergunta | Decisão |
 |---|---|
 | Device online, sem user logado | **"Sem usuário"** — cor neutra (cinza claro/azul), distinto de "Offline" |
-| Device desligado | **Mostrar ambos**: status atual reflete device state + sub-label com timestamp do último evento do user (ex: "Online às 14:32") |
-| Estratégia de migração | **Cutover total** em v4.0: remove `_pwrMap` e `_activeUsers` do backend; frontend lê só `_live`. Rollout por versão de plugin (usuário precisa recarregar) |
+| Estratégia de migração | **Dev mode**: cutover limpo em v4.0. **Quando for para prod**: vide ADR-001 §10 (migrations + rollout + rollback) |
 | Hooks vs scan | **Duas fases**: v4.0 adiciona hooks reativos + mantém `scanNow` como fallback; v4.1 remove `scanNow` após validação |
 | Múltiplos servers (mesh federation) | OK — `wsagents` é local por server, plugin já roda em cada um |
 
 ## 6. Próximos passos
 
-### 6.1 Implementar v4.0 (cutover total)
+### 6.1 Implementar v4.0 (refator limpo, dev mode)
 
 - [ ] Backend: `resolveLiveState(nodeids)` server-side usando `obj.meshServer.webserver.wsagents`
 - [ ] Backend: trocar `_pwrMap`+`_activeUsers` por `_live` em `getTimeline`
