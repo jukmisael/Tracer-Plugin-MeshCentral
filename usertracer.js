@@ -229,14 +229,21 @@ module.exports.usertracer = function (parent) {
                 if (currentUsers.indexOf(u) === -1) obj.storeEvent(nodeid, nodeName, u, UT_EVENT.LOGOUT);
             });
 
-            // detect LOCK / UNLOCK (lógica adicional)
+            // detect LOCK / UNLOCK (transição users/lusers)
             currentUsers.forEach(function (u) {
                 var isNowLocked = currentLusers.indexOf(u) >= 0;
                 var wasLocked = (prevLusers.indexOf(u) >= 0) && (prevUsers.indexOf(u) >= 0);
                 if (isNowLocked && !wasLocked && prevUsers.indexOf(u) >= 0) {
                     obj.storeEvent(nodeid, nodeName, u, UT_EVENT.LOCK);
                 }
-                // O unlock já é tratado acima (via path "was in lusers before")
+            });
+            // UNLOCK: user estava em prevLusers mas não em currentLusers (e ainda em currentUsers)
+            prevLusers.forEach(function (u) {
+                var wasLocked = prevLusers.indexOf(u) >= 0;  // always true here
+                var isNowLocked = currentLusers.indexOf(u) >= 0;
+                if (wasLocked && !isNowLocked && currentUsers.indexOf(u) >= 0) {
+                    obj.storeEvent(nodeid, nodeName, u, UT_EVENT.UNLOCK);
+                }
             });
         });
     };

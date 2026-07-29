@@ -67,11 +67,16 @@ function buildMock(opts = {}) {
         }
     });
 
+    const mdb = opts.mdb || {
+        Get: function (nid, cb) { cb(null, []); },
+        // Generic CRUD stubs for compatibility
+        allpins: function (q, cb) { cb([]); }
+    };
     const meshServer = {
         debug: function () { captured.debug.push(Array.from(arguments)); },
         webserver: webserver,
         parent: opts.meshParent || { config: { settings: { managealldevicegroups: opts.manageAllDeviceGroups || [] } } },
-        db: opts.meshDB || null,
+        db: mdb,
         parentpath: opts.parentpath || path.resolve(__dirname, '../../node_modules'),
         dispatchEventToAgent: opts.dispatchEventToAgent || function () {},
         DispatchEvent: opts.dispatchEvent || function () {},
@@ -89,6 +94,25 @@ function buildMock(opts = {}) {
 
     return { parent, meshServer, webserver, captured };
 }
+/**
+ * After calling factory(parent), inject a stub DB into obj.db so the
+ * scanner / actions can call storeEvent/getEventsByNode without going
+ * through the real db.js CreateDB().
+ */
+function injectDb(obj, dbMock) {
+    obj.db = dbMock || {
+        getEvents: function (q, o, cb) { cb([]); },
+        getEventsByNode: function (n, o, cb) { cb([]); },
+        getDeviceNames: function (cb) { cb([]); },
+        getUserNames: function (cb) { cb([]); },
+        storeEvent: function () {},
+        purgeAll: function (cb) { cb(null); },
+        compact: function () {},
+        getNodeName: function () {}
+    };
+    return obj;
+}
+
 
 /**
  * Construct a user object matching MeshCentral schema.
@@ -142,4 +166,4 @@ const MESHRIGHT = {
     ADMIN: 0xFFFFFFFF,
 };
 
-module.exports = { buildMock, buildUser, buildNode, MESHRIGHT };
+module.exports = { buildMock, buildUser, buildNode, MESHRIGHT, injectDb };

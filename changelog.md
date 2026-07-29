@@ -1,3 +1,10 @@
+## 3.5.84 (2026-07-29)
+
+### Fixed
+- **Lock/unlock detection**: scanner nunca emitia `userUnlock` quando user permanecia em `currentUsers` mas saía de `currentLusers`. Lógica corrigida em `usertracer.js:240-247`: novo branch `prevLusers.forEach` que detecta user que estava locked e não está mais.
+- **Mocks de teste**: `buildMock` agora tem `mdb.Get` default para evitar erro silencioso quando `mdb = null` em testes.
+
+
 ## 3.5.83 (2026-07-29)
 
 ### Security
