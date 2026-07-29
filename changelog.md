@@ -1,4 +1,10 @@
+## 3.5.87 (2026-07-29)
+
+### Fixed
+- **ReferenceError: `loadTimeline` is not defined** in `views/admin.handlebars` (lines 243, 245, 253). Function had been removed in an earlier refactor but the call sites were not updated. Triggered by clicking the reset-zoom button before any cache was populated. Added router that delegates to `loadXrefUser()` / `loadXrefDev()` when xref is active, or shows the empty-state message otherwise.
+
 ## 3.5.86 (2026-07-29)
+
 
 ### Added
 - **Testes para `hook_agentCoreIsStable` e `hook_processAgentData`** (14 testes): cobrem debounce de 2s, normalização de `nodeid` (string/object/nodeid/_id), idempotência (múltiplas chamadas = 1 checkNode), error handling (exceções em mdb.Get são capturadas sem crash), e no-op quando `_stopped=true`. Estes hooks são os triggers principais do scanner e estavam sem cobertura.
