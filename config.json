@@ -8,7 +8,7 @@
   "homepage": "https://github.com/jukmisael/Tracer-Plugin-MeshCentral",
   "changelogUrl": "https://raw.githubusercontent.com/jukmisael/Tracer-Plugin-MeshCentral/master/changelog.md",
   "configUrl": "https://raw.githubusercontent.com/jukmisael/Tracer-Plugin-MeshCentral/master/config.json",
-  "downloadUrl": "https://github.com/jukmisael/Tracer-Plugin-MeshCentral/releases/latest/download/usertracer.zip",
+  "downloadUrl": "https://github.com/jukmisael/Tracer-Plugin-MeshCentral/archive/master.zip",
   "repository": {
     "type": "git",
     "url": "https://github.com/jukmisael/Tracer-Plugin-MeshCentral.git"
