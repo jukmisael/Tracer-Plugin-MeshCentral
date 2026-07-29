@@ -3,7 +3,7 @@
 ## 3.5.81 (2026-07-29)
 
 ### Fixed
-- **Gantt bar compressed when session.start < rangeStart**: `barMs` agora usa a span visível (`barEnd-barStart` = `min(lst.end,re) - max(fst.start,rs)`) em vez de `lst.end-fst.start`. Segmentos no flex 100% preenchem corretamente o bar visível em vez de ficarem minúsculos. Adicionado `visStart`/`visEnd`/`visDur`/`sOffset` para segmentos parcialmente fora do range, com `margin-left:%` para alinhar à esquerda. Aplicado em `admin.handlebars` e `device.handlebars`.
+- **Gantt bar compressed when session.start < rangeStart**: `barMs` agora usa a span visível (`barEnd-barStart` = `min(lst.end,re) - max(fst.start,rs)`) em vez de `lst.end-fst.start`. Segmentos posicionados com `left:X%`/`width:X%` absolutos relativos ao bar (não mais `flex:0 0` + `margin-left` que acumulava drift com gaps entre segments). Cada segment clipado à span visível via `visStart`/`visEnd`/`visDur`. Aplicado em `admin.handlebars` e `device.handlebars`.
 
 ## 3.5.80 (2026-07-28)
 
