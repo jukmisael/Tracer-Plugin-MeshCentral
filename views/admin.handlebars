@@ -240,6 +240,7 @@ function setViewHint(){
     if(!_viewRange){el.textContent=base;return;}
     el.textContent=(base?base+' · ':'')+fmtDate(_viewRange.rs)+' → '+fmtDate(_viewRange.re)+' ('+fmtDur(_viewRange.re-_viewRange.rs)+')';
 }
+function onDateChange(){ _viewRange=null; _baseRange=pickerRange(); loadTimeline(); }
 function loadTimeline(){ if(_reqUser){loadXrefUser();return;} if(_reqDev){loadXrefDev();return;} document.getElementById('gantt').innerHTML='<div class="empty">Selecione um usuário ou dispositivo.</div>'; }
 function resetZoom(){
     if(!_eventsCache.length){_viewRange=null;loadTimeline();return;}

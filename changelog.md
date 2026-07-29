@@ -1,4 +1,12 @@
+## 3.5.88 (2026-07-29)
+
+### Added
+- **Tests for `loadTimeline()` router** (12 tests in `tests/unit/loadTimeline.test.js`): verifies routing to `loadXrefUser` / `loadXrefDev` based on `_reqUser` / `_reqDev`, precedence (user wins), empty-state placeholder when no xref is active, and regression coverage for `onDateChange` / `resetZoom` / `zoomTo` (the call sites that triggered the original bug). Uses stub injection (no DOM/WS plumbing).
+- **`tests/_helpers/view-runner.js`**: extracts the inline `<script>` from a Handlebars view and runs it in a `vm` sandbox with a minimal DOM shim, exposing globals/functions for testing. Future view-level tests can reuse this helper.
+- **`function onDateChange()`**: same pattern as v3.5.87 bug — referenced from HTML `onchange` attributes (lines 73-74) but never defined in the script block. Added the missing definition so changing the date inputs no longer throws `ReferenceError`.
+
 ## 3.5.87 (2026-07-29)
+
 
 ### Fixed
 - **ReferenceError: `loadTimeline` is not defined** in `views/admin.handlebars` (lines 243, 245, 253). Function had been removed in an earlier refactor but the call sites were not updated. Triggered by clicking the reset-zoom button before any cache was populated. Added router that delegates to `loadXrefUser()` / `loadXrefDev()` when xref is active, or shows the empty-state message otherwise.
