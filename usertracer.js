@@ -202,11 +202,36 @@ module.exports.usertracer = function (parent) {
         }
     };
 
+    // Normaliza nodeid: se veio sem prefixo (ex: hook com myparent.nodeid curto),
+    // tenta achar a chave completa em wsagents.
+    obj._resolveNodeId = function (nodeid) {
+        if (!nodeid || typeof nodeid !== 'string') return nodeid;
+        // Já tem prefixo — retorna como está
+        if (nodeid.indexOf('node//') === 0 || nodeid.indexOf('node/') === 0) return nodeid;
+        // Procura em wsagents por chave que termina com o nodeid
+        try {
+            var ws = obj.meshServer && obj.meshServer.webserver && obj.meshServer.webserver.wsagents;
+            if (ws) {
+                var keys = Object.keys(ws);
+                for (var _ri = 0; _ri < keys.length; _ri++) {
+                    if (keys[_ri] === 'node//' + nodeid || keys[_ri].indexOf(nodeid) >= 0) {
+                        UT_LOG.raw('_resolveNodeId: mapped raw="' + nodeid.substring(0,40) + '..." → "' + keys[_ri] + '"');
+                        return keys[_ri];
+                    }
+                }
+            }
+        } catch (_re) {}
+        // Fallback: assume domínio padrão
+        UT_LOG.raw('_resolveNodeId: no wsagent match for "' + nodeid.substring(0,40) + '..." — using node// prefix fallback');
+        return 'node//' + nodeid;
+    };
+
     obj.checkNode = function (nodeid) {
         if (obj._stopped) return;
         if (!nodeid || typeof nodeid !== 'string') return;
         if (!obj.mdb || typeof obj.mdb.Get !== 'function') return;
 
+        nodeid = obj._resolveNodeId(nodeid);
         UT_LOG.raw('checkNode: mdb.Get start nodeid=' + nodeid);
         obj.mdb.Get(nodeid, function (err, docs) {
             if (err) { UT_LOG.error('checkNode:mdb.Get', err, { nodeid: nodeid }); return; }

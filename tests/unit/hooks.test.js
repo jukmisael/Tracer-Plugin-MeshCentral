@@ -321,8 +321,8 @@ test('hook_processAgentData: different nodeids scan independently', (t, done) =>
 
     setTimeout(function () {
         assert.equal(checkNodeCalls.length, 2, 'both nodes scanned');
-        assert.ok(checkNodeCalls.indexOf('node1') >= 0);
-        assert.ok(checkNodeCalls.indexOf('node2') >= 0);
+        assert.ok(checkNodeCalls.indexOf('node1') >= 0 || checkNodeCalls.indexOf('node//node1') >= 0, 'node1 resolved');
+        assert.ok(checkNodeCalls.indexOf('node2') >= 0 || checkNodeCalls.indexOf('node//node2') >= 0, 'node2 resolved');
         done();
     }, 2400);
 });
