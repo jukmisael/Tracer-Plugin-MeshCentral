@@ -138,8 +138,8 @@ module.exports.usertracer = function (parent) {
                 } catch (e) { UT_LOG.error('registerPermissions', e); }
             }
 
-            obj.startScanner();
             obj._stopped = false;
+            obj.startScanner();
         } catch (e) {
             UT_LOG.error('server_startup', e, { step: 'init' });
         }
