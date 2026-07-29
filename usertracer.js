@@ -370,93 +370,109 @@ module.exports.usertracer = function (parent) {
         }
     };
 
-    // --- getCurrentUsers: itera wsagents + cache hit ---
+    // --- getCurrentUsers: ACL filter via GetNodeWithRights (v3.5.83 security fix) ---
     obj._actionGetCurrentUsers = function (command, sid) {
+        var user = obj._getSessionUser(sid);
+        if (!user) { obj._send(sid, { action:'plugin', plugin:'usertracer', method:'currentUsers', data: [] }); return; }
         if (!obj.mdb || typeof obj.mdb.Get !== 'function') {
             obj._send(sid, { action:'plugin', plugin:'usertracer', method:'currentUsers', data: [] });
             return;
         }
         var ws = obj.meshServer.webserver.wsagents || {};
-        var ids = Object.keys(ws);
-        if (ids.length === 0) {
+        var allIds = Object.keys(ws);
+        if (allIds.length === 0) {
             obj._send(sid, { action:'plugin', plugin:'usertracer', method:'currentUsers', data: [] });
             return;
         }
-        // #6 — pendência com timeout safety
-        var done = false;
-        var remaining = ids.length;
-        var result = [];
-        var timeout = setTimeout(function () {
-            if (done) return;
-            done = true;
-            obj._send(sid, { action:'plugin', plugin:'usertracer', method:'currentUsers', data: result, _partial: true });
-        }, 5000);
-
-        ids.forEach(function (nid) {
-            obj.mdb.Get(nid, function (err, docs) {
+        // ACL: filtrar wsagents por MESHRIGHT_DEVICEDETAILS
+        obj._filterAccessibleNodeIds(user, allIds, function (accessibleIds) {
+            if (accessibleIds.length === 0) {
+                obj._send(sid, { action:'plugin', plugin:'usertracer', method:'currentUsers', data: [] });
+                return;
+            }
+            var done = false;
+            var remaining = accessibleIds.length;
+            var result = [];
+            var timeout = setTimeout(function () {
                 if (done) return;
-                if (!err && docs && docs.length > 0) {
-                    var d = docs[0];
-                    if (Array.isArray(d.users) && d.users.length > 0) {
-                        result.push({ nodeid: nid, nodeName: d.name || nid, users: d.users });
+                done = true;
+                obj._send(sid, { action:'plugin', plugin:'usertracer', method:'currentUsers', data: result, _partial: true });
+            }, 5000);
+            accessibleIds.forEach(function (nid) {
+                obj.mdb.Get(nid, function (err, docs) {
+                    if (done) return;
+                    if (!err && docs && docs.length > 0) {
+                        var d = docs[0];
+                        if (Array.isArray(d.users) && d.users.length > 0) {
+                            result.push({ nodeid: nid, nodeName: d.name || nid, users: d.users });
+                        }
                     }
-                }
-                if (--remaining <= 0 && !done) {
-                    done = true;
-                    clearTimeout(timeout);
-                    obj._send(sid, { action:'plugin', plugin:'usertracer', method:'currentUsers', data: result });
-                }
+                    if (--remaining <= 0 && !done) {
+                        done = true;
+                        clearTimeout(timeout);
+                        obj._send(sid, { action:'plugin', plugin:'usertracer', method:'currentUsers', data: result });
+                    }
+                });
             });
         });
     };
 
-    // --- getTimeline: usar cache devicePower + activeUsers ---
+    // --- getTimeline: ACL filter via GetNodeWithRights (v3.5.83 security fix) ---
     obj._actionGetTimeline = function (command, sid) {
+        var user = obj._getSessionUser(sid);
+        if (!user) { obj._send(sid, { action:'plugin', plugin:'usertracer', method:'timeline', data: [], _pwrMap: {}, _activeUsers: {}, _reqSeq: command._reqSeq }); return; }
         if (!obj.db || typeof obj.db.getEvents !== 'function') {
             obj._send(sid, { action:'plugin', plugin:'usertracer', method:'timeline', data: [], _pwrMap: {}, _activeUsers: {}, _reqSeq: command._reqSeq });
             return;
         }
-        var opts = { limit: command.limit || 5000 };
-        if (command.startDate) {
-            var sd = new Date(command.startDate);
-            if (!isNaN(sd)) {
-                sd.setDate(sd.getDate() - 1);
-                opts.startDate = sd.toISOString();
+        var requestedNodeIds = null;
+        if (command.nodeids && command.nodeids.length > 0) requestedNodeIds = command.nodeids.slice();
+        else if (command.nodeid) requestedNodeIds = [command.nodeid];
+        obj._filterAccessibleNodeIds(user, requestedNodeIds, function (accessibleNodeIds) {
+            if (accessibleNodeIds === null) {
+                accessibleNodeIds = requestedNodeIds;
             }
-        }
-        if (command.endDate) opts.endDate = command.endDate;
-        if (command.nodeids && command.nodeids.length > 0) opts.nodeids = command.nodeids;
-        else if (command.nodeid) opts.nodeids = [command.nodeid];
-        var query = {};
-        if (command.username) query.$or = [{ username: command.username }, { displayUser: command.username }];
-        obj.db.getEvents(query, opts, function (docs) {
-            docs = docs || [];
-            var pwrMap = {};
-            if (obj.devicePower) {
+            var opts = { limit: command.limit || 5000 };
+            if (command.startDate) {
+                var sd = new Date(command.startDate);
+                if (!isNaN(sd)) { sd.setDate(sd.getDate() - 1); opts.startDate = sd.toISOString(); }
+            }
+            if (command.endDate) opts.endDate = command.endDate;
+            if (accessibleNodeIds && accessibleNodeIds.length > 0) opts.nodeids = accessibleNodeIds;
+            else if (requestedNodeIds) {
+                obj._send(sid, { action:'plugin', plugin:'usertracer', method:'timeline', data: [], _pwrMap: {}, _activeUsers: {}, _reqSeq: command._reqSeq });
+                return;
+            }
+            var query = {};
+            if (command.username) query.$or = [{ username: command.username }, { displayUser: command.username }];
+            obj.db.getEvents(query, opts, function (docs) {
+                docs = docs || [];
+                var pwrMap = {};
+                if (obj.devicePower) {
+                    docs.forEach(function (e) {
+                        if (e && e.nodeid && obj.devicePower[e.nodeid] && !pwrMap[e.nodeid]) {
+                            pwrMap[e.nodeid] = obj.devicePower[e.nodeid];
+                        }
+                    });
+                }
+                var activeUsers = {};
+                var seen = {};
                 docs.forEach(function (e) {
-                    if (e && e.nodeid && obj.devicePower[e.nodeid] && !pwrMap[e.nodeid]) {
-                        pwrMap[e.nodeid] = obj.devicePower[e.nodeid];
+                    if (e && e.nodeid && obj.userCache[e.nodeid] && !seen[e.nodeid]) {
+                        seen[e.nodeid] = 1;
+                        try {
+                            var st = JSON.parse(obj.userCache[e.nodeid]);
+                            activeUsers[e.nodeid] = (st.users || []).slice();
+                        } catch (_) {}
                     }
                 });
-            }
-            // activeUsers a partir do userCache (instantâneo, sem round-trip DB)
-            var activeUsers = {};
-            var seen = {};
-            docs.forEach(function (e) {
-                if (e && e.nodeid && obj.userCache[e.nodeid] && !seen[e.nodeid]) {
-                    seen[e.nodeid] = 1;
-                    try {
-                        var st = JSON.parse(obj.userCache[e.nodeid]);
-                        activeUsers[e.nodeid] = (st.users || []).slice();
-                    } catch (_) {}
-                }
+                var resp = {
+                    action: 'plugin', plugin: 'usertracer', method: 'timeline',
+                    data: docs, _pwrMap: pwrMap, _activeUsers: activeUsers,
+                    _reqSeq: command._reqSeq
+                };
+                obj._send(sid, resp);
             });
-            var resp = {
-                action: 'plugin', plugin: 'usertracer', method: 'timeline',
-                data: docs, _pwrMap: pwrMap, _activeUsers: activeUsers,
-                _reqSeq: command._reqSeq
-            };
-            obj._send(sid, resp);
         });
     };
 
@@ -479,8 +495,9 @@ module.exports.usertracer = function (parent) {
     };
 
     obj._actionGetNodeDetails = function (command, sid) {
+        var user = obj._getSessionUser(sid);
         var nid = command.nodeid;
-        if (!nid) {
+        if (!user || !nid) {
             obj._send(sid, { action:'plugin', plugin:'usertracer', method:'nodeDetails', data: null });
             return;
         }
@@ -488,21 +505,27 @@ module.exports.usertracer = function (parent) {
             obj._send(sid, { action:'plugin', plugin:'usertracer', method:'nodeDetails', data: null });
             return;
         }
-        obj.mdb.Get(nid, function (err, docs) {
-            if (err || !docs || !docs.length) {
+        // ACL check
+        obj._filterAccessibleNodeIds(user, [nid], function (accessible) {
+            if (accessible.length === 0) {
                 obj._send(sid, { action:'plugin', plugin:'usertracer', method:'nodeDetails', data: null });
                 return;
             }
-            var d = docs[0];
-            obj._send(sid, { action:'plugin', plugin:'usertracer', method:'nodeDetails', data: {
-                nodeid: nid, name: d.name, host: d.host, ip: d.ip, osdesc: d.osdesc,
-                domain: d.domain, mtype: d.mtype, agent: d.agent,
-                lastbootuptime: d.lastbootuptime, idletime: d.idletime
-            }});
+            obj.mdb.Get(nid, function (err, docs) {
+                if (err || !docs || !docs.length) {
+                    obj._send(sid, { action:'plugin', plugin:'usertracer', method:'nodeDetails', data: null });
+                    return;
+                }
+                var d = docs[0];
+                obj._send(sid, { action:'plugin', plugin:'usertracer', method:'nodeDetails', data: {
+                    nodeid: nid, name: d.name, host: d.host, ip: d.ip, osdesc: d.osdesc,
+                    domain: d.domain, mtype: d.mtype, agent: d.agent,
+                    lastbootuptime: d.lastbootuptime, idletime: d.idletime
+                }});
+            });
         });
     };
 
-    // #10 — purge só quem tem permissão can_purge_history
     obj._actionPurgeHistory = function (command, myparent, sid) {
         var user = myparent && myparent.user;
         if (!obj.parent || typeof obj.parent.getAccessPermissions !== 'function') {
@@ -525,6 +548,75 @@ module.exports.usertracer = function (parent) {
             obj._send(sid, { action:'plugin', plugin:'usertracer', method:'purgeResult', data: { success: false, error: 'Permission check failed' } });
         });
     };
+
+
+    // -----------------------------------------------------------------------
+    // ACL helpers — usando APIs nativas do MeshCentral (v3.5.83 security fix)
+    // -----------------------------------------------------------------------
+    obj._getSessionUser = function (sid) {
+        try {
+            var wss2 = obj.meshServer && obj.meshServer.webserver && obj.meshServer.webserver.wssessions2;
+            if (!wss2 || !wss2[sid] || !wss2[sid].user) return null;
+            return wss2[sid].user;
+        } catch (_) { return null; }
+    };
+
+    obj._isAdminFull = function (user) {
+        return user && (user.siteadmin & 0xFFFFFFFF) === 0xFFFFFFFF;
+    };
+
+    obj._filterAccessibleNodeIds = function (user, nodeIds, cb) {
+        if (!user) { cb([]); return; }
+        // Admin full + manageAllDeviceGroups → acesso total
+        if (obj._isAdminFull(user)) {
+            var cfg = obj.meshServer && obj.meshServer.parent && obj.meshServer.parent.config;
+            var mg = cfg && cfg.settings && cfg.settings.managealldevicegroups;
+            if (mg && (mg.indexOf(user._id) >= 0 ||
+                (user.links && Object.keys(user.links).some(function (k) { return mg.indexOf(k) >= 0; })))) {
+                cb(nodeIds); return;
+            }
+        }
+        if (!nodeIds || nodeIds.length === 0) {
+            // Sem filtro explícito: retornar nodes visíveis via user.links
+            cb(user.links ? Object.keys(user.links).filter(function (k) { return k.indexOf('node/') === 0; }) : []);
+            return;
+        }
+        var webserver = obj.meshServer && obj.meshServer.webserver;
+        if (!webserver || typeof webserver.GetNodeWithRights !== 'function') {
+            cb([]); return;
+        }
+        var accessible = [], pending = nodeIds.length, done = false;
+        var timeout = setTimeout(function () {
+            if (done) return;
+            done = true;
+            UT_LOG.warn('_filterAccessibleNodeIds: timeout, returning partial');
+            cb(accessible);
+        }, 3000);
+        nodeIds.forEach(function (nid) {
+            try {
+                webserver.GetNodeWithRights(user.domain, user, nid, function (node, rights, visible) {
+                    if (done) return;
+                    // MESHRIGHT_DEVICEDETAILS (0x100000) libera node.users/lusers
+                    // User-Device Tracer requer este right para exibir dados sensíveis
+                    if (visible && rights > 0 && (rights & 0x00100000) === 0x00100000) {
+                        accessible.push(nid);
+                    }
+                    if (--pending === 0 && !done) {
+                        done = true;
+                        clearTimeout(timeout);
+                        cb(accessible);
+                    }
+                });
+            } catch (e) {
+                if (--pending === 0 && !done) {
+                    done = true;
+                    clearTimeout(timeout);
+                    cb(accessible);
+                }
+            }
+        });
+    };
+
 
     obj._send = function (sid, data) {
         try {

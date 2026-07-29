@@ -1,4 +1,14 @@
-# Changelog
+## 3.5.83 (2026-07-29)
+
+### Security
+- **ACL filter em serveraction**: `getTimeline`, `getCurrentUsers`, `getNodeDetails` agora chamam `_filterAccessibleNodeIds(user, nodeIds, cb)` que usa `webserver.GetNodeWithRights` nativo do MeshCentral. User non-admin que conhece um `nodeid` e tenta `getTimeline(nodeid=X)` recebe `data:[]` em vez de events do node. Requer `MESHRIGHT_DEVICEDETAILS` (0x100000) para visualizar dados sensíveis (alinhado com UI nativo). Admin full bypass via `manageAllDeviceGroups`. Implementação em `usertracer.js:421-550` (helpers em 556-623).
+
+### Notes
+- **Não muda contratos WS**: response shape idêntico (`method:timeline`, `data`, `_pwrMap`, `_activeUsers`, `_reqSeq`). Apenas o conteúdo de `data` é filtrado.
+- **Frontend não precisa mudar**: backend já filtra; frontend renderiza apenas o que recebe.
+- **`getDeviceNames`/`getUserNames` não filtram**: retornam listas agregadas sem nodeids detalhados. Adicionar filtro aqui é enhancement futuro, não security fix.
+- Auditoria completa em `analysis/ADR-002-acl-native.md` (patterns nativos + MESHRIGHT_* constants + cascade).
+
 
 ## 3.5.82 (2026-07-29)
 
