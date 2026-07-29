@@ -1,5 +1,10 @@
 # Changelog
 
+## 3.5.82 (2026-07-29)
+
+### Fixed
+- **Spurious zero-duration segments at bar start when session crosses midnight**: `buildSessions` agora clampa `end` com `Math.max(rs, Math.min(re, t))` e descarta segments onde `end <= start`. Antes, eventos do dia anterior (com `t < rs`) geravam segments com `start=rs, end=t<rs`, que após clamp de start ficavam com `dur=0` mas ainda renderizavam (graças ao `min-width:4px`) como fragmentos invisíveis empilhados em `left:0%`. Aplicado em `admin.handlebars` e `device.handlebars` (que também não tinha nenhum clamp por `rs`/`re`).
+
 ## 3.5.81 (2026-07-29)
 
 ### Fixed

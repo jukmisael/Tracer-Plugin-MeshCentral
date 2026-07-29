@@ -199,23 +199,28 @@ function buildSessions(events,rs,re){
     });
     var out=[];Object.keys(by).forEach(function(k){
         var g=by[k],activeStart=null,activeState='login';
+        function pushSeg(s,e,st,open){
+            var ss=Math.max(rs,s),ee=Math.max(rs,Math.min(re,e));
+            if(ee>ss)out.push({nodeName:g.nodeName,nodeid:g.nodeid,user:g.user,display:g.display,start:ss,end:ee,state:st,open:!!open});
+        }
         g.events.forEach(function(e){
             var t=new Date(e.detectedAt).getTime();
             if(e.eventType==='userLogin'){
-                if(activeStart!=null)out.push({nodeName:g.nodeName,nodeid:g.nodeid,user:g.user,display:g.display,start:Math.max(rs,activeStart),end:Math.min(re,t),state:activeState});
+                if(activeStart!=null)pushSeg(activeStart,t,activeState,false);
                 activeStart=t;activeState='login';
             }else if(e.eventType==='userLogout'){
-                if(activeStart!=null){out.push({nodeName:g.nodeName,nodeid:g.nodeid,user:g.user,display:g.display,start:Math.max(rs,activeStart),end:Math.min(re,t),state:activeState});activeStart=null;}
-                else out.push({nodeName:g.nodeName,nodeid:g.nodeid,user:g.user,display:g.display,start:Math.max(rs,t-30*60000),end:Math.min(re,t),state:'logout'});
+                if(activeStart!=null){pushSeg(activeStart,t,activeState,false);activeStart=null;}
+                else pushSeg(t-30*60000,t,'logout',false);
             }else if(e.eventType==='userLock'){
-                if(activeStart!=null){out.push({nodeName:g.nodeName,nodeid:g.nodeid,user:g.user,display:g.display,start:Math.max(rs,activeStart),end:Math.min(re,t),state:activeState});}
+                if(activeStart!=null)pushSeg(activeStart,t,activeState,false);
                 activeStart=t;activeState='lock';
             }else if(e.eventType==='userUnlock'){
-                if(activeStart!=null){out.push({nodeName:g.nodeName,nodeid:g.nodeid,user:g.user,display:g.display,start:Math.max(rs,activeStart),end:Math.min(re,t),state:activeState});}
+                if(activeStart!=null)pushSeg(activeStart,t,activeState,false);
                 activeStart=t;activeState='login';
             }
-        });if(activeStart!=null){var segEnd=Math.min(re,Date.now());if(segEnd>rs)out.push({nodeName:g.nodeName,nodeid:g.nodeid,user:g.user,display:g.display,start:Math.max(rs,activeStart),end:segEnd,state:activeState,open:true});}
-    });return out;}
+        });if(activeStart!=null){var segEnd=Math.min(re,Date.now());if(segEnd>rs)pushSeg(activeStart,segEnd,activeState,true);}
+    });return out;
+}
 function pickerRange(){
     var rs=new Date(document.getElementById('dStart').value+'T00:00:00').getTime();
     var re=new Date(document.getElementById('dEnd').value+'T23:59:59.999').getTime();
