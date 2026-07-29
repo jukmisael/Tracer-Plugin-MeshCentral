@@ -1,14 +1,14 @@
 {
   "name": "User-Device Tracer",
   "shortName": "usertracer",
-  "version": "3.5.88",
+  "version": "3.5.89",
   "author": "Misael Filho",
   "description": "Rastreia associação entre usuários e dispositivos Windows em ambiente AD. Mantém lastro histórico de qual usuário AD usou qual máquina, com timeline e auditoria.",
   "hasAdminPanel": true,
   "homepage": "https://github.com/jukmisael/Tracer-Plugin-MeshCentral",
   "changelogUrl": "https://raw.githubusercontent.com/jukmisael/Tracer-Plugin-MeshCentral/master/changelog.md",
   "configUrl": "https://raw.githubusercontent.com/jukmisael/Tracer-Plugin-MeshCentral/master/config.json",
-  "downloadUrl": "https://github.com/jukmisael/Tracer-Plugin-MeshCentral/archive/master.zip",
+  "downloadUrl": "https://github.com/jukmisael/Tracer-Plugin-MeshCentral/releases/latest/download/usertracer.zip",
   "repository": {
     "type": "git",
     "url": "https://github.com/jukmisael/Tracer-Plugin-MeshCentral.git"

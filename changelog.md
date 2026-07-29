@@ -1,4 +1,15 @@
+## 3.5.89 (2026-07-29)
+
+### Fixed
+- **`EPERM` on `analysis/00-README.md` in plugin install**: root cause was `downloadUrl` in `config.json` pointing to `https://github.com/jukmisael/Tracer-Plugin-MeshCentral/archive/master.zip` — the full GitHub source archive containing `analysis/`, `tests/`, `meshcentral-core/`, `MESHCENTRAL-PLUGIN-GUIDE.md`, `.megamemory/`. MeshCentral extracts the whole zip to `meshcentral-data/plugins/usertracer/`. On next update, those dev-only files become permission-locked and the new extraction fails with `EPERM`.
+
+### Added
+- **`.github/workflows/release.yml`**: triggered on `v*` tag push, builds a clean plugin zip containing only runtime files (`usertracer.js`, `db.js`, `config.json`, `changelog.md`, `views/admin.handlebars`, `views/device.handlebars`), creates a GitHub release, and uploads the zip as a fixed-name asset (`usertracer.zip`). Validates that `config.json` version matches the tag.
+- **`downloadUrl` switched** to `https://github.com/jukmisael/Tracer-Plugin-MeshCentral/releases/latest/download/usertracer.zip`. MeshCentral will now download only the clean runtime zip.
+- **Manual install note**: existing installations must be removed and re-added (`Delete plugin` in MeshCentral admin → re-add the plugin URL) for the new `downloadUrl` to take effect, since `getPluginLatest` does not propagate `downloadUrl` from remote `config.json` to existing DB entries.
+
 ## 3.5.88 (2026-07-29)
+
 
 ### Added
 - **Tests for `loadTimeline()` router** (12 tests in `tests/unit/loadTimeline.test.js`): verifies routing to `loadXrefUser` / `loadXrefDev` based on `_reqUser` / `_reqDev`, precedence (user wins), empty-state placeholder when no xref is active, and regression coverage for `onDateChange` / `resetZoom` / `zoomTo` (the call sites that triggered the original bug). Uses stub injection (no DOM/WS plumbing).

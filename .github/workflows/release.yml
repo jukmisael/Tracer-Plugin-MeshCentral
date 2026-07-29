@@ -1,0 +1,72 @@
+name: Release Plugin
+
+# Triggers on tags matching v* (e.g. v3.5.88). The tag becomes the release
+# version; the clean zip becomes the release asset that MeshCentral downloads.
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write   # required to create the release
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Extract version from tag
+        id: ver
+        run: |
+          # Strip leading 'v' from the tag name to get the bare version.
+          VERSION="${GITHUB_REF_NAME#v}"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Release version: $VERSION"
+
+      - name: Validate config.json version matches tag
+        run: |
+          TAG_VERSION="${GITHUB_REF_NAME#v}"
+          CFG_VERSION=$(node -p "require('./config.json').version")
+          if [ "$TAG_VERSION" != "$CFG_VERSION" ]; then
+            echo "ERROR: tag version ($TAG_VERSION) != config.json version ($CFG_VERSION)"
+            exit 1
+          fi
+          echo "Versions match: $TAG_VERSION"
+
+      - name: Build clean plugin zip
+        run: |
+          set -euo pipefail
+          mkdir -p staging
+          # Only ship plugin runtime files. Dev docs, tests, upstream
+          # clones, and tooling scratch files must NOT be in the zip or
+          # MeshCentral will extract them to meshcentral-data/plugins/<name>/
+          # and they become permission-locked on the next update (EPERM).
+          cp usertracer.js staging/
+          cp db.js          staging/
+          cp config.json    staging/
+          cp changelog.md   staging/
+          mkdir -p staging/views
+          cp views/admin.handlebars  staging/views/
+          cp views/device.handlebars staging/views/
+          cd staging
+          zip -r "../usertracer.zip" .
+          cd ..
+          ls -la *.zip
+
+      - name: Create release and upload asset
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "User-Device Tracer ${{ steps.ver.outputs.version }}"
+          body: |
+            Auto-generated release for **User-Device Tracer v${{ steps.ver.outputs.version }}**.
+
+            This zip contains only the plugin runtime files:
+            - `usertracer.js`, `db.js`, `config.json`, `changelog.md`
+            - `views/admin.handlebars`, `views/device.handlebars`
+
+            Dev docs, tests, and upstream clones are excluded.
+          files: usertracer.zip
+          generate_release_notes: true
+          fail_on_unmatched_files: true
