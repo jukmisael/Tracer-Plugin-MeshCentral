@@ -71,7 +71,7 @@ module.exports.usertracer = function (parent) {
     obj.parent = parent;
     obj.meshServer = parent.parent;
     obj.debug = obj.meshServer.debug;
-    obj.exports = ['onDeviceRefreshEnd'];
+    obj.exports = ['onDeviceRefreshEnd', 'currentUsers', 'nodeDetails', 'purgeResult'];
     obj.db = null;
     obj.mdb = obj.meshServer.db;
     obj.scanTimer = null;
@@ -647,8 +647,16 @@ module.exports.usertracer = function (parent) {
     };
 
     // -----------------------------------------------------------------------
-    // onDeviceRefreshEnd — registra tab no iframe
-    // -----------------------------------------------------------------------
+    // WS message handlers (browser-side) — exist so the upstream pluginHandler
+    // dispatch (default.handlebars:4172) does not throw TypeError when our
+    // server-side _send broadcasts messages that other MeshCentral pages
+    // (devices list, device details) receive. Admin.handlebars intercepts
+    // the same messages directly via ms.socket.addEventListener, so these
+    // stubs are no-ops everywhere.
+    // -------------------------------------------------------------------
+    obj.currentUsers = function () {};
+    obj.nodeDetails  = function () {};
+    obj.purgeResult  = function () {};
     obj.onDeviceRefreshEnd = function () {
         try {
             if (typeof currentNode === 'undefined' || !currentNode) return;

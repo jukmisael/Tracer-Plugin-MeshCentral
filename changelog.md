@@ -1,4 +1,13 @@
+## 3.5.90 (2026-07-29)
+
+### Fixed
+- **`TypeError: pluginHandler[message.plugin][message.method] is not a function`** in non-admin MeshCentral pages (devices list, device details — `viewmode=42`). Root cause: server-side `_send` broadcasts 6 message methods (`currentUsers`, `timeline`, `deviceNames`, `userNames`, `nodeDetails`, `purgeResult`), but only `onDeviceRefreshEnd` was exported to the browser via `obj.exports`. The upstream browser dispatcher (`default.handlebars:4172`) tries `pluginHandler['usertracer'][message.method]` for any incoming WS message, throwing TypeError when the method is missing. Fix: added no-op stubs `obj.currentUsers`, `obj.nodeDetails`, `obj.purgeResult` and listed them in `obj.exports`. The admin.handlebars intercepts these directly via `ms.socket.addEventListener('message', …)` and is unaffected.
+
+### Added
+- **Tests for WS message stubs** (`tests/unit/storeEvent.test.js`): verifies `currentUsers`, `nodeDetails`, `purgeResult` are in `obj.exports`, are functions, and are no-ops when called with arbitrary args (including a typical WS payload).
+
 ## 3.5.89 (2026-07-29)
+
 
 ### Fixed
 - **`EPERM` on `analysis/00-README.md` in plugin install**: root cause was `downloadUrl` in `config.json` pointing to `https://github.com/jukmisael/Tracer-Plugin-MeshCentral/archive/master.zip` — the full GitHub source archive containing `analysis/`, `tests/`, `meshcentral-core/`, `MESHCENTRAL-PLUGIN-GUIDE.md`, `.megamemory/`. MeshCentral extracts the whole zip to `meshcentral-data/plugins/usertracer/`. On next update, those dev-only files become permission-locked and the new extraction fails with `EPERM`.
