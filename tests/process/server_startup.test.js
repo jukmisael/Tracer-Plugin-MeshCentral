@@ -12,6 +12,27 @@ const { buildMock, buildUser } = require('../_helpers/mock-meshcentral');
 // Process-level tests: validate that the factory creates an obj that
 // survives hot-reload (multiple factory() calls), produces valid JSON
 // responses, and behaves correctly when timers fire.
+//
+// PRODUCTION BEHAVIOR PINS — DO NOT ALTER:
+//
+// Hot-reload safety:
+//   MeshCentral recria o plugin via factory(parent) a cada reload.
+//   Múltiplas chamadas factory() produzem instâncias independentes
+//   sem estado compartilhado. obj._send serializa via JSON.stringify
+//   sem loops circulares (obj não tem referências circulares).
+//
+// handleAdminReq:
+//   Roteia entre render('admin', {}) e render('device', {...})
+//   baseado em req.query.user. Admin full bypassa ACL e RBAC.
+//   Sem admin full, usa GetNodeWithRights + getAccessPermissions.
+//
+//   [UT] handleAdminReq: ENTRY query={"pin":"usertracer"}
+//       user={"name":"misael.filho.admin","siteadmin":4294967295}
+//   [UT] handleAdminReq: admin full bypass
+//   [UT] handleAdminReq: admin panel (admin bypass)
+//   [UT] handleAdminReq: rendered admin.handlebars (admin bypass)
+//
+// ESTES TESTES SÃO PINADOS — não alterar sem verificar o fluxo real.
 // =============================================================================
 
 test('process: factory() can be called multiple times (hot-reload safe)', () => {

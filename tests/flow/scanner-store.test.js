@@ -8,6 +8,34 @@ const factory = require('../../usertracer.js').usertracer;
 
 // =============================================================================
 // Flow tests: scanner → checkNode → storeEvent → db roundtrip
+//
+// PRODUCTION BEHAVIOR PINS — DO NOT ALTER:
+//
+// 1. _resolveNodeId + checkNode:
+//    [UT] _resolveNodeId: mapped raw="85S93T..." → "node//85S93T..."
+//    [UT] checkNode: raw doc = {"users":["BKSSERVICES\\Janio.dionisio"]}
+//    [UT] storeEvent: raw evt={"eventType":"userLogin",...}
+//    [UT INFO] event stored node=BR-25001 user=BKSSERVICES\J***o type=userLogin
+//
+//    Scanner lê o doc do MeshCentral via mdb.Get, encontra usuários logados
+//    no dispositivo, e armazena eventos de transição no NeDB. O nodeid é
+//    normalizado por _resolveNodeId quando vem no formato curto (sem prefixo
+//    "node//"). A transição login→lock→unlock→logout deriva dos arrays
+//    doc.users (sessão ativa) e doc.lusers (bloqueio) do MeshCentral.
+//
+//    No primeiro scan, se o usuário está em users E em lusers, o evento
+//    gerado é LOCK (não LOGIN) — porque o estado real é "Bloqueado",
+//    não "Online". Isso resolve a discrepância entre a UI do MeshCentral
+//    (que mostra o ícone de cadeado) e a timeline do plugin.
+//
+// 2. storeEvent:
+//    Eventos inválidos (eventType fora de UT_EVENT) são rejeitados sem crash.
+//    Eventos válidos são persistidos via db.addEvent com displayUser, nodeName,
+//    detectedAt em ISO, e eventType normalizado (userLogin/userLogout/userLock/userUnlock).
+//
+// ESTES TESTES SÃO PINADOS — não alterar sem verificar o fluxo real em produção.
+// Qualquer mudança aqui reflete uma mudança no comportamento do scanner que
+// afeta diretamente quais eventos são armazenados no NeDB.
 // =============================================================================
 
 // Helper: build a stub DB that records events
@@ -201,6 +229,35 @@ test('flow: scanner suppresses first-login event on recent reconnect (bounce pro
 
 // =============================================================================
 // Flow 7: idem-potency — same state twice produces no duplicate events
+// =============================================================================
+
+// =============================================================================
+// Flow 7: primeira varredura com usuário já bloqueado (lusers não vazio)
+// Deve gerar LOCK, não LOGIN — alinhado com a UI do MeshCentral que
+// mostra "Bloqueado" com ícone de cadeado.
+// =============================================================================
+
+test('flow: first scan with locked user emits userLock instead of userLogin', (t, done) => {
+    const storedEvents = [];
+    const tenMinAgo = (Date.now() - 10 * 60 * 1000) / 1000;
+    const { parent } = buildMock({
+        wsagents: { 'node//domain/n1': { users: ['DOMAIN\\alice'] } },
+        mdb: makeMdbGet(['DOMAIN\\alice'], ['DOMAIN\\alice'], tenMinAgo)
+    });
+    const obj = injectDb(factory(parent), makeRecordingDb(storedEvents));
+    obj._stopped = false;
+    obj.checkNode('node//domain/n1');
+    setTimeout(function () {
+        const lockEvts = storedEvents.filter(function (e) { return e.eventType === 'userLock'; });
+        const loginEvts = storedEvents.filter(function (e) { return e.eventType === 'userLogin'; });
+        assert.ok(lockEvts.length >= 1, 'locked user on first scan should emit userLock, got ' + JSON.stringify(storedEvents));
+        assert.equal(loginEvts.length, 0, 'should NOT emit userLogin for locked user');
+        done();
+    }, 100);
+});
+
+// =============================================================================
+// Flow 8: scanner is idempotent — same state does not emit duplicate events
 // =============================================================================
 
 test('flow: scanner is idempotent — same state does not emit duplicate events', (t, done) => {

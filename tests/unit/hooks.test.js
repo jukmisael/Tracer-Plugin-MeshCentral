@@ -19,7 +19,31 @@ const factory = require('../../usertracer.js').usertracer;
 // Both hooks debounce checkNode with a 2000ms timeout (delays actual scan
 // to avoid agent bounce storms). The implementation cancels pending
 // timers on subsequent calls (debounce within 2s window).
+//
+// PRODUCTION BEHAVIOR PINS — DO NOT ALTER:
+//
+// checkNode:
+//   O nodeid recebido do hook pode ser curto (ex: "85S93T..." sem prefixo
+//   "node//"). _resolveNodeId normaliza procurando a chave completa em
+//   wsagents. Se não encontrar, assume "node//" + nodeid como fallback.
+//   mdb.Get(nodeid) só encontra o doc quando o nodeid tem o prefixo correto.
+//
+//   [UT] _resolveNodeId: mapped raw="85S93T..." → "node//85S93T..."
+//   [UT] checkNode: raw doc = {"users":["BKSSERVICES\\Janio.dionisio"]}
+//
+// Debounce:
+//   Múltiplas chamadas hook_processAgentData dentro de 2s = 1 checkNode.
+//   Múltiplos nodeids diferentes = checkNodes independentes.
+//   Erro dentro de checkNode é capturado (não quebra o plugin).
+//
+// hook_agentCoreIsStable:
+//   Recebe o nodeid de myparent.nodeid (formato curto).
+//   Se _stopped=true, não agenda checkNode.
+//   Se nodeid inválido (null/undefined/não-string), ignora.
+//
+// ESTES TESTES SÃO PINADOS — não alterar sem verificar o fluxo real.
 // =============================================================================
+
 
 // Helper: build mdb get that returns a node doc
 function makeMdbGet(nodeDoc) {

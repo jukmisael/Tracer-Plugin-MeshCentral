@@ -277,8 +277,15 @@ module.exports.usertracer = function (parent) {
                     var recentBounce = initialLoggedSince && ((Date.now() - initialLoggedSince.getTime()) < 2 * 60 * 1000);
                     UT_LOG.raw('checkNode: first-scan decision for ' + nodeName + ' hasPrior=' + hasPrior + ' recentBounce=' + recentBounce + ' currentUsers=' + JSON.stringify(currentUsers));
                     if (!hasPrior && !recentBounce && currentUsers.length > 0) {
-                        UT_LOG.info('first scan ever for ' + nodeName + ' with ' + currentUsers.length + ' users');
-                        currentUsers.forEach(function (u) { obj.storeEvent(nodeid, nodeName, u, UT_EVENT.LOGIN); });
+                        UT_LOG.info('first scan ever for ' + nodeName + ' with ' + currentUsers.length + ' users lusers=' + currentLusers.length);
+                        currentUsers.forEach(function (u) {
+                            // Se usuário está em lusers, estado real é bloqueado, não online
+                            if (currentLusers.indexOf(u) >= 0) {
+                                obj.storeEvent(nodeid, nodeName, u, UT_EVENT.LOCK);
+                            } else {
+                                obj.storeEvent(nodeid, nodeName, u, UT_EVENT.LOGIN);
+                            }
+                        });
                     } else {
                         UT_LOG.raw('checkNode: first-scan skipped for ' + nodeName + ' (hasPrior=' + hasPrior + ' recentBounce=' + recentBounce + ' users=' + currentUsers.length + ')');
                     }

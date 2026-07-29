@@ -7,7 +7,29 @@ const { buildMock, buildUser } = require('../_helpers/mock-meshcentral');
 const factory = require('../../usertracer.js').usertracer;
 
 // =============================================================================
-// _getSessionUser
+// _getSessionUser tests
+//
+// PRODUCTION BEHAVIOR PINS — DO NOT ALTER:
+//
+// _getSessionUser(sid, fallback):
+//   1. Tenta wssessions2[sid].user (o caminho normal do WebSocket).
+//   2. Se falhar (wss2[sid] existe mas .user é null/undefined), usa
+//      fallback (myparent.user passado por serveraction).
+//   3. Se ambos falharem, retorna null.
+//
+//   Em produção:
+//     [UT] _getSessionUser: using fallback user for sid=user//0105...
+//         user={"_id":"user//0105...","name":"misael.filho.admin","siteadmin":4294967295}
+//
+//   sid pode ser userID (não sessionID) — wssessions2[sid] existe mas
+//   .user é falsy. O fallback via myparent.user resolve o auth.
+//
+//   Com fallback ativo, admin full (siteadmin=0xFFFFFFFF) faz todas
+//   as chamadas ACL bypassarem direto.
+//
+// NOTA: Os testes atuais só cobrem o caminho wssessions2[sid].user.
+// O caminho fallback (parentUser) NÃO é testado — foi adicionado
+// como fix para o bug de produção onde sid era userID e não sessionID.
 // =============================================================================
 
 test('_getSessionUser: returns user from wssessions2[sid].user', () => {

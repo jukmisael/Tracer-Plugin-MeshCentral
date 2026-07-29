@@ -7,7 +7,45 @@ const { buildMock, buildUser } = require('../_helpers/mock-meshcentral');
 const factory = require('../../usertracer.js').usertracer;
 
 // =============================================================================
-// serveraction dispatcher
+// serveraction dispatcher tests
+//
+// PRODUCTION BEHAVIOR PINS — DO NOT ALTER:
+//
+// serveraction(command, myparent, gp):
+//   Roteia pluginaction para _action* handlers. sid extraído de
+//   myparent.ws.sessionId. userFromParent extraído de myparent.user.
+//
+// getDeviceNames:
+//   [UT] getDeviceNames: result count=1 sample=[{"nodeid":"node//85S93T...","name":"BR-25001"}]
+//   Consulta db.getDeviceNames e retorna lista de {nodeid, name}.
+//   Usado pelo frontend para popular o dropdown de dispositivos.
+//
+// getUserNames:
+//   [UT] getUserNames: result count=1 sample=[{"username":"Janio.dionisio","displayUser":"BKSSERVICES\\Janio.dionisio"}]
+//   Consulta db.getUserNames e retorna lista de {username, displayUser, domain}.
+//   Usado pelo frontend para popular o dropdown de usuários.
+//
+// getTimeline:
+//   [UT] getTimeline: getEvents returned 1 events
+//   [UT] getTimeline: event[0]={"_id":"Ki6MR3NkRGHXqzow","username":"Janio.dionisio","eventType":"userLogin","nodeName":"BR-25001"}
+//   [UT] _send: method=timeline data=[{...1 event...}] _reqSeq=1
+//
+//   Consulta db.getEvents com filtro por username ou nodeid. Retorna
+//   eventos + pwrMap (online/offline) + activeUsers (usuários ativos
+//   no momento). _reqSeq evita respostas stale no frontend.
+//
+// getCurrentUsers:
+//   Lê doc.users de cada agente via mdb.Get, filtra por ACL
+//   (MESHRIGHT_DEVICEDETAILS), retorna {nodeid, nodeName, users[]}.
+//
+// getNodeDetails:
+//   Retorna detalhes de um node específico via mdb.Get.
+//
+// purgeHistory:
+//   Limpa todos os eventos via db.purgeAll. Requer permissão
+//   can_purge_history ou siteadmin full.
+//
+// ESTES TESTES SÃO PINADOS — não alterar sem verificar o fluxo real.
 // =============================================================================
 
 test('serveraction: ignores when plugin !== usertracer', () => {
