@@ -333,20 +333,139 @@ function sendToAgentWithResponse(nodeid, verb, params, sid) {
 
 Útil em v4.0 se quisermos **consultar info adicional do agent on-demand** (ex: lista de processos rodando, último comando executado). Mas para v4.0 mínimo, `wsagents` runtime já basta.
 
-### 3.10 ACL — verificando permissões no backend
+### 3.10 ACL — padrões nativos do MeshCentral
 
-Antes de retornar dados ao frontend, verificar se o user tem acesso ao node:
+O MeshCentral já implementa ACL em 3 camadas. **Sempre usar o nativo**, não reinventar:
+
+#### 3.10.1 As 3 APIs canônicas (de `pluginHandler.js`, `webserver.js`)
+
+| API | Fonte | Quando usar |
+|---|---|---|
+| `obj.meshServer.webserver.GetNodeWithRights(domain, user, nodeid, cb)` | `webserver.js:9548` | Checar se user tem rights a um node específico (node direto OU mesh link OU user group) |
+| `obj.meshServer.webserver.GetMeshRights(user, meshid)` | `webserver.js:9697` | Checar rights do user em um mesh (device group) |
+| `obj.parent.getAccessPermissions(pluginName, user, context)` | `pluginHandler.js:709` | Checar **permissões custom do plugin** (`can_view_history`, `can_purge_history`) — retorna Promise que resolve em função `(perm) => bool` |
+| `obj.parent.checkPluginPermission(user, pluginName, permission, nodeid, meshId)` | `pluginHandler.js:838` | Versão sync da acima (não recomendado, internamente usado) |
+
+#### 3.10.2 MESHRIGHT_* — os bits de direito
+
+Definidos em `webserver.js:150-174` (constantes também em `apprelays.js`, `meshrelay.js`, `meshipkvm.js`, `meshuser.js`):
+
+| Constante | Hex | Significado |
+|---|---|---|
+| `MESHRIGHT_REMOTECONTROL` | 0x08 | Desktop remoto |
+| `MESHRIGHT_REMOTEVIEWONLY` | 0x100 | Apenas ver tela |
+| `MESHRIGHT_AGENTCONSOLE` | 0x10 | Console do agent |
+| `MESHRIGHT_DEVICEDETAILS` | 0x100000 | **Ver "Do utilizador"** (users, lusers, sysinfo, network) |
+| `MESHRIGHT_MANAGECOMPUTERS` | 0x04 | Editar devices |
+| `MESHRIGHT_RESETOFF` | 0x40000 | Reset/shutdown |
+| `MESHRIGHT_NOSOFTWARE` | 0x800000 | Hide software tab |
+| `MESHRIGHT_NOREGISTRY` | 0x400000 | Hide registry tab |
+| `MESHRIGHT_ADMIN` | 0xFFFFFFFF | Full rights |
+
+Para User-Device Tracer: **`MESHRIGHT_DEVICEDETAILS` é o right canônico** que libera `node.users`/`node.lusers`. Se user não tem, frontend não vê esses dados.
+
+#### 3.10.3 Pattern correto para getTimeline (v4.0)
+
 ```js
-function withNodeAccess(user, nodeid, cb) {
-    if (!user) return cb(null, false);
-    if ((user.siteadmin & 0xFFFFFFFF) === 0xFFFFFFFF) return cb(null, true);  // site-admin
-    obj.meshServer.webserver.GetNodeWithRights(user.domain, user, nodeid, function(node, rights) {
-        cb(null, !!node && rights > 0);
+obj._actionGetTimeline = function(command, sid) {
+    var user = obj._getSessionUser(sid);  // helper para extrair user do wssessions2
+    if (!user) { obj._send(sid, { method:'timeline', data:[], _live:{} }); return; }
+
+    // 1. Coletar nodes candidatos do request
+    var requestedNodeIds = command.nodeids || (command.nodeid ? [command.nodeid] : []);
+
+    // 2. Filtrar por ACL nativo (não reinventar)
+    var accessibleNodeIds = [];
+    var pending = requestedNodeIds.length;
+    if (pending === 0) {
+        // Sem filtro: usar todos os nodes que o user pode ver
+        // (admin ou tem access ao menos a um mesh)
+        accessibleNodeIds = Object.keys(obj.meshServer.webserver.nodes || {});
+        // OU chamar uma query que filtra
+    }
+
+    requestedNodeIds.forEach(function(nid) {
+        obj.meshServer.webserver.GetNodeWithRights(user.domain, user, nid, function(node, rights, visible) {
+            // visible=false → user não tem access ao node
+            // rights & MESHRIGHT_DEVICEDETAILS → user pode ver users/lusers
+            if (visible && (rights > 0)) {
+                accessibleNodeIds.push(nid);
+            }
+            if (--pending === 0) doQuery();
+        });
     });
-}
+
+    function doQuery() {
+        // 3. Query NeDB só com nodes acessíveis
+        obj.db.getEvents({ nodeid: { $in: accessibleNodeIds } }, { limit: command.limit || 5000 }, function(docs) {
+            // 4. Resolve live state (já filtra por ACL implicitamente via wsagents[nodeid])
+            var live = obj.resolveLiveState(accessibleNodeIds, user);
+
+            // 5. Filtra docs: events de nodes que user NÃO tem MESHRIGHT_DEVICEDETAILS
+            //    ainda podem ser vistos se MESHRIGHT_REMOTECONTROL ou qualquer rights > 0
+            //    (decisão de produto: User-Device Tracer requer MESHRIGHT_DEVICEDETAILS)
+            obj.meshServer.webserver.GetAllMeshWithRights(user, MESHRIGHT_DEVICEDETAILS);
+
+            obj._send(sid, {
+                method: 'timeline',
+                data: docs,
+                _live: live,
+                _reqSeq: command._reqSeq
+            });
+        });
+    }
+};
 ```
 
-Para v4.0, manter compat: se `getTimeline` hoje não filtra por ACL (porque `getEvents` já filtra), `resolveLiveState` deve respeitar o mesmo filtro.
+#### 3.10.4 Helper para extrair user de uma sessão
+
+```js
+obj._getSessionUser = function(sid) {
+    var ws = obj.meshServer.webserver.wssessions2 && obj.meshServer.webserver.wssessions2[sid];
+    return (ws && ws.user) ? ws.user : null;
+};
+```
+
+#### 3.10.5 Pattern de permissões custom do plugin (RBAC)
+
+Plugin já registra 2 permissões (`can_view_history`, `can_purge_history`). Para v4.0 adicionar:
+
+```js
+obj.parent.registerPermissions('usertracer', {
+    can_view_history: {
+        title: 'User Tracer: visualizar histórico',
+        desc:  'Permite abrir o painel admin e a aba de histórico do dispositivo',
+        default: 'allowed'
+    },
+    can_purge_history: {
+        title: 'User Tracer: apagar histórico',
+        desc:  'Permite limpar events do User-Device Tracer',
+        default: 'denied'
+    }
+});
+```
+
+Verificação no backend:
+```js
+obj.parent.getAccessPermissions('usertracer', user, { nodeid: nid })
+    .then(function(has) {
+        if (!has('can_view_history')) { obj._send(sid, { method:'timeline', error:'forbidden' }); return; }
+        // ... proceed
+    });
+```
+
+#### 3.10.6 Regra de ouro: nunca duplicar ACL
+
+O frontend NÃO deve esconder/filtrar dados por ACL — o backend JÁ envia apenas o que o user pode ver. Frontend só renderiza.
+
+- ❌ Errado: backend envia todos os events, frontend filtra `if (user.links && user.links[nid])`
+- ✅ Certo: backend chama `GetNodeWithRights` e filtra antes de enviar
+
+Isso é o que o MeshCentral nativo faz em `meshuser.js:6682` (`getnetworkinfo`) e `meshuser.js:6707` (`getsysinfo`): checa `MESHRIGHT_DEVICEDETAILS` antes de retornar dados.
+
+#### 3.10.7 Quando `getEvents` já filtra (compat com v3.5.x)
+
+Em `usertracer.js`, `db.getEvents` já recebe `nodeids` no opts. Se a query usar `nodeids: accessibleNodeIds`, o filtro já está feito. Validar que isso se mantém em v4.0.
 
 ### 3.11 `obj.db` (plugin DB próprio) — aproveitar para live state?
 
