@@ -1,3 +1,18 @@
+## 3.5.92 (2026-07-29)
+
+### Fixed
+- **Gantt vazio re-renderiza com dados não solicitados** (`views/admin.handlebars:182 handleTimeline`): o handler WS chamava `renderTimeline(d.data, d._pwrMap)` incondicionalmente ao receber qualquer response `timeline`, sobrescrevendo o Gantt com pushes do servidor, retries de rede ou respostas de requests canceladas. Adicionado `_ganttOwner` (`'user'` | `'dev'` | `null`) setado em `loadXrefUser`/`loadXrefDev` e limpo em `resetUserFilter`/`resetDevFilter`. O `renderTimeline` agora só é chamado quando `_ganttOwner` bate com `_reqUser`/`_reqDev` ativo — respostas stale ou sem filtro ativo são descartadas silenciosamente com `WS_TL_SKIP`.
+- **Mesmo bug em `views/device.handlebars:280`**: o WS handler chamava `renderGantt` sem gate de request ativa. Adicionado `_reqSeq` à declaração de estado e à request em `loadHistory` (linha 126-127). Handler agora valida `d._reqSeq !== _reqSeq` antes de renderizar — descarte via `WS_TL_STALE`. Defesa secundária via `_inflight === null` (request não foi feita pelo user) com log `WS_TL_NOINFLIGHT`.
+- **Filtro A + response de filtro B sobrescreve Gantt**: ao buscar "alexandre.matias" depois mudar para um device, a response tardia do filtro antigo re-renderizava o Gantt com dados do usuário, sobrescrevendo a seleção do device. Agora o gate `_ganttOwner === 'dev' && _reqDev` previne.
+
+## 3.5.91 (2026-07-29)
+
+### Fixed
+- **`ReferenceError: UT_LOG is not defined` no browser** (`usertracer.js:911 onDeviceRefreshEnd`): a função roda no browser via `prepExports`, mas o `catch` chamava `UT_LOG.error()` que é variável server-side. Se algo no `try` lançasse, o `catch` propagava `ReferenceError` e o `callHook` upstream matava o dispatch de todos os outros plugins naquela página. Trocado por `console.error` no `catch` (browser-safe). Também removido o guard `user`/`siteadmin` (alinhado com RegEdit, que não filtra — permissões finas vão via `handleAdminReq` server-side).
+- **Device tab não registrava aba "User Tracer"**: o `onDeviceRefreshEnd` tinha dois guards (`user` e `siteadmin`) que bails silencionavam antes de chamar `registerPluginTab` em alguns fluxos. Após o fix do `UT_LOG`, a tab passa a aparecer consistentemente em todos os devices Windows.
+- **Drag-to-zoom na timeline do device tab**: `views/device.handlebars` agora tem drag-select idêntico ao admin (`setupGanttDrag`, `zoomTo`, `resetZoom` em linhas 252-277). Track do Gantt marca com `class="gantt-track" data-rs data-re` (linhas 168, 180) para que o `timeAt(clientX)` calcule o range a partir do rect do track. Botão `↺` (linha 48) aparece durante zoom e chama `resetZoom`. `_viewRange`/`_baseRange` (linha 67) preservam o zoom durante `zoomTo`/`resetZoom`/`renderGantt`. `_pwrMap` cacheado no client (linha 216) para re-renders sem WS.
+- **`_stopped` flag ordering** (`usertracer.js:141-142 server_startup`): o `stopScanner()` é chamado antes de `startScanner()` dentro de `server_startup`, e seta `_stopped = true`. O `startScanner()` checava `if (_stopped) return;` e bailava imediatamente — o timer `setInterval` nunca era criado. Resultado: scanner só processava agentes que disparavam `hook_processAgentData` ou `hook_agentCoreIsStable`, não os conectados sem hook ativo. Swap das linhas 141/142: `_stopped = false` agora vem ANTES de `startScanner()`. Sintoma em produção: scanner processava 1-3 dos 10 agents por ciclo, perdia os outros até alguma mensagem de hook chegar.
+
 ## 3.5.90 (2026-07-29)
 
 ### Fixed
