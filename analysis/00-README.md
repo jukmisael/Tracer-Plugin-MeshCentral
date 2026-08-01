@@ -1,3 +1,13 @@
+> ⚠️ **Escopo deste repositório**: o projeto é o **plugin User-Device Tracer** (`usertracer.js` + `views/*.handlebars` + `db.js`). Os documentos em `analysis/` descrevem **APIs do MeshCentral upstream** referenciadas pelo plugin, mas os links para `core/*.md` e `plugins/<name>/*.md` apontam para arquivos de **análise que não existem neste repo**. Esses links devem ser lidos como "vide análise upstream em fonte externa" — o source real está em `C:\tmp\MeshCentral\`.
+>
+> **O que ESTÁ no repositório** e tem documentação prática:
+> - Plugin server-side: `usertracer.js` (linhas e funções referenciadas nos docs ADR/STUDY)
+> - Plugin frontend: `views/admin.handlebars`, `views/device.handlebars`
+> - DB layer: `db.js` (NeDB/MongoDB/SQL delegate)
+> - Guias ADR: `analysis/ADR-001-live-state-source.md`, `analysis/ADR-002-acl-native.md`
+> - Estudo de heurística: `analysis/STUDY-user-online-state.md`
+> - Guia de fluxo: `analysis/HOOKS-CATALOG.md` (hooks do core), `analysis/FLUXOS-E2E.md` (fluxos upstream)
+
 # MeshCentral Plugin Development — Documentação Técnica Completa
 
 > **HUB central** de navegação para toda a documentação dividida em `/analysis/`

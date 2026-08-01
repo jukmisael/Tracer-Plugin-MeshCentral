@@ -1,8 +1,8 @@
 # Study: User Online State — Correção da Heurística Frontend
 
-> **Status**: Documento de estudo. Sem código a ser aplicado ainda.
-> **Escopo**: Mapear o problema, levantar opções, desenhar proposta de API.
-> **Decisão do usuário** (já tomada): estudo primeiro, código depois. Source of truth: `wsagents` (runtime). API shape: híbrido events + getLiveSessions.
+> **Status** (atualizado v3.5.91): **Itens já implementados** — `devicePower` TTL cache (`usertracer.js:84`), `userCache` (linha 83), `pwrMap` em `getTimeline` (linhas 629-635), `scanNow` polling a cada 30s (linhas 171-202), checkNode com `_resolveNodeId` (linha 234), `_filterAccessibleNodeIds` ACL (linha 792).
+> **Itens ainda não implementados (v4.0)**: hooks reativos (`hook_afterNotifyUserOfDeviceStateChange` listener), `resolveLiveState`, `_live` field na resposta WS, `getLiveSessions` action separada.
+> **Source of truth**: `wsagents` (runtime) + `nodedoc.users/lusers` persistido pelo MeshCentral quando o agent envia coreinfo.
 
 ---
 

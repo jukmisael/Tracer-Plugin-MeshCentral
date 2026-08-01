@@ -115,7 +115,7 @@ body{font-family:"Trebuchet MS",Arial,Helvetica,sans-serif;background:#d3d9d6;co
 <script>
 // === UT v3.6.0 — handler único, debounce, sem leak no unload ===
 var D=[],ms=(typeof top!='undefined'&&top.meshserver)||(typeof parent!='undefined'&&parent.meshserver)||window.meshserver;
-var _allDevices=[],_allUsers=[],_xrefPending='',_reqUser='',_reqDev='',selectedDevs={};
+var _allDevices=[],_allUsers=[],_xrefPending='',_reqUser='',_reqDev='',_ganttOwner=null,selectedDevs={};
 var _eventsCache=[],_viewRange=null,_baseRange={rs:0,re:0},_pwrMap=null,_reqSeq=0,_activeUsers={};
 var _unmounted = false; // #3,#12 - flag de cleanup
 var _wsHandler = null;
@@ -182,12 +182,22 @@ function makeWSHandler() {
 function handleTimeline(d) {
     try { if (d._activeUsers && typeof d._activeUsers === 'object') _activeUsers = d._activeUsers; } catch (_) {}
     try {
-        if (_xrefPending === 'user')      { renderXrefUser(d.data || []); _xrefPending = ''; }
-        else if (_xrefPending === 'dev')  { renderXrefDev(d.data || []);  _xrefPending = ''; }
+        if (_xrefPending === 'user')      { renderXrefUser(d.data || []); _xrefPending = ''; _ganttOwner = 'user'; }
+        else if (_xrefPending === 'dev')  { renderXrefDev(d.data || []);  _xrefPending = ''; _ganttOwner = 'dev'; }
         else                                { _xrefPending = ''; }
     } catch (ex) { dlog('WS_XREF_ERR', ex.message); _xrefPending = ''; }
-    try { renderTimeline(d.data || [], d._pwrMap); }
-    catch (ex) { dlog('WS_TL_ERR', ex.message); }
+    // Só renderiza gantt se o usuário tem um filtro ativo que corresponde à resposta.
+    // Sem filtro ativo → descarta silenciosamente (não re-renderiza com dados não solicitados).
+    // Re-render via zoomTo/resetZoom/resizeRefresh já passou por _reqUser/_reqDev setados.
+    try {
+        if (_ganttOwner === 'user' && _reqUser) {
+            renderTimeline(d.data || [], d._pwrMap);
+        } else if (_ganttOwner === 'dev' && _reqDev) {
+            renderTimeline(d.data || [], d._pwrMap);
+        } else {
+            dlog('WS_TL_SKIP', 'no matching filter (owner=' + _ganttOwner + ' reqUser=' + _reqUser + ' reqDev=' + _reqDev + ')');
+        }
+    } catch (ex) { dlog('WS_TL_ERR', ex.message); }
 }
 
 function loadDeviceNames(){ dlog('LOAD','loadDeviceNames'); sendOnce('deviceNames', {action:'plugin',plugin:'usertracer',pluginaction:'getDeviceNames'}); }
@@ -364,14 +374,14 @@ function gotoUser(displayUser){
     for(var i=0;i<sel.options.length;i++){if(sel.options[i].textContent===displayUser||sel.options[i].value===displayUser){sel.selectedIndex=i;sdDisplay('xrefUser');loadXrefUser();return;}}
 }
 function resetUserFilter(){
-    _viewRange=null;_eventsCache=[];
+    _viewRange=null;_eventsCache=[];if(_ganttOwner==='user')_ganttOwner=null;
     document.getElementById('xrefUser').value='';document.getElementById('xrefUserResult').innerHTML='<div class="empty">Selecione um usuário.</div>';
     sdDisplay('xrefUser');
     document.getElementById('hintUser').textContent='';_populateXrefDevs(_allDevices);
     document.getElementById('tlFilter').textContent='';document.getElementById('tlFilter').removeAttribute('data-base');document.getElementById('gantt').innerHTML='<div class="empty">Selecione um usuário ou dispositivo.</div>';
 }
 function resetDevFilter(){
-    _viewRange=null;_eventsCache=[];
+    _viewRange=null;_eventsCache=[];if(_ganttOwner==='dev')_ganttOwner=null;
     document.getElementById('xrefDev').value='';document.getElementById('xrefDevResult').innerHTML='<div class="empty">Selecione um dispositivo.</div>';
     sdDisplay('xrefDev');
     document.getElementById('hintDev').textContent='';_populateXrefDevs(_allDevices);
@@ -379,7 +389,7 @@ function resetDevFilter(){
 }
 function loadXrefUser(){
     var u=document.getElementById('xrefUser').value;if(!u){document.getElementById('xrefUserResult').innerHTML='<div class="empty">Selecione um usuário.</div>';return;}
-    _reqUser=u;_viewRange=null;
+    _reqUser=u;_viewRange=null;_ganttOwner='user';
     document.getElementById('xrefUserResult').innerHTML='<div class="loading">Buscando...</div>';document.getElementById('hintUser').textContent='';
     _xrefPending='user';document.getElementById('gantt').innerHTML='<div class="loading">Carregando...</div>';
     var baseTxt='Usuário: '+u;document.getElementById('tlFilter').setAttribute('data-base',baseTxt);document.getElementById('tlFilter').textContent=baseTxt;
@@ -388,7 +398,7 @@ function loadXrefUser(){
 }
 function loadXrefDev(){
     var n=document.getElementById('xrefDev').value;if(!n){document.getElementById('xrefDevResult').innerHTML='<div class="empty">Selecione um dispositivo.</div>';return;}
-    _reqDev=n;_viewRange=null;
+    _reqDev=n;_viewRange=null;_ganttOwner='dev';
     document.getElementById('xrefDevResult').innerHTML='<div class="loading">Buscando...</div>';document.getElementById('hintDev').textContent='';
     _xrefPending='dev';document.getElementById('gantt').innerHTML='<div class="loading">Carregando...</div>';
     var baseTxt='Dispositivo: '+document.getElementById('xrefDev').options[document.getElementById('xrefDev').selectedIndex].text;

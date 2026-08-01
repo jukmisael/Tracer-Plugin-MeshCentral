@@ -1,3 +1,5 @@
+> ⚠️ **Escopo**: este catálogo descreve hooks do **MeshCentral upstream** referenciados pelo plugin User-Device Tracer. As referências a `core/*.md` e `plugins/<name>/*.md` apontam para arquivos de análise que **não fazem parte** deste repositório. Os call-sites verificáveis no projeto estão em `usertracer.js` (veja `obj.exports` linha 77 e a seção "Server-side hooks" abaixo).
+
 # ⚙️ Catálogo de Hooks do MeshCentral
 
 > Lista exaustiva de **todos** os hooks que o MeshCentral chama via `pluginHandler.callHook`, que plugins expõem via `obj.exports` (frontend), e que `PluginHookScheduler.wrapFunctionCall` injeta. Compilado de [`core/`](core/), [`plugins/pluginhookexample/`](plugins/pluginhookexample/), [`plugins/pluginhookscheduler/`](plugins/pluginhookscheduler/), [`plugins/agentname2servername/`](plugins/agentname2servername/) e call-sites em [`plugins/eventlog/`](plugins/eventlog/), [`plugins/scripttask/`](plugins/scripttask/), [`plugins/routeplus/`](plugins/routeplus/), [`plugins/workfromhome/`](plugins/workfromhome/), [`plugins/filedist/`](plugins/filedist/).

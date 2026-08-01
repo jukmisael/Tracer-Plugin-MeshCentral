@@ -26,6 +26,7 @@ h2{font-size:15px;font-weight:700;color:#003366}.sub{color:#555;font-size:11px;m
 .dbg{margin-top:8px;font-size:10px;color:#003366;cursor:pointer;text-decoration:underline}
 #debug{display:none;background:#fff8e1;border:1px solid #e0c060;color:#333;padding:5px;margin-top:4px;font-size:9px;font-family:Consolas,monospace;max-height:100px;overflow:auto;white-space:pre-wrap}
 .gantt-wrap{overflow:auto;border:1px solid #aaa;background:#fff;position:relative;min-height:50px;max-height:calc(100vh - 280px)}
+.gantt-sel{position:absolute;top:0;bottom:0;background:rgba(0,51,102,.18);border:1px solid rgba(0,51,102,.45);pointer-events:none;z-index:6;box-sizing:border-box}
 </style>
 </head>
 <body>
@@ -44,6 +45,7 @@ h2{font-size:15px;font-weight:700;color:#003366}.sub{color:#555;font-size:11px;m
     <button class="btn" data-r="6h" onclick="setRange('6h',this)">6h</button>
     <span class="tbsep"></span>
     <input type="date" id="dStart" onchange="loadHistory()"><input type="date" id="dEnd" onchange="loadHistory()">
+    <button class="btn" id="btnResetZoom" onclick="resetZoom()" title="Resetar zoom" style="display:none;font-weight:700">↺</button><span class="muted" id="tlFilter" style="margin-left:6px"></span>
   </div>
 </div>
 <div class="panel" style="padding:0;overflow:hidden">
@@ -62,7 +64,7 @@ h2{font-size:15px;font-weight:700;color:#003366}.sub{color:#555;font-size:11px;m
 <script>
 var D=[], nodeid='{{nodeid}}', nodeName='{{nodeName}}';
 var ms=(typeof top!='undefined'&&top.meshserver)||(typeof parent!='undefined'&&parent.meshserver)||window.meshserver;
-var _savedEvents=[],_activeUsers={};
+var _savedEvents=[],_activeUsers={},_viewRange=null,_baseRange={rs:0,re:0},_pwrMap=null,_reqSeq=0;
 var _unmounted=false; // cleanup marker (#3, #12)
 var _wsHandler=null;
 var _inflight=null; // #19 - dedupe de requests
@@ -83,7 +85,10 @@ function fmtDur(ms){if(ms<0)ms=0;var m=Math.floor(ms/60000),h=Math.floor(m/60),d
 
 function setRange(kind,btn){
     document.querySelectorAll('.btn[data-r]').forEach(function(b){b.classList.remove('active');});
-    if(btn)btn.classList.add('active');var end=new Date(),start=new Date();
+    if(btn)btn.classList.add('active');
+    _viewRange=null;
+    var btnReset=document.getElementById('btnResetZoom');if(btnReset)btnReset.style.display='none';
+    var end=new Date(),start=new Date();
     if(kind==='1h'){start.setTime(end.getTime()-3600000);}
     else if(kind==='2h'){start.setTime(end.getTime()-7200000);}
     else if(kind==='4h'){start.setTime(end.getTime()-14400000);}
@@ -99,6 +104,8 @@ function setRange(kind,btn){
 // #19 — loadHistory com dedupe e queue
 function loadHistory(){
     if (_unmounted) return;
+    _viewRange=null;
+    var btnReset=document.getElementById('btnResetZoom');if(btnReset)btnReset.style.display='none';
     var s=document.getElementById('dStart').value,e=document.getElementById('dEnd').value;
     if(!s||!e){
         document.getElementById('gantt').innerHTML='<div class="empty">Selecione datas.</div>';
@@ -116,7 +123,8 @@ function loadHistory(){
         _inflight = null;
         document.getElementById('gantt').innerHTML='<div class="loading">Carregando...</div>';
         if(ms){
-            ms.send({action:'plugin',plugin:'usertracer',pluginaction:'getTimeline',nodeid:nodeid,startDate:s+'T00:00:00',endDate:e+'T23:59:59.999',limit:2000});
+            var _s=++_reqSeq;
+            ms.send({action:'plugin',plugin:'usertracer',pluginaction:'getTimeline',nodeid:nodeid,startDate:s+'T00:00:00',endDate:e+'T23:59:59.999',limit:2000,_reqSeq:_s});
         }
     }, 100);
 }
@@ -160,7 +168,7 @@ function _renderGantt(events,rs,re,pwrMap){
     var ticks=[],t0=Math.ceil(rs/step)*step;
     for(var t=t0;t<=re;t+=step){var d=new Date(t);ticks.push({pct:((t-rs)/total)*100,label:step<3600000?((d.getHours()<10?'0':'')+d.getHours()+':'+(d.getMinutes()<10?'0':'')+d.getMinutes()):step<dayMs?((d.getHours()<10?'0':'')+d.getHours()+':00'):((d.getDate()<10?'0':'')+d.getDate()+'/'+(d.getMonth()+1<10?'0':'')+(d.getMonth()+1))});}
     var mw=Math.max(520,Math.min(2400,Math.floor(span*100)));
-    var h='<div class="gantt-wrap"><div style="display:flex;border-bottom:1px solid #aaa;background:#e4e9e7;position:sticky;top:0;z-index:2"><div style="width:160px;flex-shrink:0;padding:6px 7px;font-size:9px;color:#333;font-weight:700;border-right:1px solid #aaa">SESSÃO</div><div style="flex:1;position:relative;height:28px;min-width:'+mw+'px">';
+    var h='<div class="gantt-wrap"><div class="gantt-row gantt-head" style="display:flex;border-bottom:1px solid #aaa;background:#e4e9e7;position:sticky;top:0;z-index:2"><div style="width:160px;flex-shrink:0;padding:6px 7px;font-size:9px;color:#333;font-weight:700;border-right:1px solid #aaa">SESSÃO</div><div class="gantt-track" data-rs="'+rs+'" data-re="'+re+'" style="flex:1;position:relative;height:28px;min-width:'+mw+'px">';
     ticks.forEach(function(tk){h+='<div style="position:absolute;top:0;bottom:0;border-left:1px dashed #ccc;left:'+tk.pct+'%"><span style="position:absolute;top:6px;left:3px;font-size:8px;color:#666;white-space:nowrap">'+esc(tk.label)+'</span></div>';});
     h+='</div></div>';
     var byUser={};sessions.forEach(function(s){var k=s.display||s.user||'?';if(!byUser[k])byUser[k]=[];byUser[k].push(s);});
@@ -172,7 +180,7 @@ function _renderGantt(events,rs,re,pwrMap){
         var barStart=Math.max(fst.start,rs),barEnd=Math.min(lst.end,re);
         var barLeft=Math.max(0,((fst.start-rs)/total)*100),barRight=Math.min(100,((lst.end-rs)/total)*100);if(barRight<=barLeft)barRight=barLeft+0.15;
         var barW=barRight-barLeft,barMs=barEnd-barStart||1;
-        h+='<div style="display:flex;min-height:40px;border-bottom:1px solid #e0e0e0"><div style="width:160px;flex-shrink:0;padding:7px;border-right:1px solid #ccc;font-size:10px;color:#003366;font-weight:700;display:flex;align-items:center;background:#fff">'+esc(u)+'</div><div style="flex:1;position:relative;min-width:'+mw+'px;min-height:40px">';
+        h+='<div class="gantt-row" style="display:flex;min-height:40px;border-bottom:1px solid #e0e0e0"><div style="width:160px;flex-shrink:0;padding:7px;border-right:1px solid #ccc;font-size:10px;color:#003366;font-weight:700;display:flex;align-items:center;background:#fff">'+esc(u)+'</div><div class="gantt-track" data-rs="'+rs+'" data-re="'+re+'" style="flex:1;position:relative;min-width:'+mw+'px;min-height:40px">';
         ticks.forEach(function(tk){h+='<div style="position:absolute;top:0;bottom:0;border-left:1px dashed #ccc;left:'+tk.pct+'%"></div>';});
         var stColor = {'login':'#2e7d32','lock':'#e65100','logout':'#888'};
         h+='<div style="position:absolute;top:9px;height:20px;left:'+barLeft+'%;width:'+barW+'%;border-radius:2px;overflow:hidden;border:1px solid rgba(0,0,0,.2)">';
@@ -190,6 +198,7 @@ function _renderGantt(events,rs,re,pwrMap){
         h+='</div></div></div>';
     });
     h+='</div>';document.getElementById('gantt').innerHTML=h;
+    if(!_viewRange){_baseRange={rs:rs,re:re};}setViewHint();setupGanttDrag();
     var byName={};events.forEach(function(e){var k=e.displayUser||e.username||'?';if(!byName[k])byName[k]={user:k,username:e.username,domain:e.domain||'',events:[]};byName[k].events.push(e);});
     var names=Object.keys(byName).sort();
     if(!names.length){document.getElementById('userList').innerHTML='<div class="empty">Nenhum usuário.</div>';return;}
@@ -205,17 +214,66 @@ function _renderGantt(events,rs,re,pwrMap){
     ul+='</tbody></table>';document.getElementById('userList').innerHTML=ul;
 }
 function renderGantt(events,pwrMap){
-    events=events||[];
+    events=events||[];_pwrMap=pwrMap;
     if(!events.length){document.getElementById('gantt').innerHTML='<div class="empty">Nenhum evento no período.</div>';document.getElementById('userList').innerHTML='<div class="empty">Nenhum evento.</div>';return;}
     var ds=document.getElementById('dStart'),de=document.getElementById('dEnd');
     var rs=new Date(ds.value+'T00:00:00').getTime(),re=new Date(de.value+'T23:59:59.999').getTime();
     if(isNaN(rs)||isNaN(re)||re<=rs){
         rs=Infinity;re=-Infinity;events.forEach(function(e){var t=new Date(e.detectedAt).getTime();if(t<rs)rs=t;if(t>re)re=t;});if(re<=rs)re=rs+86400000;
     }
+    _baseRange={rs:rs,re:re};
+    if(_viewRange&&_viewRange.re>_viewRange.rs){rs=_viewRange.rs;re=_viewRange.re;}
     try{_renderGantt(events,rs,re,pwrMap);}catch(ex){dlog('RGERR',ex.message);}
 }
 
+
+// === Drag-to-zoom (portado de admin.handlebars) ===
+function activeRange(){ if(_viewRange&&_viewRange.re>_viewRange.rs)return _viewRange; return _baseRange.rs?_baseRange:{rs:0,re:86400000}; }
+function setViewHint(){
+    var el=document.getElementById('tlFilter');if(!el)return;
+    if(!_viewRange){el.textContent='';return;}
+    el.textContent=fmtDate(_viewRange.rs)+' → '+fmtDate(_viewRange.re)+' ('+fmtDur(_viewRange.re-_viewRange.rs)+')';
+    var btn=document.getElementById('btnResetZoom');if(btn)btn.style.display='';
+}
+function zoomTo(rs,re){
+    rs=Math.floor(rs);re=Math.ceil(re);
+    if(!(re>rs))return;
+    if(re-rs<60000){var mid=(rs+re)/2;rs=mid-30000;re=mid+30000;}
+    _viewRange={rs:rs,re:re};setViewHint();
+    if(!_savedEvents.length){return;}
+    _renderGantt(_savedEvents,rs,re,_pwrMap);
+}
+function resetZoom(){
+    if(!_savedEvents.length){_viewRange=null;var btn=document.getElementById('btnResetZoom');if(btn)btn.style.display='none';return;}
+    _viewRange=null;
+    var rs=_baseRange.rs,re=_baseRange.re;
+    setViewHint();
+    _renderGantt(_savedEvents,rs,re,_pwrMap);
+}
+function setupGanttDrag(){
+    var wrap=document.querySelector('.gantt-wrap');if(!wrap)return;
+    var drag=null;
+    function trackOf(el){while(el&&el!==wrap){if(el.classList&&el.classList.contains('gantt-track'))return el;el=el.parentNode;}return wrap.querySelector('.gantt-track');}
+    function timeAt(track,clientX){if(!track)return 0;var rs=+track.getAttribute('data-rs'),re=+track.getAttribute('data-re');var rect=track.getBoundingClientRect();var w=rect.width;if(w<=0)return rs;var x=clientX-rect.left;if(x<0)x=0;if(x>w)x=w;return rs+(x/w)*(re-rs);}
+    function pxAt(track,clientX){if(!track)return 0;var rect=track.getBoundingClientRect();var w=rect.width;if(w<=0)return 0;var x=clientX-rect.left;if(x<0)x=0;if(x>w)x=w;return x;}
+    function onMove(e){if(!drag)return;drag.t1=timeAt(drag.track,e.clientX);drag.x1=pxAt(drag.track,e.clientX);var a=Math.min(drag.x0,drag.x1),b=Math.max(drag.x0,drag.x1);if(drag.ov){drag.ov.style.left=a+'px';drag.ov.style.width=Math.max(1,b-a)+'px';}}
+    function onUp(e){document.removeEventListener('mousemove',onMove,true);document.removeEventListener('mouseup',onUp,true);if(!drag)return;if(e){drag.t1=timeAt(drag.track,e.clientX);}var t0=Math.min(drag.t0,drag.t1),t1=Math.max(drag.t0,drag.t1);if(drag.ov&&drag.ov.parentNode)drag.ov.parentNode.removeChild(drag.ov);var d=drag;drag=null;if(t1-t0<30000)return;zoomTo(t0,t1);}
+    wrap.addEventListener('mousedown',function(e){
+        if(e.button!==0)return;
+        var t=e.target,onLab=false;
+        while(t&&t!==wrap){if(t.classList&&t.classList.contains('gantt-lab')){onLab=true;break;}t=t.parentNode;}
+        if(onLab)return;
+        var track=trackOf(e.target);if(!track)return;
+        var x=pxAt(track,e.clientX);
+        var ov=document.createElement('div');ov.className='gantt-sel';ov.style.left=x+'px';ov.style.width='1px';
+        track.appendChild(ov);
+        drag={track:track,t0:timeAt(track,e.clientX),t1:timeAt(track,e.clientX),x0:x,x1:x,ov:ov};
+        document.addEventListener('mousemove',onMove,true);
+        document.addEventListener('mouseup',onUp,true);
+    });
+}
 // #2 — handler único
+
 (function(){
     if (_unmounted) return;
     if (ms && ms.socket) {
@@ -223,9 +281,13 @@ function renderGantt(events,pwrMap){
             try{
                 var d = JSON.parse(e.data);
                 if (d.action === 'plugin' && d.plugin === 'usertracer' && d.method === 'timeline') {
+                    // #19 - dedupe + stale check: descarta se _inflight for null
+                    // (não há request em voo — response não foi solicitada) OU
+                    // se _reqSeq bater diferente (response stale)
+                    if (d._reqSeq != null && d._reqSeq !== _reqSeq) { dlog('WS_TL_STALE','seq='+d._reqSeq+' expected='+_reqSeq); return; }
+                    if (_inflight === null) { dlog('WS_TL_NOINFLIGHT','descartando response não solicitado'); return; }
                     dlog('WS','got timeline n=' + (d.data?d.data.length:'?'));
                     if (d._activeUsers && typeof d._activeUsers === 'object') _activeUsers = d._activeUsers;
-                    // #19 - dedupe: ignore se for para inflight diferente
                     renderGantt(d.data || [], d._pwrMap);
                 }
             } catch (ex) { dlog('WSE', ex.message); }

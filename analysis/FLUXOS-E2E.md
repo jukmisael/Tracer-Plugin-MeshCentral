@@ -1,3 +1,5 @@
+> ⚠️ **Escopo**: diagramas end-to-end de fluxos do **MeshCentral upstream**, com referência a plugins de terceiros (`devtools`, `printercontrol`, `scripttask`, `eventlog`, etc.) que **não fazem parte** deste repositório. Para fluxos que tocam o plugin User-Device Tracer, ver chamadas em `usertracer.js:server_startup` (linha 96) e o dispatch em `serveraction` (linha 513).
+
 # 🔄 Fluxos End-to-End do MeshCentral
 
 > 9 diagramas ASCII mostrando os fluxos completos de dados entre **Browser**, **MeshCentral Server**, **Plugin** e **MeshAgent**. Cada diagrama referencia o arquivo `.md` com a implementação detalhada.

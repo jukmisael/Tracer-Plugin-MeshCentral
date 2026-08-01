@@ -1,3 +1,5 @@
+> ⚠️ **Escopo**: perguntas sobre APIs nativas do **MeshCentral upstream** referenciadas pelo plugin User-Device Tracer. As referências a `core/*.md` e `plugins/<name>/*.md` apontam para arquivos de análise que **não fazem parte** deste repositório. O snippet "Mais nativo" é a API real do MeshCentral, validada contra o source em `C:\tmp\MeshCentral\`.
+
 # ❓ Pergunta → Resposta Nativa
 
 > **40+ perguntas reais** de desenvolvimento de plugin MeshCentral, cada uma com **caminho mais nativo + fallback + localização `arquivo:linha` + suporte por backend**.

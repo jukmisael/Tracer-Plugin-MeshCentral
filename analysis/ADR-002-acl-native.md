@@ -186,8 +186,7 @@ res.render('admin', {});
 ```
 
 Também **não checa ACL por node** para a query `getTimeline`. O `db.getEvents` no v3.5.x usa `command.nodeids` como filtro, mas não valida se user tem access a esses nodeids.
-
-**Vulnerabilidade atual**: user non-admin que conhece um `nodeid` pode fazer `getTimeline` com esse nodeid e receber dados.
+~~**Vulnerabilidade atual**: user non-admin que conhece um `nodeid` pode fazer `getTimeline` com esse nodeid e receber dados.~~ **CORRIGIDO em v3.5.91**: `usertracer.js:792 _filterAccessibleNodeIds` chama `webserver.GetNodeWithRights` e exige `MESHRIGHT_DEVICEDETAILS (0x100000)`. Aplicado em `getCurrentUsers` (linha 543), `getTimeline` (linha 596) e `getNodeDetails` (linha 703). Admin full bypass em `_isAdminFull` (linha 796).
 
 ---
 

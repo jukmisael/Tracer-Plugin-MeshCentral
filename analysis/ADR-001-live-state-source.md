@@ -1,9 +1,9 @@
 # ADR-001: Source-of-truth para "Live User State"
 
-> **Status**: ✅ **Aceito** — implementação imediata
-> **Contexto**: precisamos decidir se confiamos em dados server-side (`wsagents`, `agentInfo.users` populado no connect) ou se fazemos round-trip ao agent em cada request.
-> **Decisão**: **Server-side, sem polling de agent** — usar `wsagents` runtime + cache derivado do `agentInfo` que o agent já envia no connect.
-> **Migração**: zero. Projeto ainda em dev (v3.5.x); quando v4.0 for para prod, migrations serão necessárias (vide §10).
+> **Status**: ✅ **Aceito** — **implementação parcial** (v3.5.91)
+> **Implementado em v3.5.x**: **Opção A + polling de servidor** (`usertracer.js:171-202 scanNow`/`setInterval(30000)`) itera `wsagents` e checa `nodedoc.users/lusers` via `mdb.Get`. NÃO usa hook `hook_agentCoreIsStable` — polling é o caminho atual.
+> **Decisão v4.0**: **Opção C com fallback para A** (hook `hook_agentCoreIsStable` push no connect + hook `hook_agentWebSocketDisconnected` invalidação) — substituir polling por hooks reativos.
+> **Migração**: zero para v3.5.x. Para v4.0, será necessário remover `scanNow`/`setInterval` e adicionar os hooks.
 
 ---
 
