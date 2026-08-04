@@ -32,21 +32,38 @@ module.exports.CreateDB = function (meshserver) {
         console.log('[UT ERROR] NeDB não disponível e nenhum backend alternativo.');
     } }
 
+    var _nedbRecovered = false;
     function initNeDB() {
         if (!Datastore) return;
         try {
             obj.backend = 'nedb';
             obj.events = new Datastore({
                 filename: meshserver.getConfigFilePath('plugin-usertracer-events.db'),
-                autoload: true
+                autoload: true,
+                corruptAlertThreshold: 0.5  // default 10% é muito conservador — tolera 50% corrupção (recovery em vez de crash loop)
             });
-            obj.events.setAutocompactionInterval(60000);
+            obj.events.setAutocompactionInterval(300000);  // 5min: reduz write contention com scanner
             obj.events.ensureIndex({ fieldName: 'nodeid' });
             obj.events.ensureIndex({ fieldName: 'username' });
             obj.events.ensureIndex({ fieldName: 'detectedAt' });
             console.log('[UT] NeDB initialized (TTL_DAYS=' + obj.TTL_DAYS + ')');
         } catch (e) {
             console.log('[UT ERROR] NeDB init failed: ' + e.message);
+            // Recovery: se corrupção > threshold corrompeu o arquivo durante restart abrupto,
+            // deleta o .db e tenta de novo (fresh start, dados perdidos nesse cenário).
+            if (!_nedbRecovered && /corrupt/i.test(e.message)) {
+                _nedbRecovered = true;
+                try {
+                    var _fs = require('fs');
+                    var _p = meshserver.getConfigFilePath('plugin-usertracer-events.db');
+                    console.log('[UT WARN] deleting corrupt db: ' + _p);
+                    try { _fs.unlinkSync(_p); } catch (_e1) {}
+                    try { _fs.unlinkSync(_p + '~'); } catch (_e2) {}
+                    initNeDB();  // retry
+                } catch (_recoverE) {
+                    console.log('[UT ERROR] recovery failed: ' + _recoverE.message);
+                }
+            }
         }
     }
 

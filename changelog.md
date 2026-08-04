@@ -1,3 +1,12 @@
+## 3.5.93 (2026-07-29)
+
+### Fixed
+- **NeDB crash loop com `11% of data file is corrupt`**: após restart abrupto durante compaction, o `@seald-io/nedb` recusava carregar com `Error: 11% of the data file is corrupt, more than corruptAlertThreshold (10%). Cautiously refusing to start NeDB to prevent dataloss`. Crash loopava o MeshCentral a cada 5s. Fix em `db.js:35-68`: (1) `corruptAlertThreshold: 0.5` em vez do default 10% — tolera até 50% de corrupção (cenário real de restart mid-write); (2) autocompaction subiu de 60s para 300s (`setAutocompactionInterval(300000)`) reduzindo write contention com o scanner; (3) recovery path que deleta o `.db` + `.db~` e re-inicializa quando o erro detectado é de corrupção (regex `/corrupt/i` na mensagem), uma vez por processo (`_nedbRecovered` flag previne loop). MeshCentral agora sobe mesmo com DB parcialmente corrompido.
+
+### Notes
+- **Ação manual recomendada (uma vez)**: deletar `C:\Program Files\Open Source\MeshCentral\meshcentral-data\plugin-usertracer-events.db` e reiniciar MeshCentral para tirar do estado crash-loop atual. O fix previne recorrência, mas o arquivo já corrompido precisa de reset manual.
+
+
 ## 3.5.92 (2026-07-29)
 
 ### Fixed
