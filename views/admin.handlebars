@@ -113,10 +113,10 @@ body{font-family:"Trebuchet MS",Arial,Helvetica,sans-serif;background:#d3d9d6;co
 <div id="debug">aguardando...</div>
 
 <script>
-// === UT v3.6.0 — handler único, debounce, sem leak no unload ===
+// === UT v3.5.94 — handler único, debounce, sem leak no unload ===
 var D=[],ms=(typeof top!='undefined'&&top.meshserver)||(typeof parent!='undefined'&&parent.meshserver)||window.meshserver;
 var _allDevices=[],_allUsers=[],_xrefPending='',_reqUser='',_reqDev='',_ganttOwner=null,selectedDevs={};
-var _eventsCache=[],_viewRange=null,_baseRange={rs:0,re:0},_pwrMap=null,_reqSeq=0,_activeUsers={};
+var _eventsCache=[],_viewRange=null,_baseRange={rs:0,re:0},_pwrMap=null,_reqSeq=0,_activeUsers={},_activeLusers={};
 var _unmounted = false; // #3,#12 - flag de cleanup
 var _wsHandler = null;
 // =====================================================================
@@ -130,6 +130,18 @@ function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'
 function segColor(st){return st==='lock'?'#e65100':st==='logout'?'#888':'#2e7d32';}
 function dlog(){var a=Array.prototype.slice.call(arguments);D.push(new Date().toLocaleTimeString()+' '+a.join(' '));var e=document.getElementById('debug');if(e)e.innerHTML=D.slice(-80).join('\n');}
 function eventMeta(t){return{color:t==='userLock'?'#e65100':t==='userLogout'?'#888':'#2e7d32',label:t==='userLock'?'Bloqueado':t==='userLogout'?'Offline':'Online',endLabel:t==='userLogin'?'<b>Agora</b>':t==='userUnlock'?'<b>Agora</b>':null};}
+// Resolve live state for (nodeid,user) using _activeUsers/_activeLusers. If user is in current active list:
+//   - in activeLusers -> Bloqueado; - in activeUsers only -> Online.
+// Otherwise (not in activeUsers) -> Offline regardless of last event type.
+function liveState(nodeid, user){
+    var activeU=_activeUsers[nodeid]||[],activeL=_activeLusers[nodeid]||[];
+    var uShort=splitUser(user).u||user,matched=false,locked=false;
+    for(var i=0;i<activeU.length;i++){var as=splitUser(activeU[i]).u||activeU[i];if(as===uShort||activeU[i]===user){matched=true;break;}}
+    if(matched){for(var j=0;j<activeL.length;j++){var ls=splitUser(activeL[j]).u||activeL[j];if(ls===uShort||activeL[j]===user){locked=true;break;}}}
+    if(locked)return{color:'#e65100',label:'Bloqueado',endLabel:null};
+    if(matched)return{color:'#2e7d32',label:'Online',endLabel:'<b>Agora</b>'};
+    return{color:'#888',label:'Offline',endLabel:null};
+}
 function fmtDate(d){var x=new Date(d);if(isNaN(x))return'—';var m=x.getMonth()+1,day=x.getDate();return (day<10?'0':'')+day+'/'+(m<10?'0':'')+m+' '+x.getHours()+':'+(x.getMinutes()<10?'0':'')+x.getMinutes();}
 function fmtDur(ms){if(ms<0)ms=0;var m=Math.floor(ms/60000),h=Math.floor(m/60),d=Math.floor(h/24);m%=60;h%=24;if(d>0)return d+'d '+h+'h';if(h>0)return h+'h '+m+'m';return m+'m';}
 function ymd(d){var x=new Date(d),m=x.getMonth()+1,day=x.getDate();return x.getFullYear()+'-'+(m<10?'0':'')+m+'-'+(day<10?'0':'')+day;}
@@ -181,6 +193,7 @@ function makeWSHandler() {
 
 function handleTimeline(d) {
     try { if (d._activeUsers && typeof d._activeUsers === 'object') _activeUsers = d._activeUsers; } catch (_) {}
+    try { if (d._activeLusers && typeof d._activeLusers === 'object') _activeLusers = d._activeLusers; } catch (_) {}
     try {
         if (_xrefPending === 'user')      { renderXrefUser(d.data || []); _xrefPending = ''; _ganttOwner = 'user'; }
         else if (_xrefPending === 'dev')  { renderXrefDev(d.data || []);  _xrefPending = ''; _ganttOwner = 'dev'; }
@@ -268,7 +281,7 @@ function _renderGantt(events,rs,re,pwrMap){
     document.getElementById('sEvents').textContent=events.length;
     var total=re-rs;if(total<=0)total=1;
     var sessions=buildSessions(events,rs,re),dayMs=86400000,span=total/dayMs;
-    sessions.forEach(function(s){if(s.open&&s.state!=='login'&&s.state!=='lock'){var da=_activeUsers[s.nodeid]||[];var sUser=splitUser(s.display||s.user||'').u||s.display||s.user;for(var si=0;si<da.length;si++){var daShort=splitUser(da[si]).u||da[si];if(daShort===sUser||da[si]===s.display||daShort===(s.user||'')||da[si]===(s.user||'')){s.state='login';break;}}}});
+    sessions.forEach(function(s){if(s.open){var ls=liveState(s.nodeid,s.display||s.user||'');if(s.state==='logout')s.state=ls.label==='Offline'?s.state:'login';else if(s.state==='lock'&&ls.label==='Online')s.state='login';}});
     var step=span<=0.02?60000:(span<=0.08?300000:(span<=0.25?900000:(span<=0.5?1800000:(span<=1?3600000:(span<=7?10800000:(span<=14?21600000:43200000))))));
     var ticks=[],t0=Math.ceil(rs/step)*step;
     for(var t=t0;t<=re;t+=step){
@@ -411,11 +424,8 @@ function renderXrefUser(e){e=e||[];document.getElementById('sEvents').textConten
     var by={};e.forEach(function(v){var n=v.nodeName||v.nodeid||'?';if(!by[n])by[n]={name:n,nodeid:v.nodeid,events:[]};by[n].events.push(v);});
     var names=Object.keys(by).sort();document.getElementById('hintUser').textContent=e.length+' eventos em '+names.length+' dispositivos';
     var selUser=document.getElementById('xrefUser').value||'';
-    var selShort=splitUser(selUser).u||selUser;
     var h='<div class="stacked">';names.forEach(function(n){var evs=by[n].events.sort(function(a,b){return new Date(b.detectedAt)-new Date(a.detectedAt);}),last=evs[0],first=evs[evs.length-1];
-    var da=_activeUsers[by[n].nodeid]||[];var isOn=false;
-    for(var ai=0;ai<da.length;ai++){var aShort=splitUser(da[ai]).u||da[ai];if(aShort===selShort||da[ai]===selUser||aShort===selUser||da[ai]===selShort){isOn=true;break;}}
-    var em=eventMeta(last.eventType);
+    var em=liveState(by[n].nodeid,selUser);
     h+='<div class="scard" onclick="gotoDev(\''+esc(by[n].nodeid)+'\')"><div style="flex:1"><div class="tag">'+esc(n)+'</div><div class="tagl">'+evs.length+' eventos · '+fmtDate(first.detectedAt)+' → '+(em.endLabel||fmtDate(last.detectedAt))+'</div></div><span class="badge" style="color:'+em.color+'">'+em.label+'</span></div>';});
     h+='</div>';document.getElementById('xrefUserResult').innerHTML=h;
     if(document.getElementById('xrefUser').value){
@@ -429,10 +439,9 @@ function renderXrefDev(e){e=e||[];document.getElementById('sEvents').textContent
     if(document.getElementById('xrefDev').value!==_reqDev){return;}
     var by={};e.forEach(function(v){var u=v.displayUser||v.username||'?';if(!by[u])by[u]={user:u,domain:v.domain,events:[]};by[u].events.push(v);});
     var names=Object.keys(by).sort();document.getElementById('hintDev').textContent=e.length+' eventos de '+names.length+' usuários';
-    var devId=document.getElementById('xrefDev').value||'';var da=_activeUsers[devId]||[];
+    var devId=document.getElementById('xrefDev').value||'';
     var h='<div class="stacked">';names.forEach(function(u){var g=by[u],evs=g.events.sort(function(a,b){return new Date(b.detectedAt)-new Date(a.detectedAt);}),last=evs[0],first=evs[evs.length-1],un=splitUser(g.user);
-    var isOn2=false;for(var ai2=0;ai2<da.length;ai2++){var aShort2=splitUser(da[ai2]).u||da[ai2];if(aShort2===un.u||da[ai2]===g.user||aShort2===g.user||da[ai2]===un.u){isOn2=true;break;}}
-    var em=eventMeta(last.eventType);
+    var em=liveState(devId,g.user);
     h+='<div class="scard" onclick="gotoUser(\''+esc(g.user)+'\')"><div style="flex:1"><div class="tag">'+esc(un.u||g.user)+'</div><div class="tagl">'+(g.domain?esc(g.domain)+' · ':'')+evs.length+' eventos · '+fmtDate(first.detectedAt)+' → '+(em.endLabel||fmtDate(last.detectedAt))+'</div></div><span class="badge" style="color:'+em.color+'">'+em.label+'</span></div>';});
     h+='</div>';document.getElementById('xrefDevResult').innerHTML=h;
     if(document.getElementById('xrefDev').value){

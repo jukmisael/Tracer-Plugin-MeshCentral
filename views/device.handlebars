@@ -64,7 +64,7 @@ h2{font-size:15px;font-weight:700;color:#003366}.sub{color:#555;font-size:11px;m
 <script>
 var D=[], nodeid='{{nodeid}}', nodeName='{{nodeName}}';
 var ms=(typeof top!='undefined'&&top.meshserver)||(typeof parent!='undefined'&&parent.meshserver)||window.meshserver;
-var _savedEvents=[],_activeUsers={},_viewRange=null,_baseRange={rs:0,re:0},_pwrMap=null,_reqSeq=0;
+var _savedEvents=[],_activeUsers={},_activeLusers={},_viewRange=null,_baseRange={rs:0,re:0},_pwrMap=null,_reqSeq=0;
 var _unmounted=false; // cleanup marker (#3, #12)
 var _wsHandler=null;
 var _inflight=null; // #19 - dedupe de requests
@@ -77,6 +77,15 @@ var _inflight=null; // #19 - dedupe de requests
 // =====================================================================
 function dlog(){var a=Array.prototype.slice.call(arguments);D.push(new Date().toLocaleTimeString()+' '+a.join(' '));var e=document.getElementById('debug');if(e)e.innerHTML=D.slice(-60).join('\n');}
 function eventMeta(t){return{color:t==='userLock'?'#e65100':t==='userLogout'?'#888':'#2e7d32',label:t==='userLock'?'Bloqueado':t==='userLogout'?'Offline':'Online',endLabel:t==='userLogin'?'<b>Agora</b>':t==='userUnlock'?'<b>Agora</b>':null};}
+function liveState(nodeid, user){
+    var activeU=_activeUsers[nodeid]||[],activeL=_activeLusers[nodeid]||[];
+    var uShort=splitUser(user).u||user,matched=false,locked=false;
+    for(var i=0;i<activeU.length;i++){var as=splitUser(activeU[i]).u||activeU[i];if(as===uShort||activeU[i]===user){matched=true;break;}}
+    if(matched){for(var j=0;j<activeL.length;j++){var ls=splitUser(activeL[j]).u||activeL[j];if(ls===uShort||activeL[j]===user){locked=true;break;}}}
+    if(locked)return{color:'#e65100',label:'Bloqueado',endLabel:null};
+    if(matched)return{color:'#2e7d32',label:'Online',endLabel:'<b>Agora</b>'};
+    return{color:'#888',label:'Offline',endLabel:null};
+}
 function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 function splitUser(u){var p=String(u||'').split('\\');return p.length>1?{d:p[0],u:p[1]}:{d:'',u:u||''};}
 function ymd(d){var x=new Date(d),m=x.getMonth()+1,day=x.getDate();return x.getFullYear()+'-'+(m<10?'0':'')+m+'-'+(day<10?'0':'')+day;}
@@ -161,7 +170,7 @@ function _renderGantt(events,rs,re,pwrMap){
     _savedEvents=events;
     var total=re-rs;if(total<=0)total=86400000;
     var sessions=buildSessions(events,rs,re);
-    sessions.forEach(function(s){if(s.open&&s.state!=='login'&&s.state!=='lock'){var da=_activeUsers[s.nodeid]||[];var sUser=splitUser(s.display||s.user||'').u||s.display||s.user;for(var si=0;si<da.length;si++){var daShort=splitUser(da[si]).u||da[si];if(daShort===sUser||da[si]===s.display||daShort===(s.user||'')||da[si]===(s.user||'')){s.state='login';break;}}}});
+    sessions.forEach(function(s){if(s.open){var ls=liveState(s.nodeid,s.display||s.user||'');if(s.state==='logout')s.state=ls.label==='Offline'?s.state:'login';else if(s.state==='lock'&&ls.label==='Online')s.state='login';}});
     if(!sessions.length){document.getElementById('gantt').innerHTML='<div class="empty">Nenhuma sessão.</div>';return;}
     var dayMs=86400000,span=total/dayMs;
     var step=span<=0.02?60000:(span<=0.08?300000:(span<=0.25?900000:(span<=0.5?1800000:(span<=1?3600000:(span<=7?10800000:(span<=14?21600000:43200000))))));
@@ -204,11 +213,8 @@ function _renderGantt(events,rs,re,pwrMap){
     if(!names.length){document.getElementById('userList').innerHTML='<div class="empty">Nenhum usuário.</div>';return;}
     var ul='<table class="tbl" style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="background:#aaa;color:#000;font-weight:700;text-align:left"><th style="padding:5px 7px;border:1px solid #999">Usuário</th><th style="padding:5px 7px;border:1px solid #999">Domínio</th><th style="padding:5px 7px;border:1px solid #999">Eventos</th><th style="padding:5px 7px;border:1px solid #999">Primeiro</th><th style="padding:5px 7px;border:1px solid #999">Último</th><th style="padding:5px 7px;border:1px solid #999">Status</th></tr></thead><tbody>';
     var devOff = pwrMap && pwrMap[nodeid] && pwrMap[nodeid].pwr === 0;
-    var devActive = _activeUsers[nodeid] || [];
     names.forEach(function(k){var g=byName[k],evs=g.events.sort(function(a,b){return new Date(b.detectedAt)-new Date(a.detectedAt);});var last=evs[0],first=evs[evs.length-1];
-    var em;
-    if(devOff||(!devActive.length&&!evs.some(function(e){return e.eventType==='userLogin';})))em={color:'#888',label:'Offline'};
-    else em=eventMeta(last.eventType);
+    var em = devOff ? {color:'#888',label:'Offline',endLabel:null} : liveState(nodeid, g.username||g.user);
     var endLab = em.endLabel || fmtDate(last.detectedAt);
     ul+='<tr><td style="padding:5px 7px;border-bottom:1px solid #ddd"><b>'+esc(g.username||g.user)+'</b></td><td style="padding:5px 7px;border-bottom:1px solid #ddd;color:#555;font-size:11px">'+esc(g.domain||'—')+'</td><td style="padding:5px 7px;border-bottom:1px solid #ddd">'+evs.length+'</td><td style="padding:5px 7px;border-bottom:1px solid #ddd;color:#555;font-size:11px">'+esc(fmtDate(first.detectedAt))+'</td><td style="padding:5px 7px;border-bottom:1px solid #ddd;color:#555;font-size:11px">'+endLab+'</td><td style="padding:5px 7px;border-bottom:1px solid #ddd;font-weight:700;color:'+em.color+'">'+em.label+'</td></tr>';});
     ul+='</tbody></table>';document.getElementById('userList').innerHTML=ul;
@@ -288,6 +294,7 @@ function setupGanttDrag(){
                     if (_inflight === null) { dlog('WS_TL_NOINFLIGHT','descartando response não solicitado'); return; }
                     dlog('WS','got timeline n=' + (d.data?d.data.length:'?'));
                     if (d._activeUsers && typeof d._activeUsers === 'object') _activeUsers = d._activeUsers;
+                    if (d._activeLusers && typeof d._activeLusers === 'object') _activeLusers = d._activeLusers;
                     renderGantt(d.data || [], d._pwrMap);
                 }
             } catch (ex) { dlog('WSE', ex.message); }

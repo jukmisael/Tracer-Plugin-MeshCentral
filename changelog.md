@@ -1,8 +1,21 @@
+## 3.5.94 (2026-08-05)
+
+### Fixed
+- **Status "Bloqueado" errado quando usuário está online (e vice-versa)** em `views/admin.handlebars` (renderXrefUser/renderXrefDev) e `views/device.handlebars` (userList). Bug: badge mostrava sempre o último `eventType` histórico — se o último evento era `userLock` de ontem mas o usuário está online agora, badge ficava "Bloqueado" para sempre. Fix em 3 partes:
+  - **Backend** (`usertracer.js:_actionGetTimeline`): novo campo `_activeLusers` na response WS, espelhando `_activeUsers` mas com a lista de usuários bloqueados (`doc.lusers`). Os 4 caminhos de response (sucesso + 3 fallbacks) emitem o campo.
+  - **Helper `liveState(nodeid, user)`** adicionado em ambos os views: se user está em `_activeUsers[nodeid]` E em `_activeLusers[nodeid]` → **Bloqueado**; só em `_activeUsers` → **Online**; em nenhum → **Offline**. Source-of-truth é o estado atual do agente, não o último evento histórico.
+  - **Override no Gantt** (`_renderGantt` em ambos os views): sessões abertas agora re-resolvem o estado via `liveState`. Trailing segment com `state='lock'` é rebaixado para `login` se o usuário está atualmente online e desbloqueado. Trailing segment com `state='logout'` mantém-se se usuário realmente não está ativo.
+
+### Notes
+- **Não muda o contrato WS existente**: clientes antigos continuam recebendo `_activeUsers` (não-regardless). O novo campo `_activeLusers` é aditivo — frontend sem o helper ignora e cai no comportamento anterior (lastEventType). Migração limpa é forward-compatible.
+- `_activeLusers` é populado do `obj.userCache[nodeid]` (cache populado pelo scanner 30s), mesma fonte do `_activeUsers`. TTL implícito: 30s entre scans. Mesma garantia de freshness do live-state.
+
 ## 3.5.93 (2026-07-29)
 
 ### Fixed
 - **NeDB crash loop com `11% of data file is corrupt`**: após restart abrupto durante compaction, o `@seald-io/nedb` recusava carregar com `Error: 11% of the data file is corrupt, more than corruptAlertThreshold (10%). Cautiously refusing to start NeDB to prevent dataloss`. Crash loopava o MeshCentral a cada 5s. Fix em `db.js:35-68`: (1) `corruptAlertThreshold: 0.5` em vez do default 10% — tolera até 50% de corrupção (cenário real de restart mid-write); (2) autocompaction subiu de 60s para 300s (`setAutocompactionInterval(300000)`) reduzindo write contention com o scanner; (3) recovery path que deleta o `.db` + `.db~` e re-inicializa quando o erro detectado é de corrupção (regex `/corrupt/i` na mensagem), uma vez por processo (`_nedbRecovered` flag previne loop). MeshCentral agora sobe mesmo com DB parcialmente corrompido.
 
+### Notes
 ### Notes
 - **Ação manual recomendada (uma vez)**: deletar `C:\Program Files\Open Source\MeshCentral\meshcentral-data\plugin-usertracer-events.db` e reiniciar MeshCentral para tirar do estado crash-loop atual. O fix previne recorrência, mas o arquivo já corrompido precisa de reset manual.
 

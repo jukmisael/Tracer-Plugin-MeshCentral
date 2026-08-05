@@ -1,7 +1,7 @@
 /**
- * User-Device Tracer v3.6.0
+ * User-Device Tracer v3.5.94
  * ==========================
- * Corrigido conforme análise (v3.5.80 → v3.6.0):
+ * Corrigido conforme análise (v3.5.80 → v3.5.94):
  *   #1, #22  ACL no device tab (GetNodeWithRights)
  *   #3       stopScanner() + safeReload() para não vazar setInterval
  *   #4       Não gerar login events no bounce de agente (cross-ref lastconnect)
@@ -584,10 +584,10 @@ module.exports.usertracer = function (parent) {
     obj._actionGetTimeline = function (command, sid, parentUser) {
         UT_LOG.raw('getTimeline: entry sid=' + (sid ? sid.substring(0,40) : 'null') + ' startDate=' + command.startDate + ' endDate=' + command.endDate + ' nodeid=' + command.nodeid + ' nodeids=' + command.nodeids + ' username=' + command.username + ' _reqSeq=' + command._reqSeq);
         var user = obj._getSessionUser(sid, parentUser);
-        if (!user) { UT_LOG.raw('getTimeline: no user — sending empty'); obj._send(sid, { action:'plugin', plugin:'usertracer', method:'timeline', data: [], _pwrMap: {}, _activeUsers: {}, _reqSeq: command._reqSeq }); return; }
+        if (!user) { UT_LOG.raw('getTimeline: no user — sending empty'); obj._send(sid, { action:'plugin', plugin:'usertracer', method:'timeline', data: [], _pwrMap: {}, _activeUsers: {}, _activeLusers: {}, _reqSeq: command._reqSeq }); return; }
         if (!obj.db || typeof obj.db.getEvents !== 'function') {
             UT_LOG.raw('getTimeline: no db.getEvents — sending empty');
-            obj._send(sid, { action:'plugin', plugin:'usertracer', method:'timeline', data: [], _pwrMap: {}, _activeUsers: {}, _reqSeq: command._reqSeq });
+            obj._send(sid, { action:'plugin', plugin:'usertracer', method:'timeline', data: [], _pwrMap: {}, _activeUsers: {}, _activeLusers: {}, _reqSeq: command._reqSeq });
             return;
         }
         var requestedNodeIds = null;
@@ -605,7 +605,7 @@ module.exports.usertracer = function (parent) {
             if (command.endDate) opts.endDate = command.endDate;
             if (accessibleNodeIds && accessibleNodeIds.length > 0) opts.nodeids = accessibleNodeIds;
             else if (requestedNodeIds) {
-                obj._send(sid, { action:'plugin', plugin:'usertracer', method:'timeline', data: [], _pwrMap: {}, _activeUsers: {}, _reqSeq: command._reqSeq });
+                obj._send(sid, { action:'plugin', plugin:'usertracer', method:'timeline', data: [], _pwrMap: {}, _activeUsers: {}, _activeLusers: {}, _reqSeq: command._reqSeq });
                 return;
             }
             var query = {};
@@ -635,6 +635,7 @@ module.exports.usertracer = function (parent) {
                     });
                 }
                 var activeUsers = {};
+                var activeLusers = {};
                 var seen = {};
                 docs.forEach(function (e) {
                     if (e && e.nodeid && obj.userCache[e.nodeid] && !seen[e.nodeid]) {
@@ -642,13 +643,14 @@ module.exports.usertracer = function (parent) {
                         try {
                             var st = JSON.parse(obj.userCache[e.nodeid]);
                             activeUsers[e.nodeid] = (st.users || []).slice();
+                            activeLusers[e.nodeid] = (st.lusers || []).slice();
                         } catch (_) {}
                     }
                 });
-                UT_LOG.raw('getTimeline: response pwrMap=' + JSON.stringify(Object.keys(pwrMap)) + ' activeUsers=' + JSON.stringify(Object.keys(activeUsers)) + ' ids=' + JSON.stringify(Object.keys(activeUsers)));
+                UT_LOG.raw('getTimeline: response pwrMap=' + JSON.stringify(Object.keys(pwrMap)) + ' activeUsers=' + JSON.stringify(Object.keys(activeUsers)) + ' activeLusers=' + JSON.stringify(Object.keys(activeLusers)) + ' ids=' + JSON.stringify(Object.keys(activeUsers)));
                 var resp = {
                     action: 'plugin', plugin: 'usertracer', method: 'timeline',
-                    data: docs, _pwrMap: pwrMap, _activeUsers: activeUsers,
+                    data: docs, _pwrMap: pwrMap, _activeUsers: activeUsers, _activeLusers: activeLusers,
                     _reqSeq: command._reqSeq
                 };
                 UT_LOG.raw('getTimeline: sending response eventCount=' + docs.length + ' _reqSeq=' + command._reqSeq);
