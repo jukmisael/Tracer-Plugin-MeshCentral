@@ -67,7 +67,6 @@ var ms=(typeof top!='undefined'&&top.meshserver)||(typeof parent!='undefined'&&p
 var _savedEvents=[],_activeUsers={},_activeLusers={},_viewRange=null,_baseRange={rs:0,re:0},_pwrMap=null,_reqSeq=0;
 var _unmounted=false; // cleanup marker (#3, #12)
 var _wsHandler=null;
-var _inflight=null; // #19 - dedupe de requests
 // =====================================================================
 // Shared utilities (esc, splitUser, ymd, fmtDur, eventMeta, dlog).
 // These are byte-identical in admin.handlebars and device.handlebars.
@@ -111,6 +110,9 @@ function setRange(kind,btn){
 }
 
 // #19 — loadHistory com dedupe e queue
+// loadHistory — sem dedupe: _reqSeq já descarta responses stale.
+// 100ms debounce via _sendDebounced reduz envios em rajada (date-picker onchange rápido).
+var _sendDebounced = {};
 function loadHistory(){
     if (_unmounted) return;
     _viewRange=null;
@@ -121,21 +123,15 @@ function loadHistory(){
         document.getElementById('userList').innerHTML='<div class="empty">Selecione datas.</div>';
         return;
     }
-    var key = s+'|'+e;
-    if (_inflight === key) return;
-    if (_inflight) {
-        clearTimeout(_inflightTimeout);
+    var key='loadHistory|'+s+'|'+e;
+    if (_sendDebounced[key]) return;
+    _sendDebounced[key]=true;
+    setTimeout(function(){ _sendDebounced[key]=false; }, 100);
+    document.getElementById('gantt').innerHTML='<div class="loading">Carregando...</div>';
+    if(ms){
+        var _s=++_reqSeq;
+        ms.send({action:'plugin',plugin:'usertracer',pluginaction:'getTimeline',nodeid:nodeid,startDate:s+'T00:00:00',endDate:e+'T23:59:59.999',limit:2000,_reqSeq:_s});
     }
-    _inflight = key;
-    _inflightTimeout = setTimeout(function () {
-        if (_inflight !== key) return;
-        _inflight = null;
-        document.getElementById('gantt').innerHTML='<div class="loading">Carregando...</div>';
-        if(ms){
-            var _s=++_reqSeq;
-            ms.send({action:'plugin',plugin:'usertracer',pluginaction:'getTimeline',nodeid:nodeid,startDate:s+'T00:00:00',endDate:e+'T23:59:59.999',limit:2000,_reqSeq:_s});
-        }
-    }, 100);
 }
 function buildSessions(events,rs,re){
     var by={};
@@ -170,7 +166,7 @@ function _renderGantt(events,rs,re,pwrMap){
     _savedEvents=events;
     var total=re-rs;if(total<=0)total=86400000;
     var sessions=buildSessions(events,rs,re);
-    sessions.forEach(function(s){if(s.open){var ls=liveState(s.nodeid,s.display||s.user||'');if(s.state==='logout')s.state=ls.label==='Offline'?s.state:'login';else if(s.state==='lock'&&ls.label==='Online')s.state='login';}});
+    sessions.forEach(function(s){if(s.open){var ls=liveState(nodeid,s.display||s.user||'');if(s.state==='logout')s.state=ls.label==='Offline'?s.state:'login';else if(s.state==='lock'&&ls.label==='Online')s.state='login';}});
     if(!sessions.length){document.getElementById('gantt').innerHTML='<div class="empty">Nenhuma sessão.</div>';return;}
     var dayMs=86400000,span=total/dayMs;
     var step=span<=0.02?60000:(span<=0.08?300000:(span<=0.25?900000:(span<=0.5?1800000:(span<=1?3600000:(span<=7?10800000:(span<=14?21600000:43200000))))));
@@ -287,11 +283,8 @@ function setupGanttDrag(){
             try{
                 var d = JSON.parse(e.data);
                 if (d.action === 'plugin' && d.plugin === 'usertracer' && d.method === 'timeline') {
-                    // #19 - dedupe + stale check: descarta se _inflight for null
-                    // (não há request em voo — response não foi solicitada) OU
-                    // se _reqSeq bater diferente (response stale)
+                    // Stale check via _reqSeq (response must match latest send).
                     if (d._reqSeq != null && d._reqSeq !== _reqSeq) { dlog('WS_TL_STALE','seq='+d._reqSeq+' expected='+_reqSeq); return; }
-                    if (_inflight === null) { dlog('WS_TL_NOINFLIGHT','descartando response não solicitado'); return; }
                     dlog('WS','got timeline n=' + (d.data?d.data.length:'?'));
                     if (d._activeUsers && typeof d._activeUsers === 'object') _activeUsers = d._activeUsers;
                     if (d._activeLusers && typeof d._activeLusers === 'object') _activeLusers = d._activeLusers;

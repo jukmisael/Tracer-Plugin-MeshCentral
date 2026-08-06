@@ -1,7 +1,18 @@
+## 3.5.95 (2026-08-05)
+
+### Fixed
+- **Device tab Gantt nunca aplicava o override lock→login** (`views/device.handlebars:_renderGantt`): o override chamava `liveState(s.nodeid, ...)`, mas `buildSessions` da device tab não popula `s.nodeid` (só admin popula). Resultado: `_activeUsers[undefined]` → `[]` → `liveState` sempre retornava "Offline" → trailing open session com `state='lock'` nunca era rebaixado para 'login'. Fix: usar a global `nodeid` (sempre o device atual) em vez de `s.nodeid`. Admin já estava correto porque lá `buildSessions` popula `s.nodeid`.
+- **Device tab: response de timeline descartada como "não solicitada"** (`views/device.handlebars:loadHistory` + WS handler). Bug: `_inflight = null` era setado ANTES de `ms.send()` dentro do setTimeout, então quando o response chegava (milissegundos depois), o handler via `_inflight === null` e descartava. Drop completo do mecanismo `_inflight` — `_reqSeq` (já presente no handler) é suficiente para descartar responses stale. Substituído por debounce de 100ms via `_sendDebounced` keyed em 'loadHistory|startDate|endDate' para evitar rajadas do date-picker onchange.
+
+### Notes
+- A v3.5.94 foi commitada mas não foi capaz de fixar o device tab completamente por causa desses dois bugs latentes. v3.5.95 fecha o ciclo: status badge + Gantt override ambos funcionam em admin e device tabs.
+- O memory `gantt-builder` deve refletir que `device.handlebars:buildSessions` NÃO popula `s.nodeid` (apenas `user, display, start, end, state, open`). Admin popula. Isso é divergência intencional entre os dois builds — admin agrupa por device+user, device agrupa por user (uma linha por usuário).
+
+
 ## 3.5.94 (2026-08-05)
 
 ### Fixed
-- **Status "Bloqueado" errado quando usuário está online (e vice-versa)** em `views/admin.handlebars` (renderXrefUser/renderXrefDev) e `views/device.handlebars` (userList). Bug: badge mostrava sempre o último `eventType` histórico — se o último evento era `userLock` de ontem mas o usuário está online agora, badge ficava "Bloqueado" para sempre. Fix em 3 partes:
+- **Status "Bloqueado" errado quando usuário está online (e vice-versa)**
   - **Backend** (`usertracer.js:_actionGetTimeline`): novo campo `_activeLusers` na response WS, espelhando `_activeUsers` mas com a lista de usuários bloqueados (`doc.lusers`). Os 4 caminhos de response (sucesso + 3 fallbacks) emitem o campo.
   - **Helper `liveState(nodeid, user)`** adicionado em ambos os views: se user está em `_activeUsers[nodeid]` E em `_activeLusers[nodeid]` → **Bloqueado**; só em `_activeUsers` → **Online**; em nenhum → **Offline**. Source-of-truth é o estado atual do agente, não o último evento histórico.
   - **Override no Gantt** (`_renderGantt` em ambos os views): sessões abertas agora re-resolvem o estado via `liveState`. Trailing segment com `state='lock'` é rebaixado para `login` se o usuário está atualmente online e desbloqueado. Trailing segment com `state='logout'` mantém-se se usuário realmente não está ativo.
